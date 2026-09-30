@@ -1,0 +1,18 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null
+        && (request.auth.token.get('admin', false) == true
+          || request.auth.token.get('email', '') == 'aristeaamnta@gmail.com');
+    }
+
+    match /jewelry/{filePath=**} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.size <= 30 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|video/.*');
+      allow delete: if isAdmin();
+    }
+  }
+}

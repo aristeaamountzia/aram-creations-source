@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && (request.auth.token.get('admin', false) == true
+          || request.auth.token.get('email', '') == "aristeaamnta@gmail.com");
+    }
+
+    // Public catalog content; only the store administrator may change it.
+    match /jewelry/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /settings/shop {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Portfolio pages subscribe to this collection from the public site.
+    match /portfolio/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Keep any other existing app collections private to the administrator.
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
