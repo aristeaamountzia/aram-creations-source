@@ -29,4 +29,9 @@ await build({
 });
 
 console.log("Netlify Functions prepared in .netlify/functions-dist");
+await build({
+  entryPoints: [join(source, 'media.ts')], outfile: join(output, 'media.mjs'), bundle: true,
+  platform: 'node', format: 'esm', packages: 'bundle', target: 'node20',
+  banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' },
+});
 
