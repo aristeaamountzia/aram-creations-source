@@ -475,13 +475,10 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
         {shopSettings.heroVideoUrl && <video className="absolute inset-0 h-full w-full object-cover" src={shopSettings.heroVideoUrl} autoPlay muted loop playsInline aria-hidden="true" />}
         {shopSettings.heroVideoUrl && <div className="absolute inset-0 bg-black/50" aria-hidden="true" />}
         <div className="relative max-w-4xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-stone-200 text-xs font-semibold tracking-wider uppercase">
-            <span>Aram Creations Atelier</span>
-          </div>
-          <h1 className={`${shopSettings.heroTitleSize} font-bold tracking-tight`} style={{ color: shopSettings.heroTitleColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
+          <h1 className={`${shopSettings.heroTitleSize} font-bold tracking-tight break-words`} style={{ color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroTitleColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
             {shopSettings.heroTitle}
           </h1>
-          <p className="text-sm sm:text-base max-w-2xl mx-auto leading-relaxed opacity-90" style={{ color: shopSettings.heroSubtitleColor }}>
+          <p className="text-sm sm:text-base max-w-2xl mx-auto leading-relaxed opacity-90" style={{ color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroSubtitleColor }}>
             {shopSettings.heroSubtitle}
           </p>
 
@@ -581,12 +578,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             </button>
 
             {/* Sort Select */}
-            <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-700">
+            <div className="flex max-w-full min-w-0 items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-700">
               <span className="text-[11px] text-stone-400 uppercase font-bold">Ταξινόμηση:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-transparent font-bold text-stone-800 focus:outline-none cursor-pointer text-xs"
+                className="min-w-0 max-w-full bg-transparent font-bold text-stone-800 focus:outline-none cursor-pointer text-xs"
               >
                 <option value="featured">Προτεινόμενα</option>
                 <option value="popular">Πιο Δημοφιλή (Likes)</option>
@@ -1202,4 +1199,3 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
     </div>
   );
 };
-
