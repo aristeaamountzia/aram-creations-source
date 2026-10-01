@@ -3,6 +3,9 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { OrdersManager } from './OrdersManager';
 import { VintedRefresh } from './VintedRefresh';
 import { MediaDownload } from './MediaDownload';
+import { VideoUploadStatus } from './VideoUploadStatus';
+import { prepareVideoUpload } from '../lib/video-compression';
+import { VIDEO_UPLOAD_HELP } from '../lib/video-policy';
 import { editableBlob } from '../lib/media-files';
 import { vintedSourceUrl } from '../lib/vinted-refresh';
 import { db, auth, storage } from "../firebase";
@@ -146,12 +149,18 @@ interface BackOfficeViewProps {
         // --- ΣΥΝΑΡΤΗΣΗ ΑΥΤΟΜΑΤΗΣ ΣΥΜΠΙΕΣΗΣ ΕΙΚΟΝΩΝ ---
         const compressImage = async (file) => {
             // Canvas converts animated GIFs into one still frame. Keep GIFs intact.
-            if (file?.type === 'image/gif') return file;
-            return new Promise((resolve) => {
+            if (file?.type === 'image/gif') {
+                if (file.size > 30 * 1024 * 1024) throw new Error('Το GIF πρέπει να είναι έως 30 MB.');
+                return file;
+            }
+            return new Promise((resolve, reject) => {
                 const reader = new FileReader();
+                reader.onerror = () => reject(new Error('Δεν διαβάστηκε η εικόνα.'));
+                reader.onabort = () => reject(new Error('Η ανάγνωση εικόνας ακυρώθηκε.'));
                 reader.readAsDataURL(file);
                 reader.onload = (event) => {
                     const img = new Image();
+                    img.onerror = () => reject(new Error('Δεν άνοιξε η εικόνα. Επίλεξε JPG, PNG, WebP ή GIF.'));
                     img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
@@ -173,9 +182,11 @@ interface BackOfficeViewProps {
                         canvas.width = width;
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
+                        if (!ctx) { reject(new Error('Δεν ξεκίνησε η επεξεργασία εικόνας.')); return; }
                         ctx.drawImage(img, 0, 0, width, height);
                         
                         canvas.toBlob((blob) => {
+                            if (!blob?.size) { reject(new Error('Δεν δημιουργήθηκε έγκυρη εικόνα.')); return; }
                             const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
                                 type: 'image/jpeg',
                                 lastModified: Date.now()
@@ -259,6 +270,19 @@ interface BackOfficeViewProps {
             const [statsFilter, setStatsFilter] = useState('all');
             const [uploadProgress, setUploadProgress] = useState(0);
             const [uploadStatus, setUploadStatus] = useState('');
+            const [mediaPreparing, setMediaPreparing] = useState(false);
+            const [videoProgress, setVideoProgress] = useState(null);
+            const [videoCompressing, setVideoCompressing] = useState(false);
+            const videoAbort = useRef(null);
+            useEffect(() => () => videoAbort.current?.abort(), []);
+            const prepareLocalVideo = async (file) => {
+                const controller = new AbortController();
+                videoAbort.current = controller;
+                setVideoCompressing(true);
+                try { return await prepareVideoUpload(file, setVideoProgress, controller.signal); }
+                catch (error) { setVideoProgress({ text: error.message }); throw error; }
+                finally { setVideoCompressing(false); videoAbort.current = null; }
+            };
 
             const [customCategories, setCustomCategories] = useState(() => readStoredList('aram_custom_categories'));
             const [customCollections, setCustomCollections] = useState(() => readStoredList('aram_custom_collections'));
@@ -310,6 +334,7 @@ interface BackOfficeViewProps {
             const [isAddOpen, setIsAddOpen] = useState(false);
             const [isDetailOpen, setIsDetailOpen] = useState(false);
             const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            useEffect(() => { setVideoProgress(null); }, [isAddOpen, isSettingsOpen]);
             const [currentItem, setCurrentItem] = useState(null);
             const [isEditMode, setIsEditMode] = useState(false);
             const [activeDetailMediaIdx, setActiveDetailMediaIdx] = useState(0);
@@ -634,23 +659,22 @@ interface BackOfficeViewProps {
             };
 
             const handleHeroVideoUpload = async (file) => {
-                if (!file) return;
-                if (!file.type.startsWith('video/') || file.size > 30 * 1024 * 1024) {
-                    setHeroUploadStatus('Επίλεξε βίντεο έως 30 MB.');
-                    return;
-                }
-                setHeroUploadStatus('Ανέβασμα βίντεο...');
+                if (!file || mediaPreparing) return;
+                setMediaPreparing(true);
+                setHeroUploadStatus('');
                 try {
-                    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '') || 'hero-video.mp4';
+                    const prepared = await prepareLocalVideo(file);
+                    setHeroUploadStatus('Ανέβασμα συμπιεσμένου βίντεο...');
+                    const safeName = prepared.name.replace(/[^a-zA-Z0-9._-]/g, '') || 'hero-video.mp4';
                     const fileRef = firebaseRef(storage, `jewelry/hero/${Date.now()}-${safeName}`);
-                    const task = uploadBytesResumable(fileRef, file);
+                    const task = uploadBytesResumable(fileRef, prepared, { contentType: prepared.type });
                     await new Promise((resolve, reject) => task.on('state_changed', null, reject, resolve));
                     const url = await getDownloadURL(task.snapshot.ref);
                     setShopSettings(prev => ({ ...prev, heroVideoUrl: url }));
                     setHeroUploadStatus('Το βίντεο ανέβηκε. Πάτησε Αποθήκευση ρυθμίσεων για να εμφανιστεί στο Shop.');
                 } catch (error) {
                     setHeroUploadStatus(`Αποτυχία ανεβάσματος: ${error.message}`);
-                }
+                } finally { setMediaPreparing(false); }
             };
 
             const handleResetTheme = (mode) => {
@@ -1314,12 +1338,17 @@ interface BackOfficeViewProps {
             }, [formName, formNotes, formCategory, formColorsArr, formMaterials, newMaterialInput, newColorInput, allFormCategories, allAvailableColors, smartSuggestions?.source]);
 
             const handleFileSelectShop = async (e) => {
+                if (mediaPreparing) return;
+                setMediaPreparing(true); setVideoProgress(null);
                 const files = Array.from(e.target.files);
+                const input = e.target;
                 const newMedia = [];
+                const errors = [];
                 let smartCandidate = null;
                 setUploadStatus('Επεξεργασία και συμπίεση αρχείων...');
-                
+                try {
                 for (const file of files) {
+                    try {
                     if (file.type.startsWith('image/')) {
                         const compressedFile = await compressImage(file);
                         const previewUrl = URL.createObjectURL(compressedFile);
@@ -1328,12 +1357,10 @@ interface BackOfficeViewProps {
                         }
                         newMedia.push({ url: previewUrl, type: 'image', isNew: true, fileObj: compressedFile, showInShop: true });
                     } else if (file.type.startsWith('video/')) {
-                        if (file.size > 30 * 1024 * 1024) {
-                            alert(`Το βίντεο ${file.name} είναι πολύ μεγάλο (${(file.size/1024/1024).toFixed(1)}MB). Παρακαλώ ανεβάστε βίντεο έως 30MB.`);
-                            continue;
-                        }
-                        newMedia.push({ url: URL.createObjectURL(file), type: 'video', isNew: true, fileObj: file, showInShop: true });
+                            const prepared = await prepareLocalVideo(file);
+                            newMedia.push({ url: URL.createObjectURL(prepared), type: 'video', isNew: true, fileObj: prepared, showInShop: true });
                     }
+                    } catch (error) { errors.push(`${file.name}: ${error.message}`); if (error.name === 'AbortError') break; }
                 }
                 setFormShopMediaList(prev => [...prev, ...newMedia]);
                 if (smartCandidate) {
@@ -1346,8 +1373,11 @@ interface BackOfficeViewProps {
                         });
                     }
                 }
-                setUploadStatus('');
-                e.target.value = '';
+                } catch (error) { errors.push(error.message); }
+                finally {
+                    if (errors.length) setVideoProgress({ text: errors.join('\n') });
+                    setUploadStatus(''); input.value = ''; setMediaPreparing(false);
+                }
             };
 
             const handleRemoveShopMedia = (idx) => {
@@ -1371,24 +1401,27 @@ interface BackOfficeViewProps {
             };
 
             const handleFileSelectPrivate = async (e) => {
+                if (mediaPreparing) return;
+                setMediaPreparing(true); setVideoProgress(null);
                 const files = Array.from(e.target.files);
+                const input = e.target;
                 const newMedia = [];
+                const errors = [];
                 let smartCandidate = null;
                 setUploadStatus('Επεξεργασία και συμπίεση αρχείων...');
-                
+                try {
                 for (const file of files) {
+                    try {
                     if (file.type.startsWith('image/')) {
                         const compressedFile = await compressImage(file);
                         const previewUrl = URL.createObjectURL(compressedFile);
                         if (!smartCandidate) smartCandidate = { url: previewUrl, fileName: file.name };
                         newMedia.push({ url: previewUrl, type: 'image', isNew: true, fileObj: compressedFile, showInShop: false });
                     } else if (file.type.startsWith('video/')) {
-                        if (file.size > 30 * 1024 * 1024) {
-                            alert(`Το βίντεο ${file.name} είναι πολύ μεγάλο. Όριο: 30MB.`);
-                            continue;
-                        }
-                        newMedia.push({ url: URL.createObjectURL(file), type: 'video', isNew: true, fileObj: file, showInShop: false });
+                            const prepared = await prepareLocalVideo(file);
+                            newMedia.push({ url: URL.createObjectURL(prepared), type: 'video', isNew: true, fileObj: prepared, showInShop: false });
                     }
+                    } catch (error) { errors.push(`${file.name}: ${error.message}`); if (error.name === 'AbortError') break; }
                 }
                 const nextPrivateMediaList = [...formPrivateMediaList, ...newMedia];
                 setFormPrivateMediaList(nextPrivateMediaList);
@@ -1396,8 +1429,11 @@ interface BackOfficeViewProps {
                     setUploadStatus('Ανάλυση εικόνας back-office...');
                     await refreshSmartSuggestionsFromMain(formShopMediaList, nextPrivateMediaList);
                 }
-                setUploadStatus('');
-                e.target.value = '';
+                } catch (error) { errors.push(error.message); }
+                finally {
+                    if (errors.length) setVideoProgress({ text: errors.join('\n') });
+                    setUploadStatus(''); input.value = ''; setMediaPreparing(false);
+                }
             };
 
             const handleRemovePrivateMedia = (idx) => {
@@ -2411,7 +2447,7 @@ interface BackOfficeViewProps {
 
             const handleSaveItem = async (e) => {
                 e.preventDefault();
-                if (!formName.trim() || isSaving) return;
+                if (!formName.trim() || isSaving || mediaPreparing) return;
 
                 const parsedPrice = formPrice === '' ? 0 : Number(formPrice);
                 const parsedCost = formCost === '' ? 0 : Number(formCost);
@@ -3710,7 +3746,7 @@ interface BackOfficeViewProps {
                                         </h2>
                                         <p className="text-xs font-bold text-stone-400">{isEditMode ? 'Επεξεργασία υπάρχουσας καταχώρησης' : 'Νέα καταχώρηση καταλόγου'}</p>
                                     </div>
-                                    <button type="button" onClick={() => setIsAddOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1 rounded-lg border border-stone-200"><IconX /></button>
+                                    <button type="button" disabled={mediaPreparing || isSaving} onClick={() => setIsAddOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1 rounded-lg border border-stone-200"><IconX /></button>
                                 </div>
                                 <div className="px-5 py-3 border-b border-stone-100 bg-white flex gap-2 overflow-x-auto">
                                     {[
@@ -3728,6 +3764,7 @@ interface BackOfficeViewProps {
                                     ))}
                                 </div>
                                 
+                                {videoProgress && <div className="px-5 py-2"><VideoUploadStatus value={videoProgress} busy={videoCompressing} onCancel={() => videoAbort.current?.abort()} /></div>}
                                 <div className="overflow-y-auto p-6">
                                     <form id="jewelry-form" onSubmit={handleSaveItem} className="flex flex-col gap-8">
                                         <section id="form-ai" className="order-last scroll-mt-4 rounded-2xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm">
@@ -4070,8 +4107,8 @@ interface BackOfficeViewProps {
                                         <section id="form-shop-media" className="scroll-mt-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50/55 p-4 shadow-sm">
                                             <h3 className="text-sm font-black text-emerald-500 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Εικονες / Βιντεο (Βιτρινα Shop)</h3>
                                             <div className="mb-4">
-                                                <label className="block text-xs font-bold text-stone-600 mb-1">Αυτά τα αρχεία θα φαίνονται στον πελάτη (Οι εικόνες συμπιέζονται αυτόματα. Βίντεο έως 30MB).</label>
-                                                <input type="file" accept="image/*,video/*" multiple className="w-full border border-emerald-300 rounded-lg px-4 py-2.5 bg-white cursor-pointer" onChange={handleFileSelectShop} />
+                                                <label className="block text-xs font-bold text-stone-600 mb-1">Αυτά τα αρχεία θα φαίνονται στον πελάτη (Οι εικόνες και τα βίντεο συμπιέζονται αυτόματα. Αρχικό βίντεο έως 1 GB / 10 λεπτά, τελικό έως 30 MB).</label>
+                                                <input type="file" accept="image/*,video/*" multiple disabled={mediaPreparing || isSaving} className="w-full border border-emerald-300 rounded-lg px-4 py-2.5 bg-white cursor-pointer" onChange={handleFileSelectShop} />
                                                 <button type="button" onClick={handleRefreshSmartSuggestions} className="mt-2 px-3 py-1.5 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-bold hover:bg-emerald-100 transition">
                                                     Ανανέωση smart suggestions από τη φόρμα
                                                 </button>
@@ -4158,8 +4195,9 @@ interface BackOfficeViewProps {
                                         <section id="form-private-media" className="mt-6 scroll-mt-4 rounded-2xl border border-stone-300 bg-stone-100/70 p-4">
                                             <h3 className="text-sm font-black text-stone-500 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Αρχειο (Μονο για το Back-Office)</h3>
                                             <div className="mb-4">
-                                                <label className="block text-xs font-bold text-stone-600 mb-1">Προσωπικές φωτογραφίες ή λεπτομέρειες που μένουν κρυφές</label>
-                                                <input type="file" accept="image/*,video/*" multiple className="w-full border border-stone-300 rounded-lg px-4 py-2.5 bg-white cursor-pointer" onChange={handleFileSelectPrivate} />
+                                                <label className="block text-xs font-bold text-stone-600 mb-1">Προσωπικές φωτογραφίες και βίντεο που μένουν κρυφά</label>
+                                                <p className="mb-2 text-xs text-stone-500">{VIDEO_UPLOAD_HELP}</p>
+                                                <input type="file" accept="image/*,video/*" multiple disabled={mediaPreparing || isSaving} className="w-full border border-stone-300 rounded-lg px-4 py-2.5 bg-white cursor-pointer" onChange={handleFileSelectPrivate} />
                                                 
                                                 {formPrivateMediaList.length > 0 && (
                                                     <div className="mt-4">
@@ -4213,8 +4251,8 @@ interface BackOfficeViewProps {
                                     </form>
                                 </div>
                                 <div className="p-5 border-t border-stone-100 bg-white rounded-b-2xl flex justify-end gap-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
-                                    <button type="button" onClick={() => setIsAddOpen(false)} className="px-6 py-2.5 bg-stone-100 text-stone-700 rounded-lg font-bold hover:bg-stone-200 transition" disabled={isSaving}>Ακύρωση</button>
-                                    <button type="submit" form="jewelry-form" className="px-8 py-2.5 bg-stone-900 text-white rounded-lg font-bold hover:bg-stone-800 transition shadow-lg flex items-center gap-2" disabled={isSaving}>
+                                    <button type="button" onClick={() => setIsAddOpen(false)} className="px-6 py-2.5 bg-stone-100 text-stone-700 rounded-lg font-bold hover:bg-stone-200 transition" disabled={isSaving || mediaPreparing}>Ακύρωση</button>
+                                    <button type="submit" form="jewelry-form" className="px-8 py-2.5 bg-stone-900 text-white rounded-lg font-bold hover:bg-stone-800 transition shadow-lg flex items-center gap-2" disabled={isSaving || mediaPreparing}>
                                         Αποθήκευση
                                     </button>
                                 </div>
@@ -4521,7 +4559,7 @@ interface BackOfficeViewProps {
                                         <IconSettings />
                                         <h2 className="text-lg font-bold text-stone-800">Διαχείριση Συστήματος</h2>
                                     </div>
-                                    <button onClick={() => setIsSettingsOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1 rounded-lg border border-stone-200"><IconX /></button>
+                                    <button disabled={mediaPreparing || isSavingSettings} onClick={() => setIsSettingsOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1 rounded-lg border border-stone-200 disabled:opacity-40"><IconX /></button>
                                 </div>
 
                                 <div className="flex border-b border-stone-200 bg-stone-50 px-4 pt-2">
@@ -4871,8 +4909,8 @@ interface BackOfficeViewProps {
                                                     <div className="rounded-xl border border-stone-200 p-4 space-y-2">
                                                         <label className="block text-xs font-bold text-stone-600">Βίντεο Hero (προαιρετικό)</label>
                                                         <input type="url" placeholder="https://.../video.mp4" value={shopSettings.heroVideoUrl || ''} onChange={e => setShopSettings(prev => ({ ...prev, heroVideoUrl: e.target.value }))} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" />
-                                                        <input type="file" accept="video/*" onChange={e => handleHeroVideoUpload(e.target.files?.[0])} className="w-full text-xs" />
-                                                        {heroUploadStatus && <p role="status" className="text-xs text-stone-600">{heroUploadStatus}</p>}
+                                                        <input type="file" accept="video/*" disabled={mediaPreparing} aria-label="Ανέβασμα βίντεο Hero" onChange={e => { handleHeroVideoUpload(e.target.files?.[0]); e.target.value = ''; }} className="w-full text-xs" />
+                                                        <p className="text-xs text-stone-500">{VIDEO_UPLOAD_HELP}</p><VideoUploadStatus value={videoProgress} busy={videoCompressing} onCancel={() => videoAbort.current?.abort()} />{heroUploadStatus && <p role="status" className="text-xs text-stone-600">{heroUploadStatus}</p>}
                                                         {shopSettings.heroVideoUrl && <MediaDownload media={{ url: shopSettings.heroVideoUrl, type: 'video' }} name="aram-hero-video" />}{shopSettings.heroVideoUrl && <video src={shopSettings.heroVideoUrl} controls muted className="max-h-36 w-full rounded-lg bg-black" />}
                                                     </div>
                                                 </div>
@@ -4986,9 +5024,9 @@ interface BackOfficeViewProps {
                                     )}
                                 </div>
                                 <div className="p-5 border-t border-stone-100 bg-stone-50 flex justify-end gap-3">
-                                    <button onClick={() => setIsSettingsOpen(false)} className="px-6 py-2.5 bg-white border border-stone-200 text-stone-700 rounded-lg text-sm font-bold hover:bg-stone-100 transition">Κλείσιμο</button>
+                                    <button disabled={mediaPreparing || isSavingSettings} onClick={() => setIsSettingsOpen(false)} className="px-6 py-2.5 bg-white border border-stone-200 text-stone-700 rounded-lg text-sm font-bold hover:bg-stone-100 transition disabled:opacity-40">Κλείσιμο</button>
                                     {(activeSettingsTab === 'shop' || activeSettingsTab === 'assistant') && (
-                                        <button onClick={handleSaveSettings} disabled={isSavingSettings} className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition shadow-md flex items-center gap-2">
+                                        <button onClick={handleSaveSettings} disabled={isSavingSettings || mediaPreparing} className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition shadow-md flex items-center gap-2">
                                             {isSavingSettings ? 'Αποθήκευση...' : 'Αποθήκευση Ρυθμίσεων'}
                                         </button>
                                     )}
