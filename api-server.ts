@@ -266,11 +266,14 @@ async function handleVintedLink(req: Request, res: Response) {
     let title = "";
     let description = "";
     let price: number | null = null;
+    let priceKnown = false;
     let currency = "EUR";
     let favoritesCount: number | null = null;
     let viewsCount: number | null = null;
     let isSold = false;
     let isReserved = false;
+    let availabilityKnown = false;
+    let availability = 'unknown';
     let brand = "";
     let condition = "";
     let extractedCategory = "";
@@ -322,6 +325,9 @@ async function handleVintedLink(req: Request, res: Response) {
             const candidates = Array.isArray(parsed["@graph"]) ? parsed["@graph"] : [parsed];
             for (const itemNode of candidates) {
               if (!itemNode) continue;
+              if (!String(itemNode['@type'] || '').includes('Product')) continue;
+              const nodeItemId = String(itemNode.url || itemNode.offers?.url || '').match(/\/items\/(\d+)/)?.[1];
+              if (nodeItemId && nodeItemId !== vintedId) continue;
               if (itemNode.name && !title) title = itemNode.name;
               if (itemNode.description && !description) description = itemNode.description;
               if (itemNode.brand?.name) brand = itemNode.brand.name;
@@ -339,8 +345,10 @@ async function handleVintedLink(req: Request, res: Response) {
               if (offers?.price) {
                 const p = parseNum(offers.price);
                 if (p !== null && price === null) price = p;
+                if (p !== null && nodeItemId === vintedId) priceKnown = true;
                 if (offers.priceCurrency) currency = offers.priceCurrency;
-                if (/SoldOut|OutOfStock|Discontinued/i.test(offers.availability || "")) isSold = true;
+                if (/InStock$/i.test(offers.availability || '')) { availabilityKnown = true; availability = 'available'; }
+                if (/SoldOut|OutOfStock|Discontinued/i.test(offers.availability || '')) { availabilityKnown = true; availability = 'unavailable'; }
               }
 
               if (Array.isArray(itemNode.interactionStatistic)) {
@@ -393,12 +401,18 @@ async function handleVintedLink(req: Request, res: Response) {
         if (objectEnd > objectStart) {
           try {
             const itemData = JSON.parse(normalizedRsc.slice(objectStart, objectEnd));
-            if (itemData.title && !title) title = itemData.title;
+            if (itemData.id !== undefined && String(itemData.id) !== vintedId) throw new Error('Mismatched Vinted item metadata');
+          if (itemData.title && !title) title = itemData.title;
             if (itemData.description && !description) description = itemData.description;
             if (itemData.price?.amount && price === null) price = parseNum(itemData.price.amount);
+            if (itemData.price?.amount && parseNum(itemData.price.amount) !== null) priceKnown = true;
             if (itemData.price?.currency_code) currency = itemData.price.currency_code;
             if (itemData.is_closed || itemData.is_sold || itemData.status === "sold") isSold = true;
             if (itemData.is_reserved || itemData.status === "reserved") isReserved = true;
+            if (itemData.is_sold === true || itemData.is_closed === true || itemData.is_reserved === true || ['sold', 'reserved', 'available'].includes(itemData.status) || (itemData.is_sold === false && itemData.is_closed === false && itemData.is_reserved === false)) {
+              availabilityKnown = true;
+              availability = isSold ? 'sold' : isReserved ? 'reserved' : 'available';
+            }
             if (Array.isArray(itemData.photos)) {
               for (const photo of itemData.photos) {
                 const image = photo.high_resolution?.url || photo.full_size_url || photo.url ||
@@ -422,15 +436,21 @@ async function handleVintedLink(req: Request, res: Response) {
             nextData.props?.pageProps?.product ||
             {};
 
+          if (itemData.id !== undefined && String(itemData.id) !== vintedId) throw new Error('Mismatched Vinted item metadata');
           if (itemData.title && !title) title = itemData.title;
           if (itemData.description && !description) description = itemData.description;
           const rawPrice = itemData.price?.amount || itemData.price?.numeric || itemData.total_item_price || itemData.price_numeric || itemData.price;
           if (rawPrice && price === null) price = parseNum(rawPrice);
+          if (rawPrice && String(itemData.id) === vintedId && parseNum(rawPrice) !== null) priceKnown = true;
           if (itemData.price?.currency_code) currency = itemData.price.currency_code;
           if (itemData.favourite_count !== undefined && favoritesCount === null) favoritesCount = parseNum(itemData.favourite_count);
           if (itemData.view_count !== undefined && viewsCount === null) viewsCount = parseNum(itemData.view_count);
           if (itemData.is_closed || itemData.is_sold) isSold = true;
           if (itemData.is_reserved) isReserved = true;
+          if (String(itemData.id) === vintedId && (itemData.is_sold === true || itemData.is_closed === true || itemData.is_reserved === true || (itemData.is_sold === false && itemData.is_closed === false && itemData.is_reserved === false))) {
+            availabilityKnown = true;
+            availability = isSold ? 'sold' : isReserved ? 'reserved' : 'available';
+          }
           if (itemData.brand_title) brand = itemData.brand_title;
           if (itemData.status || itemData.status_title) condition = itemData.status_title || itemData.status;
           if (itemData.catalog_title || itemData.category_title || itemData.catalog?.title || itemData.catalog?.name) {
@@ -482,7 +502,7 @@ async function handleVintedLink(req: Request, res: Response) {
       // Fallback regex for price
       if (price === null) {
         const priceMeta = getMeta("product:price:amount") || getMeta("og:price:amount");
-        if (priceMeta) price = parseNum(priceMeta);
+        if (priceMeta) { price = parseNum(priceMeta); priceKnown = price !== null; }
       }
       if (price === null) {
         const priceMatch = html.match(/(\d+[\.,]\d{2})\s*(?:€|EUR)/i) || html.match(/(?:€|EUR)\s*(\d+[\.,]\d{2})/i);
@@ -538,8 +558,8 @@ async function handleVintedLink(req: Request, res: Response) {
 
     const finalTitle = title || fallbackTitle;
     const finalPrice = price;
-    const favSafe = favoritesCount !== null ? favoritesCount : 0;
-    const viewsSafe = viewsCount !== null ? viewsCount : 0;
+    const favSafe = favoritesCount !== null ? favoritesCount : req.query.refresh === '1' ? null : 0;
+    const viewsSafe = viewsCount !== null ? viewsCount : req.query.refresh === '1' ? null : 0;
 
     // Detect Category accurately from text & Vinted metadata
     const textCorpus = `${finalTitle} ${description} ${decodedUrl}`.toLowerCase();
@@ -653,6 +673,7 @@ async function handleVintedLink(req: Request, res: Response) {
       name: finalTitle,
       description,
       price: finalPrice,
+      priceKnown,
       currency: currency || "EUR",
       category: mappedCategory,
       favorites: favSafe,
@@ -665,6 +686,8 @@ async function handleVintedLink(req: Request, res: Response) {
       status: isSold ? "Πουλήθηκε" : isReserved ? "Κρατημένο" : "Διαθέσιμο",
       isSold,
       isReserved,
+      availabilityKnown,
+      availability,
       brand,
       condition: cleanCondition,
       stock: isSold ? 0 : 1,
@@ -743,3 +766,5 @@ app.use(express.static(path.join(process.cwd(), "public")));
 
 
 export { app };
+
+
