@@ -107,10 +107,10 @@ export const App: React.FC = () => {
   const totalCartCount = cartItems.reduce((acc, ci) => acc + ci.quantity, 0);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafafa] text-[#1c1917]">
+    <div className="min-h-screen w-full min-w-0 flex flex-col bg-[#fafafa] text-[#1c1917]">
       {/* Discreet owner banner when admin view is active */}
       {currentMode === 'admin' && (
-        <div className="bg-stone-900 text-stone-200 border-b border-stone-800 px-4 py-2.5 flex items-center justify-between text-xs z-50">
+        <div className="bg-stone-900 text-stone-200 border-b border-stone-800 px-4 py-2.5 flex flex-wrap gap-3 items-center justify-between text-xs z-50">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-bold tracking-wider uppercase text-[11px] text-white">
@@ -140,7 +140,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Body */}
-      <main className="flex-1">
+      <main className="flex-1 min-w-0 w-full">
         {currentMode === 'shop' && (
           <ShopView onAddToCart={handleAddToCart} />
         )}
