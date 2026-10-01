@@ -22,5 +22,11 @@ await build({
   },
 });
 
+await build({
+  entryPoints: [join(source, "orders.ts")], outfile: join(output, "orders.mjs"),
+  bundle: true, platform: "node", format: "esm", packages: "bundle", target: "node20",
+  banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' },
+});
+
 console.log("Netlify Functions prepared in .netlify/functions-dist");
 
