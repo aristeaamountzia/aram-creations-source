@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { OrdersManager } from './OrdersManager';
+import { VintedRefresh } from './VintedRefresh';
 import { db, auth, storage } from "../firebase";
 import {
   collection,
@@ -2273,116 +2274,6 @@ interface BackOfficeViewProps {
                 return String(item?.sourceUrl || item?.vintedUrl || links.find(link => /vinted/i.test(String(link?.site || link?.label || '')))?.url || '').trim();
             };
 
-            const handleRefreshSelectedVintedItems = async () => {
-                if (!currentUser) {
-                    setVintedRefreshResult({ error: true, message: 'Πρώτα κάνε σύνδεση στο Back Office.' });
-                    return;
-                }
-
-                const itemsToRefresh = selectedItems.filter(item => getVintedSourceUrl(item));
-                if (!itemsToRefresh.length) {
-                    setVintedRefreshResult({ error: true, message: 'Δεν υπάρχουν επιλεγμένα προϊόντα με Vinted link.' });
-                    return;
-                }
-                if (itemsToRefresh.length > 500) {
-                    setVintedRefreshResult({ error: true, message: 'Επίλεξε έως 500 προϊόντα ανά ανανέωση.' });
-                    return;
-                }
-
-                setIsRefreshingSelectedVintedItems(true);
-                setVintedRefreshResult(null);
-                const updates = [];
-                const errors = [];
-                let requestCount = 0;
-
-                try {
-                    for (const item of itemsToRefresh) {
-                        if (requestCount > 0) await waitForVintedRequestWindow();
-                        requestCount += 1;
-                        const sourceUrl = getVintedSourceUrl(item);
-                        try {
-                            const response = await fetch(`${getVintedApis().link}?url=${encodeURIComponent(sourceUrl)}`);
-                            const payload = await response.json();
-                            if (!response.ok || !payload?.ok || !payload.item) {
-                                throw new Error(payload?.error || `Αποτυχία ανάκτησης (${response.status}).`);
-                            }
-
-                            const row = payload.item;
-                            const newData = {};
-                            const oldData = {};
-                            const rememberChange = (key, value) => {
-                                oldData[key] = item[key] ?? null;
-                                newData[key] = value;
-                            };
-                            const basePrice = normalizeVintedPrice(row.price);
-                            if (basePrice > 0) {
-                                const sitePrice = calculateVintedAdjustedPrice(basePrice);
-                                rememberChange('price', sitePrice);
-                                rememberChange('vintedBasePrice', basePrice);
-                                rememberChange('vintedPricing', {
-                                    vintedBasePrice: basePrice,
-                                    buyerFixed: parseVintedMoney(vintedPricingSettings.buyerFixed),
-                                    buyerPercent: parseVintedMoney(vintedPricingSettings.buyerPercent),
-                                    shippingMin: parseVintedMoney(vintedPricingSettings.shippingMin),
-                                    estimatedTotal: basePrice + parseVintedMoney(vintedPricingSettings.buyerFixed) + basePrice * parseVintedMoney(vintedPricingSettings.buyerPercent) / 100 + parseVintedMoney(vintedPricingSettings.shippingMin),
-                                    sitePrice,
-                                    rounding: vintedPricingSettings.rounding,
-                                    parcelProfile: 'small_parcel_gr'
-                                });
-                            }
-
-                            const rawFavorites = row.vintedFavorites ?? row.favorites ?? row.favourite ?? row.favourites ?? row.likes ?? row.favoritesCount ?? row.favouritesCount ?? row.favoriteCount ?? row.favouriteCount;
-                            const favorites = rawFavorites === null || rawFavorites === undefined || rawFavorites === '' ? null : Number(rawFavorites);
-                            if (Number.isFinite(favorites) && favorites >= 0) {
-                                rememberChange('vintedFavorites', favorites);
-                                rememberChange('favorites', favorites);
-                            }
-
-                            const rawViews = row.vintedViews ?? row.views ?? row.viewCount ?? row.viewsCount ?? row.view_count ?? row.views_count;
-                            const views = rawViews === null || rawViews === undefined || rawViews === '' ? null : Number(rawViews);
-                            if (Number.isFinite(views) && views >= 0) rememberChange('vintedViews', views);
-
-                            if (row.isSold === true || row.status === 'Πουλήθηκε' || /^sold$/i.test(String(row.status || ''))) {
-                                rememberChange('status', 'Πουλήθηκε');
-                                rememberChange('stock', 0);
-                            } else if (row.isReserved === true || row.status === 'Κρατημένο' || /^reserved$/i.test(String(row.status || ''))) {
-                                rememberChange('status', 'Κρατημένο');
-                            }
-
-                            if (!Object.keys(newData).length) {
-                                errors.push(`${item.name || sourceUrl}: δεν βρέθηκαν πεδία για ενημέρωση.`);
-                                continue;
-                            }
-
-                            const backupKeys = ['price', 'vintedBasePrice', 'vintedPricing', 'vintedFavorites', 'favorites', 'vintedViews', 'status', 'stock', 'vintedRefreshBackup', 'lastVintedRefreshAt'];
-                            const backup = Object.fromEntries(backupKeys.map(key => [key, item[key] ?? null]));
-                            oldData.vintedRefreshBackup = item.vintedRefreshBackup ?? null;
-                            oldData.lastVintedRefreshAt = item.lastVintedRefreshAt ?? null;
-                            newData.vintedRefreshBackup = { at: new Date().toISOString(), data: backup };
-                            newData.lastVintedRefreshAt = new Date().toISOString();
-                            newData.updatedAt = serverTimestamp();
-                            updates.push({ id: item.id, oldData, newData });
-                        } catch (error) {
-                            errors.push(`${item.name || sourceUrl}: ${error.message}`);
-                        }
-                    }
-
-                    if (updates.length) {
-                        const batch = writeBatch(db);
-                        updates.forEach(update => batch.update(doc(db, 'jewelry', update.id), update.newData));
-                        await batch.commit();
-                        pushUndoAction({ type: 'BULK_UPDATE', items: updates, message: `Ανανεώθηκαν δεδομένα Vinted για ${updates.length} προϊόντα.` });
-                    }
-
-                    const message = `Ανανεώθηκαν ${updates.length} από ${itemsToRefresh.length} προϊόντα.${errors.length ? ` Προβλήματα: ${errors.join(' · ')}` : ''}`;
-                    setVintedRefreshResult({ error: errors.length > 0, message });
-                } catch (error) {
-                    setVintedRefreshResult({ error: true, message: `Η ανανέωση δεν ολοκληρώθηκε: ${error.message}` });
-                } finally {
-                    setIsRefreshingSelectedVintedItems(false);
-                }
-            };
-
             const extensionFromContentType = (contentType) => {
                 if (/png/i.test(contentType || '')) return 'png';
                 if (/webp/i.test(contentType || '')) return 'webp';
@@ -3544,9 +3435,16 @@ interface BackOfficeViewProps {
                         </div>
                         {selectedItemIds.length > 0 && (
                             <div className="flex flex-wrap gap-2">
-                                <button onClick={handleRefreshSelectedVintedItems} disabled={isRefreshingSelectedVintedItems || !selectedItems.some(item => getVintedSourceUrl(item))} className="px-4 py-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold hover:bg-amber-100 transition disabled:opacity-50">
-                                    {isRefreshingSelectedVintedItems ? 'Ανανέωση…' : `Ανανέωση Vinted (${selectedItems.filter(item => getVintedSourceUrl(item)).length})`}
-                                </button>
+                                <VintedRefresh items={selectedItems} sourceUrl={getVintedSourceUrl} endpoint={getVintedApis().link} pricing={(basePrice) => ({
+                                    vintedBasePrice: basePrice,
+                                    buyerFixed: parseVintedMoney(vintedPricingSettings.buyerFixed),
+                                    buyerPercent: parseVintedMoney(vintedPricingSettings.buyerPercent),
+                                    shippingMin: parseVintedMoney(vintedPricingSettings.shippingMin),
+                                    estimatedTotal: basePrice + parseVintedMoney(vintedPricingSettings.buyerFixed) + basePrice * parseVintedMoney(vintedPricingSettings.buyerPercent) / 100 + parseVintedMoney(vintedPricingSettings.shippingMin),
+                                    sitePrice: calculateVintedAdjustedPrice(basePrice),
+                                    rounding: vintedPricingSettings.rounding,
+                                    parcelProfile: 'small_parcel_gr'
+                                })} />
                                 <button onClick={() => setIsBulkOpen(true)} className="px-4 py-2 bg-stone-900 text-white rounded-lg text-xs font-bold hover:bg-stone-800 transition">Μαζική επεξεργασία</button>
                                 <button onClick={handleBulkDuplicate} className="px-4 py-2 bg-stone-100 text-stone-700 rounded-lg text-xs font-bold hover:bg-stone-200 transition">Αντιγραφή</button>
                                 <button onClick={handleBulkDelete} className="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg text-xs font-bold hover:bg-rose-100 transition">Διαγραφή</button>
@@ -5438,4 +5336,5 @@ interface BackOfficeViewProps {
                 </div>
             );
         }
+
 
