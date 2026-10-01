@@ -370,13 +370,6 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
         isDark ? 'border-stone-800 bg-[#0F1012]' : 'border-stone-200 bg-white'
       }`}>
         <div className="mx-auto max-w-4xl">
-          <span className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-semibold uppercase tracking-wider ${
-            isDark ? 'border-stone-700 bg-stone-800 text-stone-200' : 'border-stone-200 bg-stone-50 text-stone-600'
-          }`}>
-            <Palette className="h-3.5 w-3.5" />
-            Aram Creations Atelier
-          </span>
-
           <h1 className={`mt-4 text-3xl font-bold tracking-tight md:text-4xl ${
             isDark ? 'text-stone-100' : 'text-stone-900'
           }`}>
@@ -1080,4 +1073,3 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     </div>
   );
 };
-
