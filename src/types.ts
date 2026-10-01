@@ -153,6 +153,9 @@ export interface OrderRecord {
   total: number;
   shippingMethod: string;
   paymentMethod: string;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered';
+  status: 'pending' | 'waiting_payment' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
+  number?: string;
+  tracking?: string;
   createdAt: any;
 }
+
