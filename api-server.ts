@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
 import path from "path";
+import { isVintedHost as validVintedHost } from './src/lib/vinted-url';
 import { timingSafeEqual } from "node:crypto";
 import { GoogleGenAI } from "@google/genai";
 import { getApps, initializeApp } from "firebase-admin/app";
@@ -208,9 +209,9 @@ async function handleVintedLink(req: Request, res: Response) {
       return res.status(400).json({ ok: false, error: "Invalid URL format" });
     }
     const decodedUrl = listingUrl.toString();
-    const isVintedHost = /^(?:www\.)?vinted\.[a-z.]+$/i.test(listingUrl.hostname);
+    const isVintedHost = validVintedHost(listingUrl.hostname);
     const idMatch = listingUrl.pathname.match(/^\/items\/(\d+)(?:-|\/|$)/i);
-    if (!/^https?:$/.test(listingUrl.protocol) || !isVintedHost || !idMatch) {
+    if (listingUrl.protocol !== 'https:' || listingUrl.username || listingUrl.password || listingUrl.port || !isVintedHost || !idMatch) {
       return res.status(400).json({ ok: false, error: "Enter a valid public Vinted item link." });
     }
     const vintedId = idMatch[1];
@@ -240,7 +241,7 @@ async function handleVintedLink(req: Request, res: Response) {
         upstreamStatus = response.status;
         const finalUrl = new URL(response.url);
         const finalItemId = finalUrl.pathname.match(/^\/items\/(\d+)(?:-|\/|$)/i)?.[1];
-        if (response.ok && /^(?:www\.)?vinted\.[a-z.]+$/i.test(finalUrl.hostname) && finalItemId === vintedId) {
+        if (response.ok && validVintedHost(finalUrl.hostname) && finalItemId === vintedId) {
           html = await response.text();
           break;
         }
