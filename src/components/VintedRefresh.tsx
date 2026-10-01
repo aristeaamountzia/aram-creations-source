@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { applyVintedRefresh } from '../lib/vinted-storage';
 import { db } from '../firebase';
-import { refreshBaseline, vintedRefreshPatch } from '../lib/vinted-refresh';
+import { vintedRefreshPatch } from '../lib/vinted-refresh';
 
-type Row = { item: any; patch: any; notes: string[]; error?: string; selected: boolean; result?: string };
+type Row = { item: any; patch: any; notes: string[]; error?: string; selected: boolean; result?: string; checkedAt?: string; remotePrice?: unknown; remoteAvailability?: string };
 export function VintedRefresh({ items, sourceUrl, endpoint, pricing }: { items: any[]; sourceUrl: (item: any) => string; endpoint: string; pricing: (amount: number) => any }) {
   const [open, setOpen] = useState(false), [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false), [applying, setApplying] = useState(false), [progress, setProgress] = useState('');
@@ -24,7 +24,7 @@ export function VintedRefresh({ items, sourceUrl, endpoint, pricing }: { items: 
           const expectedId = new URL(sourceUrl(item)).pathname.match(/\/items\/(\d+)/)?.[1];
           if (!expectedId || String(payload.item.id) !== expectedId) throw new Error('Τα στοιχεία δεν αντιστοιχούν στο επιλεγμένο Vinted link.');
           const update = vintedRefreshPatch(item, payload.item, pricing(Number(payload.item.price)));
-          setRows(prev => [...prev, { item, ...update, selected: Object.keys(update.patch).length > 0 }]);
+          setRows(prev => [...prev, { item, ...update, selected: Object.keys(update.patch).length > 0, checkedAt: new Date().toLocaleTimeString('el-GR'), remotePrice: payload.item.priceKnown ? payload.item.price : undefined, remoteAvailability: payload.item.availabilityKnown ? payload.item.isSold ? 'Πουλήθηκε' : payload.item.isReserved ? 'Κρατημένο' : payload.item.availability === 'available' ? 'Διαθέσιμο' : 'Μη διαθέσιμο' : 'Δεν επιβεβαιώθηκε' }]);
         } catch (error: any) {
           if (controller.signal.aborted) break;
           setRows(prev => [...prev, { item, patch: {}, notes: [], error: error.message, selected: false }]);
@@ -38,15 +38,7 @@ export function VintedRefresh({ items, sourceUrl, endpoint, pricing }: { items: 
     setApplying(true); let saved = 0, failed = 0;
     for (const row of rows.filter(row => row.selected && !row.error && !row.result)) {
       try {
-        await runTransaction(db, async transaction => {
-          const ref = doc(db, 'jewelry', row.item.id), snapshot = await transaction.get(ref);
-          if (!snapshot.exists()) throw new Error('Το προϊόν διαγράφηκε.');
-          const latest = snapshot.data();
-          if (refreshBaseline(latest) !== refreshBaseline(row.item)) throw new Error('Το προϊόν άλλαξε μετά τον έλεγχο. Έλεγξέ το ξανά.');
-          if (Object.keys(latest.checkoutReservations || {}).length && ('stock' in row.patch || 'status' in row.patch)) throw new Error('Νέα δέσμευση παραγγελίας· έλεγξε ξανά.');
-          const backup = Object.fromEntries(Object.keys(row.patch).map(key => [key, latest[key] ?? null]));
-          transaction.update(ref, { ...row.patch, vintedRefreshBackup: { at: new Date().toISOString(), data: backup }, lastVintedRefreshAt: new Date().toISOString(), updatedAt: serverTimestamp() });
-        });
+        await applyVintedRefresh(db, row.item.id, row.item, row.patch);
         saved++; setRows(prev => prev.map(r => r.item.id === row.item.id ? { ...r, selected: false, result: 'Αποθηκεύτηκε' } : r));
       } catch (error: any) {
         failed++; setRows(prev => prev.map(r => r.item.id === row.item.id ? { ...r, selected: false, error: error.message } : r));
@@ -62,7 +54,8 @@ export function VintedRefresh({ items, sourceUrl, endpoint, pricing }: { items: 
         <div className="p-5 border-b"><h2 id="vinted-refresh-heading" className="text-lg font-bold">Ανανέωση από Vinted</h2><p className="text-sm text-stone-600 mt-2">Πρώτα ελέγχουμε, μετά αποθηκεύεις. Τίτλοι, περιγραφές, φωτογραφίες και τοπικά αγαπημένα δεν αλλάζουν. Η τιμή shop περιλαμβάνει τις ρυθμίσεις χρεώσεων Vinted που έχεις ορίσει.</p>{candidates.length > 50 && <p className="text-sm text-amber-700">Θα ελεγχθούν τα πρώτα 50 επιλεγμένα προϊόντα.</p>}<p role="status" aria-live="polite" className="text-sm font-bold mt-3">{progress}</p></div>
         <div className="overflow-y-auto p-4 space-y-3 min-h-0">{rows.map(row => <div key={row.item.id} className="border rounded-xl p-3">
           <label className="flex items-center gap-3 font-bold text-sm"><input type="checkbox" checked={row.selected} disabled={busy || applying || !!row.error || !!row.result || !Object.keys(row.patch).length} onChange={e => setRows(prev => prev.map(r => r.item.id === row.item.id ? { ...r, selected: e.target.checked } : r))} />{row.item.name || row.item.id}</label>
-          {Object.entries(row.patch).filter(([key]) => labels[key]).map(([key, value]) => <p key={key} className="text-sm mt-1">{labels[key]}: {String(row.item[key] ?? '—')} → <strong>{String(value)}</strong>{key.includes('Price') || key === 'price' ? ' €' : ''}</p>)}
+          {row.checkedAt && <p className="text-xs text-stone-600 mt-2">Έλεγχος {row.checkedAt} · Τιμή Vinted: {row.remotePrice === undefined ? 'Δεν επιβεβαιώθηκε' : `${row.remotePrice} €`} · Κατάσταση Vinted: {row.remoteAvailability}</p>}
+          {Object.entries(row.patch).filter(([key]) => labels[key]).map(([key, value]) => <p key={key} className="text-sm mt-1">{labels[key]}: {String(row.item[key] ?? '—')} → <strong>{String(value)}</strong>{key === 'vintedBasePrice' || key === 'price' ? ' €' : ''}</p>)}
           {!Object.keys(row.patch).length && !row.error && <p className="text-sm text-stone-500 mt-2">Καμία αλλαγή στα διαθέσιμα στοιχεία.</p>}
           {row.notes.map(note => <p key={note} className="text-xs text-amber-800 mt-2">{note}</p>)}
           {row.error && <p role="alert" className="text-sm text-rose-700 mt-2">{row.error} Δεν αποθηκεύτηκε αλλαγή για αυτό το προϊόν.</p>}
@@ -73,4 +66,5 @@ export function VintedRefresh({ items, sourceUrl, endpoint, pricing }: { items: 
     </div>}
   </>;
 }
+
 
