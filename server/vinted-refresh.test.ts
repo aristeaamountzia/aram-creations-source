@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { refreshBaseline, vintedRefreshPatch } from '../src/lib/vinted-refresh';
+import { refreshBaseline, vintedRefreshPatch, vintedSourceUrl } from '../src/lib/vinted-refresh';
 const current = { price: 12, status: 'Διαθέσιμο', stock: 2, shopFavorites: 8, name: 'Local title' };
 test('missing metrics, invalid price and unknown availability do not erase local data', () => {
   const result = vintedRefreshPatch(current, { price: null, vintedFavorites: null, availabilityKnown: false }, { sitePrice: 0 });
@@ -26,5 +26,12 @@ test('zero metrics are valid, shop favorites and descriptions remain untouched',
 test('baseline detects new orders and price changes before applying preview', () => {
   assert.notEqual(refreshBaseline(current), refreshBaseline({ ...current, checkoutReservations: { newOrder: 1 } }));
   assert.notEqual(refreshBaseline(current), refreshBaseline({ ...current, price: 20 }));
+});
+test('a non-Vinted source does not hide a valid Vinted purchase link', () => {
+  assert.equal(vintedSourceUrl({ sourceUrl: 'https://wix.com/item', purchaseLinks: [{ site: 'Αγορά', url: 'https://www.vinted.gr/items/123-test' }] }), 'https://www.vinted.gr/items/123-test');
+  assert.equal(vintedSourceUrl({ sourceUrl: 'https://vinted.gr.evil.com/items/123-test' }), '');
+});
+test('map key order does not create a false concurrent-edit conflict', () => {
+  assert.equal(refreshBaseline({ purchaseLinks: [{ site: 'Vinted', url: 'link' }] }), refreshBaseline({ purchaseLinks: [{ url: 'link', site: 'Vinted' }] }));
 });
 
