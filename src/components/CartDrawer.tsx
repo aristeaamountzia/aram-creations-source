@@ -8,6 +8,7 @@ interface CartDrawerProps {
   items: CartItem[];
   onUpdateQty: (itemId: string, delta: number) => void;
   onRemoveItem: (itemId: string) => void;
+  onCompleted: () => void;
 }
 
 const SHIPPING_OPTIONS = [
@@ -22,12 +23,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   items,
   onUpdateQty,
   onRemoveItem,
+  onCompleted,
 }) => {
   const [selectedShipping, setSelectedShipping] = useState(SHIPPING_OPTIONS[0].id);
   const [isCheckoutStep, setIsCheckoutStep] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
-  const [emailDraftUrl, setEmailDraftUrl] = useState<string | null>(null);
+  const [orderError, setOrderError] = useState('');
+  const [savedTotal, setSavedTotal] = useState<number | null>(null);
+  const [website, setWebsite] = useState('');
 
   // Customer form state
   const [customer, setCustomer] = useState<OrderCustomerInfo>({
@@ -50,50 +54,41 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customer.name || !customer.phone || !customer.address) {
+    if (isSubmitting || !items.length) return;
+    if (!customer.name || !customer.phone || !customer.email || (selectedShipping !== 'pickup' && (!customer.address || !customer.city))) {
       alert('Παρακαλώ συμπληρώστε όλα τα απαιτούμενα πεδία αποστολής.');
       return;
     }
 
     setIsSubmitting(true);
-    const orderRef = 'ARAM-' + Math.floor(100000 + Math.random() * 900000);
-    const itemLines = items.map(({ item, quantity, customInscription }) => {
-      const name = item.name || item.title || 'Χειροποίητο προϊόν';
-      const inscription = customInscription || item.customInscription;
-      return `• ${name} × ${quantity} — €${(Number(item.price) || 0).toFixed(2)}${inscription ? ` (Χάραξη: ${inscription})` : ''}`;
-    });
-    const subject = `Αίτημα παραγγελίας ${orderRef}`;
-    const body = [
-      `Αίτημα παραγγελίας ${orderRef}`,
-      '',
-      `Όνομα: ${customer.name}`,
-      `Email: ${customer.email || 'Δεν δόθηκε'}`,
-      `Τηλέφωνο: ${customer.phone}`,
-      `Διεύθυνση: ${customer.address}, ${customer.city} ${customer.postalCode}`,
-      `Μεταφορική: ${activeShippingObj.label}`,
-      `Τρόπος πληρωμής: ${{ iris: 'IRIS Payments', bank: 'Κατάθεση', cod: 'Αντικαταβολή' }[paymentMethod] || paymentMethod}`,
-      `Σημειώσεις: ${customer.notes || 'Καμία'}`,
-      '',
-      'Προϊόντα:',
-      ...itemLines,
-      '',
-      `Υποσύνολο: €${subtotal.toFixed(2)}`,
-      `Μεταφορικά: €${shippingCost.toFixed(2)}`,
-      `Σύνολο: €${total.toFixed(2)}`,
-      '',
-      'Σημείωση: πρόκειται για αίτημα. Η παραγγελία δεν έχει καταχωρηθεί μέχρι να σταλεί αυτό το email και να επιβεβαιωθεί από το εργαστήριο.'
-    ].join('\n');
-    const mailto = `mailto:aristeaamnta@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setEmailDraftUrl(mailto);
-    setCompletedOrderNumber(orderRef);
-    window.location.href = mailto;
-    setIsSubmitting(false);
+    setOrderError('');
+    try {
+      const payload = { customer, expectedTotal: Math.round(total * 100) / 100, shippingMethod: selectedShipping, paymentMethod, website, items: items.map(({ item, quantity, customInscription }) => ({ id: item.id, quantity, customInscription: customInscription || item.customInscription || '' })) };
+      const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(payload))))).map(n => n.toString(16).padStart(2, '0')).join('');
+      let requestId = crypto.randomUUID();
+      try {
+        const prior = JSON.parse(localStorage.getItem('aram_checkout_request') || 'null');
+        if (prior?.hash === hash && prior?.requestId) requestId = prior.requestId;
+        localStorage.setItem('aram_checkout_request', JSON.stringify({ hash, requestId }));
+      } catch { /* Browser storage is optional. */ }
+      const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, requestId }) });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || 'Η παραγγελία δεν καταχωρήθηκε. Δοκίμασε ξανά.');
+      setCompletedOrderNumber(result.order.number);
+      setSavedTotal(result.order.total);
+      onCompleted();
+      setCustomer({ name: '', email: '', phone: '', address: '', city: '', postalCode: '', notes: '' });
+      try { localStorage.removeItem('aram_checkout_request'); } catch { /* Optional storage. */ }
+    } catch (error) {
+      setOrderError(error instanceof Error ? error.message : 'Η σύνδεση διακόπηκε. Δοκίμασε ξανά.');
+    } finally { setIsSubmitting(false); }
   };
 
   const handleClose = () => {
+    if (isSubmitting) return;
     setIsCheckoutStep(false);
     setCompletedOrderNumber(null);
-    setEmailDraftUrl(null);
+    setOrderError('');
     onClose();
   };
 
@@ -144,19 +139,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <h3 className="text-2xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
-                Το αίτημα παραγγελίας είναι έτοιμο
+                Η παραγγελία καταχωρήθηκε
               </h3>
               <p className="text-sm font-bold text-stone-700" style={{ fontFamily: 'Jura, sans-serif' }}>
                 Κωδικός αναφοράς: #{completedOrderNumber}
               </p>
               <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
-                Ετοιμάσαμε προσυμπληρωμένο email. Η παραγγελία δεν έχει σταλεί ή καταχωρηθεί ακόμη· πατήστε «Αποστολή» στην εφαρμογή email για να σταλεί το αίτημα. Το καλάθι σας παραμένει αποθηκευμένο.
+                Λάβαμε την παραγγελία και κρατήσαμε τα προϊόντα. Θα επικοινωνήσουμε μαζί σας για επιβεβαίωση και οδηγίες πληρωμής. Δεν έχει γίνει αυτόματη χρέωση. Κρατήστε τον κωδικό παραγγελίας σας.
               </p>
-              {emailDraftUrl && (
-                <a href={emailDraftUrl} className="inline-block text-sm font-bold underline text-stone-900">
-                  Άνοιγμα email ξανά
-                </a>
-              )}
+              <p className="font-bold">Σύνολο: €{savedTotal?.toFixed(2)}</p>
               <div className="pt-6">
                 <button
                   onClick={handleClose}
@@ -199,10 +190,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
-                    Email
+                    Email *
                   </label>
                   <input
                     type="email"
+                    required
                     value={customer.email}
                     onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
                     placeholder="name@example.com"
@@ -217,7 +209,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </label>
                 <input
                   type="text"
-                  required
+                  required={selectedShipping !== 'pickup'}
                   value={customer.address}
                   onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
                   placeholder="Οδός και αριθμός ή σημείο BoxNow Locker"
@@ -232,7 +224,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   </label>
                   <input
                     type="text"
-                    required
+                    required={selectedShipping !== 'pickup'}
                     value={customer.city}
                     onChange={(e) => setCustomer({ ...customer, city: e.target.value })}
                     placeholder="π.χ. Αθήνα, Θεσσαλονίκη"
@@ -284,6 +276,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   </button>
                   <button
                     type="button"
+                    disabled={selectedShipping !== 'courier'}
                     onClick={() => setPaymentMethod('cod')}
                     className={`p-2.5 rounded-xl border text-xs text-center transition ${
                       paymentMethod === 'cod'
@@ -301,6 +294,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   Σημειώσεις / Οδηγίες Παράδοσης
                 </label>
                 <textarea
+                  maxLength={1000}
                   value={customer.notes}
                   onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
                   placeholder="π.χ. Κουδούνι, όροφος, επιθυμητή ώρα"
@@ -308,6 +302,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-900 outline-none focus:border-stone-900"
                 />
               </div>
+              <label className="hidden" aria-hidden="true">Website<input value={website} onChange={e => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" /></label>
+              <p className="text-xs text-stone-500">Τα στοιχεία σας αποθηκεύονται για την εξυπηρέτηση της παραγγελίας. Η πληρωμή επιβεβαιώνεται από το εργαστήριο. Αντικαταβολή μόνο με courier.</p>
             </form>
           ) : items.length === 0 ? (
             /* Empty Cart */
@@ -356,6 +352,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         </button>
                         <span className="text-xs font-bold px-1 text-stone-900">{quantity}</span>
                         <button
+                          disabled={quantity >= Number(item.stock ?? item.stockCount ?? 1)}
                           onClick={() => onUpdateQty(item.id, 1)}
                           className="w-6 h-6 rounded-lg bg-white border border-stone-200 text-stone-800 text-xs font-bold flex items-center justify-center hover:bg-stone-100 transition shadow-sm"
                         >
@@ -389,7 +386,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       <button
                         key={opt.id}
                         type="button"
-                        onClick={() => setSelectedShipping(opt.id)}
+                        onClick={() => { setSelectedShipping(opt.id); if (opt.id !== 'courier' && paymentMethod === 'cod') setPaymentMethod('iris'); }}
                         className={`w-full p-2.5 rounded-xl border text-xs flex items-center justify-between transition ${
                           selectedShipping === opt.id
                             ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
@@ -409,6 +406,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           )}
         </div>
 
+        {orderError && <p role="alert" className="m-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{orderError}</p>}
         {/* Drawer Footer */}
         {!completedOrderNumber && items.length > 0 && (
           <div className="p-6 border-t border-stone-200 bg-stone-50 space-y-4">
@@ -444,10 +442,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 className="w-full py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
               >
                 {isSubmitting ? (
-                  <span>Προετοιμασία email...</span>
+                  <span>Καταχώρηση...</span>
                 ) : (
                   <>
-                    <span>Συνέχεια με email</span>
+                    <span>Καταχώρηση παραγγελίας</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -457,7 +455,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 onClick={() => setIsCheckoutStep(true)}
                 className="w-full py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
               >
-                <span>Ολοκλήρωση Παραγγελίας (Direct Checkout)</span>
+                <span>Στοιχεία και επιβεβαίωση</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             )}
@@ -467,3 +465,4 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     </div>
   );
 };
+
