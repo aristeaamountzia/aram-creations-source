@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { OrdersManager } from './OrdersManager';
 import { db, auth, storage } from "../firebase";
 import {
   collection,
@@ -96,7 +97,7 @@ interface BackOfficeViewProps {
             borderRadius: '0.5rem',
             heroTitleSize: 'text-2xl md:text-3xl'
         };
-        const isSoldItem = (item) => item.status === 'Πουλήθηκε' || (item.stock !== undefined && item.stock !== null && Number(item.stock) <= 0);
+        const isSoldItem = (item) => item.status === 'Πουλήθηκε' || (item.status !== 'Κρατημένο' && item.stock !== undefined && item.stock !== null && Number(item.stock) <= 0);
         const isAvailableItem = (item) => item.status === 'Διαθέσιμο' && (item.stock === undefined || item.stock === null || Number(item.stock) > 0);
         const isUnavailableItem = (item) => !isAvailableItem(item) && !isSoldItem(item);
         const splitTags = (value) => value.split(',').map(v => v.trim()).filter(Boolean);
@@ -222,7 +223,7 @@ interface BackOfficeViewProps {
         };
 
         export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
-            const [activeCollection, setActiveCollection] = useState<'jewelry' | 'portfolio'>('jewelry');
+            const [activeCollection, setActiveCollection] = useState<'jewelry' | 'portfolio' | 'orders'>('jewelry');
             const [firebaseReady, setFirebaseReady] = useState(false);
             const [authReady, setAuthReady] = useState(false);
             const [currentUser, setCurrentUser] = useState(null);
@@ -3435,6 +3436,7 @@ interface BackOfficeViewProps {
                 );
             }
 
+            if (activeCollection === 'orders') return <OrdersManager onBack={() => setActiveCollection('jewelry')} />;
             if (activeCollection === 'portfolio') {
                 return <PortfolioManager onBack={() => setActiveCollection('jewelry')} />;
             }
@@ -3444,6 +3446,7 @@ interface BackOfficeViewProps {
                     
                     <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-5 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-stone-200">
                         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Κατάλογος">
+                            <button type="button" role="tab" aria-selected={false} onClick={() => setActiveCollection('orders')} className="px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold">Παραγγελίες</button>
                             <button type="button" role="tab" aria-selected={activeCollection === 'jewelry'} onClick={() => { setActiveCollection('jewelry'); setSelectedCategory('Όλα'); setStatsFilter('all'); }} className={activeCollection === 'jewelry' ? 'px-3 py-2 rounded-lg bg-stone-900 text-white text-sm font-bold' : 'px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold'}>Shop</button>
                             <button type="button" role="tab" aria-selected={activeCollection === 'portfolio'} onClick={() => { setActiveCollection('portfolio'); setSelectedCategory('Όλα'); setStatsFilter('all'); }} className={activeCollection === 'portfolio' ? 'px-3 py-2 rounded-lg bg-stone-900 text-white text-sm font-bold' : 'px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold'}>Portfolio</button>
                         </div>
@@ -5435,3 +5438,4 @@ interface BackOfficeViewProps {
                 </div>
             );
         }
+
