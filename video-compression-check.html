@@ -1,0 +1,30 @@
+<!doctype html><html lang="el"><meta charset="utf-8"><title>Video compression verification</title><body style="font:16px system-ui;max-width:850px;margin:32px auto;padding:16px"><h1>Video compression verification</h1><label>Βίντεο δοκιμής<input type="file" accept="video/*" id="source"></label><p><button id="test">Δοκιμή συμπίεσης</button> <button id="cancel-test">Δοκιμή ακύρωσης</button></p><p id="status" role="status">Έτοιμο</p><pre id="result"></pre><video id="preview" controls style="max-width:500px;max-height:350px"></video><a id="download" hidden>Λήψη δοκιμαστικού βίντεο</a>
+<script type="module">
+import { prepareVideoUpload } from './src/lib/video-compression.ts';
+import { Input, ALL_FORMATS, BlobSource } from 'mediabunny';
+document.querySelector('#test').onclick=async()=>{
+ const status=document.querySelector('#status'),result=document.querySelector('#result'); result.textContent='';
+ try {
+  const fixture=document.querySelector('#source').files[0]; if(!fixture)throw Error('Choose fixture');
+  const compressed=await prepareVideoUpload(fixture,value=>status.textContent=value.text);
+  const input=new Input({formats:ALL_FORMATS,source:new BlobSource(compressed)});
+  try {
+   const video=await input.getPrimaryVideoTrack(),audio=await input.getPrimaryAudioTrack();
+   const width=await video.getDisplayWidth(),height=await video.getDisplayHeight(),duration=await input.computeDuration();
+   if(fixture.size<=30*1024*1024||compressed.size>=fixture.size||compressed.size>30*1024*1024||width>720||height>1280||!audio||duration<2||duration>4)throw Error('Output verification failed');
+   const url=URL.createObjectURL(compressed);document.querySelector('#preview').src=url;
+   const link=document.querySelector('#download');link.href=url;link.download=compressed.name;link.hidden=false;
+   result.textContent=JSON.stringify({pass:true,sourceBytes:fixture.size,outputBytes:compressed.size,type:compressed.type,width,height,duration,audioPreserved:!!audio},null,2);
+   status.textContent='PASS: actual video encoding, portrait dimensions, audio and size limits.';
+  }finally{input.dispose();}
+ }catch(error){status.textContent='FAIL';result.textContent=error.stack;}
+};
+document.querySelector('#cancel-test').onclick=async()=>{
+ const status=document.querySelector('#status'),fixture=document.querySelector('#source').files[0];if(!fixture){status.textContent='Choose fixture first';return;}
+ const controller=new AbortController();let aborted=false;
+ try {await prepareVideoUpload(fixture,value=>{status.textContent=value.text;if(value.percent>0)controller.abort();},controller.signal);}
+ catch(error){aborted=error.name==='AbortError';}
+ status.textContent=aborted?'PASS: cancellation stopped encoding worker before upload.':'FAIL: cancellation';
+};
+</script></body></html>
+
