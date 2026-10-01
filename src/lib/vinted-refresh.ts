@@ -1,3 +1,4 @@
+import { isVintedHost } from './vinted-url';
 export function vintedRefreshPatch(current: any, row: any, pricing: any) {
   const patch: Record<string, any> = {};
   const notes: string[] = [];
@@ -27,6 +28,14 @@ export function vintedRefreshPatch(current: any, row: any, pricing: any) {
 }
 
 export function refreshBaseline(item: any) {
-  return JSON.stringify([item.price ?? null, item.status ?? null, item.stock ?? null, item.checkoutReservations ?? {}, item.lastVintedRefreshAt ?? null, item.sourceUrl ?? null, item.purchaseLinks ?? null, item.postedPlatforms ?? null]);
+  const stable = (value: any): any => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])])) : value;
+  return JSON.stringify(stable([item.price ?? null, item.status ?? null, item.stock ?? null, item.checkoutReservations ?? {}, item.lastVintedRefreshAt ?? null, item.sourceUrl ?? null, item.purchaseLinks ?? null, item.productLinks ?? null, item.postedPlatforms ?? null]));
+}
+
+export function vintedSourceUrl(item: any) {
+  const links = [...(Array.isArray(item?.purchaseLinks) ? item.purchaseLinks : []), ...(Array.isArray(item?.productLinks) ? item.productLinks : []), ...(Array.isArray(item?.postedPlatforms) ? item.postedPlatforms : [])];
+  const candidates = [item?.vintedUrl, item?.sourceUrl, ...links.map(link => link?.url)];
+  for (const raw of candidates) { try { const url = new URL(String(raw || '').trim()); if (url.protocol === 'https:' && !url.username && !url.password && !url.port && isVintedHost(url.hostname) && /^\/items\/\d+(?:-|\/|$)/.test(url.pathname)) return url.href; } catch {} }
+  return '';
 }
 
