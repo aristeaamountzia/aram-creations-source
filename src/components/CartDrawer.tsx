@@ -6,22 +6,19 @@ interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   items: CartItem[];
-  onUpdateQty: (itemId: string, delta: number) => void;
   onRemoveItem: (itemId: string) => void;
   onCompleted: () => void;
 }
 
 const SHIPPING_OPTIONS = [
   { id: 'boxnow', label: 'BoxNow Locker 24/7', price: 2.5, freeThreshold: 45 },
-  { id: 'courier', label: 'Courier (ACS / Speedex)', price: 4.0, freeThreshold: 50 },
-  { id: 'pickup', label: 'Παραλαβή από Atelier', price: 0.0, freeThreshold: 0 }
+  { id: 'courier', label: 'Courier (ACS / Speedex)', price: 4.0, freeThreshold: 50 }
 ];
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
   isOpen,
   onClose,
   items,
-  onUpdateQty,
   onRemoveItem,
   onCompleted,
 }) => {
@@ -55,7 +52,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || !items.length) return;
-    if (!customer.name || !customer.phone || !customer.email || (selectedShipping !== 'pickup' && (!customer.address || !customer.city))) {
+    if (!customer.name || !customer.phone || !customer.email || (!customer.address || !customer.city)) {
       alert('Παρακαλώ συμπληρώστε όλα τα απαιτούμενα πεδία αποστολής.');
       return;
     }
@@ -110,9 +107,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </button>
             )}
             <div>
-              <div className="text-[10px] uppercase tracking-widest text-stone-400 font-bold">
-                Aram Creations Boutique
-              </div>
               <h2 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
                 {completedOrderNumber
                   ? 'Επιβεβαίωση Παραγγελίας'
@@ -124,13 +118,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           </div>
           <button
             onClick={handleClose}
+            aria-label="Κλείσιμο καλαθιού"
             className="p-1.5 rounded-lg text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Drawer Content */}
+        <p className="border-b border-teal-100 bg-teal-50 px-6 py-3 text-xs leading-relaxed">Για περισσότερη προστασία κατά την πληρωμή, προτείνουμε οι αγορές να γίνονται μέσω Vinted, από τον σύνδεσμο κάθε προϊόντος. Η προστασία ισχύει σύμφωνα με τους όρους της πλατφόρμας.</p>{/* Drawer Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {completedOrderNumber ? (
             /* Success confirmation */
@@ -209,7 +204,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </label>
                 <input
                   type="text"
-                  required={selectedShipping !== 'pickup'}
+                  required
                   value={customer.address}
                   onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
                   placeholder="Οδός και αριθμός ή σημείο BoxNow Locker"
@@ -224,7 +219,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   </label>
                   <input
                     type="text"
-                    required={selectedShipping !== 'pickup'}
+                    required
                     value={customer.city}
                     onChange={(e) => setCustomer({ ...customer, city: e.target.value })}
                     placeholder="π.χ. Αθήνα, Θεσσαλονίκη"
@@ -251,7 +246,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <CreditCard className="w-3.5 h-3.5 text-stone-800" />
                   <span>Τρόπος Πληρωμής</span>
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('iris')}
@@ -274,18 +269,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   >
                     Κατάθεση
                   </button>
-                  <button
-                    type="button"
-                    disabled={selectedShipping !== 'courier'}
-                    onClick={() => setPaymentMethod('cod')}
-                    className={`p-2.5 rounded-xl border text-xs text-center transition ${
-                      paymentMethod === 'cod'
-                        ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
-                        : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-                    }`}
-                  >
-                    Αντικαταβολή
-                  </button>
+
                 </div>
               </div>
 
@@ -303,7 +287,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 />
               </div>
               <label className="hidden" aria-hidden="true">Website<input value={website} onChange={e => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" /></label>
-              <p className="text-xs text-stone-500">Τα στοιχεία σας αποθηκεύονται για την εξυπηρέτηση της παραγγελίας. Η πληρωμή επιβεβαιώνεται από το εργαστήριο. Αντικαταβολή μόνο με courier.</p>
+              <p className="text-xs text-stone-500">Τα στοιχεία σας αποθηκεύονται για την εξυπηρέτηση της παραγγελίας. Η πληρωμή επιβεβαιώνεται από το εργαστήριο.</p>
             </form>
           ) : items.length === 0 ? (
             /* Empty Cart */
@@ -342,23 +326,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         €{item.price}
                       </div>
 
-                      {/* Qty controls */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <button
-                          onClick={() => onUpdateQty(item.id, -1)}
-                          className="w-6 h-6 rounded-lg bg-white border border-stone-200 text-stone-800 text-xs font-bold flex items-center justify-center hover:bg-stone-100 transition shadow-sm"
-                        >
-                          -
-                        </button>
-                        <span className="text-xs font-bold px-1 text-stone-900">{quantity}</span>
-                        <button
-                          disabled={quantity >= Number(item.stock ?? item.stockCount ?? 1)}
-                          onClick={() => onUpdateQty(item.id, 1)}
-                          className="w-6 h-6 rounded-lg bg-white border border-stone-200 text-stone-800 text-xs font-bold flex items-center justify-center hover:bg-stone-100 transition shadow-sm"
-                        >
-                          +
-                        </button>
-                      </div>
+                      <p className="mt-2 text-xs text-stone-500">Μοναδικό κομμάτι · 1 τεμάχιο</p>
                     </div>
 
                     <button
@@ -386,7 +354,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       <button
                         key={opt.id}
                         type="button"
-                        onClick={() => { setSelectedShipping(opt.id); if (opt.id !== 'courier' && paymentMethod === 'cod') setPaymentMethod('iris'); }}
+                        onClick={() => setSelectedShipping(opt.id)}
                         className={`w-full p-2.5 rounded-xl border text-xs flex items-center justify-between transition ${
                           selectedShipping === opt.id
                             ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
@@ -465,4 +433,3 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     </div>
   );
 };
-

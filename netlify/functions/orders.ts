@@ -3,6 +3,7 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { normalizeOrder, priceOrder, nextStatus, OrderError } from '../../server/orders-core';
+import { notifyOrder } from '../../server/order-notifications';
 
 const reply = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 function database() {
@@ -15,7 +16,7 @@ function database() {
   return { db: getFirestore(app), auth: getAuth(app) };
 }
 
-export function createOrdersHandler(connect: typeof database = database) {
+export function createOrdersHandler(connect: typeof database = database, notify: typeof notifyOrder = notifyOrder) {
 return async function handler(request: Request, context: { ip?: string }) {
   try {
     const { db, auth } = connect();
@@ -50,7 +51,7 @@ return async function handler(request: Request, context: { ip?: string }) {
           const reserved = Number(data.checkoutReservations?.[id] || 0);
           if (!reserved) continue;
           if (status === 'cancelled') {
-            transaction.update(product.ref, { stock: Math.max(0, Number(data.stock || 0)) + reserved, [`checkoutReservations.${id}`]: FieldValue.delete(), ...(data.status === 'Κρατημένο' || data.status === 'Πουλήθηκε' ? { status: 'Διαθέσιμο' } : {}) });
+            transaction.update(product.ref, { stock: 1, [`checkoutReservations.${id}`]: FieldValue.delete(), ...(data.status === 'Κρατημένο' || data.status === 'Πουλήθηκε' ? { status: 'Διαθέσιμο' } : {}) });
           } else if ((status === 'paid' || status === 'shipped') && Number(data.stock) === 0 && data.status === 'Κρατημένο') {
             transaction.update(product.ref, { status: 'Πουλήθηκε' });
           } else if (status === 'delivered') {
@@ -91,13 +92,15 @@ return async function handler(request: Request, context: { ip?: string }) {
       for (let index = 0; index < snapshots.length; index++) {
         const product = snapshots[index];
         const data = product.data()!;
-        const remaining = Number(data.stock ?? data.stockCount ?? 1) - input.items[index].quantity;
+        const remaining = 0;
         transaction.update(product.ref, { stock: remaining, [`checkoutReservations.${ref.id}`]: input.items[index].quantity, ...(remaining === 0 ? { status: 'Κρατημένο' } : {}) });
       }
       transaction.set(rateRef, { count: freshWindow ? 1 : rateData!.count + 1, startedAt: freshWindow ? now.getTime() : rateData!.startedAt, expiresAt: new Date(now.getTime() + 86400000) });
-      transaction.create(ref, { ...priced, customer: input.customer, shippingMethod: input.shippingMethod, paymentMethod: input.paymentMethod, number, status: 'pending', createdAt: now.toISOString(), updatedAt: now.toISOString(), requestHash, history: [{ status: 'pending', at: now.toISOString() }] });
+      transaction.create(ref, { ...priced, customer: input.customer, shippingMethod: input.shippingMethod, paymentMethod: input.paymentMethod, number, status: 'pending', emailNotification: 'pending', createdAt: now.toISOString(), updatedAt: now.toISOString(), requestHash, history: [{ status: 'pending', at: now.toISOString() }] });
+      transaction.create(db.doc(`orderNotifications/${ref.id}`), { state: 'pending', payload: { number, total: priced.total }, createdAt: now.toISOString() });
       return { id: ref.id, number, total: priced.total, subtotal: priced.subtotal, shippingCost: priced.shippingCost, status: 'pending' };
     });
+    await notify(db, receipt.id).catch(() => console.error('Order email remains queued'));
     return reply({ ok: true, order: receipt }, 201);
   } catch (error) {
     if (error instanceof OrderError) return reply({ error: error.message }, error.status);
@@ -108,4 +111,3 @@ return async function handler(request: Request, context: { ip?: string }) {
 }
 }
 export default createOrdersHandler();
-

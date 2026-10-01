@@ -17,14 +17,14 @@ test('validate customer, honeypot and payment method', () => {
   assert.throws(() => normalizeOrder(makeInput({ customer: { email: 'bad' } })));
   assert.throws(() => normalizeOrder(makeInput({ website: 'spam' })));
   assert.throws(() => normalizeOrder(makeInput({ paymentMethod: 'cod' })));
-  assert.doesNotThrow(() => normalizeOrder(makeInput({ shippingMethod: 'courier', paymentMethod: 'cod' })));
+  assert.throws(() => normalizeOrder(makeInput({ shippingMethod: 'courier', paymentMethod: 'cod' })));
 });
-test('shipping threshold uses exact cents, and pickup needs no address', () => {
+test('shipping threshold uses exact cents, and removed pickup is rejected', () => {
   assert.equal(priceOrder(normalizeOrder(makeInput()), [{ ...product, price: 45 }]).shippingCost, 0);
   assert.equal(priceOrder(normalizeOrder(makeInput()), [{ ...product, price: 44.99 }]).shippingCost, 2.5);
   assert.equal(priceOrder(normalizeOrder(makeInput({ shippingMethod: 'courier' })), [{ ...product, price: 50 }]).shippingCost, 0);
   const raw = makeInput({ shippingMethod: 'pickup' }); raw.customer.address = ''; raw.customer.city = '';
-  assert.equal(priceOrder(normalizeOrder(raw), [product]).shippingCost, 0);
+  assert.throws(() => normalizeOrder(raw));
 });
 test('reject zero or invalid catalog price', () => {
   for (const price of [0, -1, NaN, undefined]) assert.throws(() => priceOrder(normalizeOrder(makeInput()), [{ ...product, price }]));
@@ -37,4 +37,3 @@ test('status transitions prevent reopening cancelled orders or shipping unpaid o
   assert.throws(() => nextStatus('cancelled', 'paid'));
   assert.throws(() => nextStatus('delivered', 'cancelled'));
 });
-

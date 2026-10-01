@@ -1,5 +1,7 @@
 // @ts-nocheck
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
+import { CatalogBackups } from './CatalogBackups';
 import { OrdersManager } from './OrdersManager';
 import { VintedRefresh } from './VintedRefresh';
 import { MediaDownload } from './MediaDownload';
@@ -20,7 +22,7 @@ import {
   deleteDoc,
   serverTimestamp,
   query,
-  orderBy
+  orderBy, limit, getDoc
 } from "firebase/firestore";
 import {
   ref as firebaseRef,
@@ -58,7 +60,7 @@ interface BackOfficeViewProps {
         const IconUndo = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>;
 
         const BASE_CATEGORIES = ['Κολιέ', 'Δαχτυλίδια', 'Σκουλαρίκια', 'Βραχιόλια', 'Καρφίτσες', 'Σετ', 'Θήκες Κινητών'];
-        const BASE_STATUSES = ['Διαθέσιμο', 'Πουλήθηκε', 'Δωρίστηκε', 'Προσωπική Συλλογή', 'Υπό Κατασκευή'];
+        const BASE_STATUSES = ['Διαθέσιμο', 'Κρατημένο', 'Πουλήθηκε', 'Μη διαθέσιμο', 'Δωρίστηκε', 'Προσωπική Συλλογή', 'Υπό Κατασκευή'];
         const BASE_MATERIALS = ['Υγρό Γυαλί', 'Αποξηραμένα Άνθη', 'Φύλλα Χρυσού', 'Ασήμι 925', 'Ορείχαλκος', 'Ακρυλικά Χρώματα'];
         const BASE_PLATFORMS = ['Vinted', 'Wix', 'Instagram', 'Facebook', 'TikTok', 'Etsy', 'Φυσικό Κατάστημα'];
         const BASE_COLORS = ['Διάφανο', 'Μαύρο', 'Λευκό', 'Χρυσό', 'Ασημί', 'Κόκκινο', 'Μπλε', 'Πράσινο', 'Ροζ', 'Μωβ', 'Κίτρινο', 'Πολύχρωμο'];
@@ -104,7 +106,7 @@ interface BackOfficeViewProps {
             borderRadius: '0.5rem',
             heroTitleSize: 'text-2xl md:text-3xl'
         };
-        const isSoldItem = (item) => item.status === 'Πουλήθηκε' || (item.status !== 'Κρατημένο' && item.stock !== undefined && item.stock !== null && Number(item.stock) <= 0);
+        const isSoldItem = (item) => item.status === 'Πουλήθηκε';
         const isAvailableItem = (item) => item.status === 'Διαθέσιμο' && (item.stock === undefined || item.stock === null || Number(item.stock) > 0);
         const isUnavailableItem = (item) => !isAvailableItem(item) && !isSoldItem(item);
         const splitTags = (value) => value.split(',').map(v => v.trim()).filter(Boolean);
@@ -266,6 +268,17 @@ interface BackOfficeViewProps {
                 }
             });
             const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+            const [historySaveError, setHistorySaveError] = useState('');
+            useEffect(() => {
+                if (!firebaseReady || !currentUser) return;
+                return onSnapshot(query(collection(db, 'catalogHistory'), orderBy('timestamp', 'desc'), limit(100)), snapshot => {
+                    setVersionHistory(previous => {
+                        const cloud = snapshot.docs.map(row => row.data());
+                        const signatures = new Set(cloud.map(row => `${row.timestamp}|${row.type}|${row.id}`));
+                        return [...cloud, ...previous.filter(row => !row.cloudId && !signatures.has(`${row.timestamp}|${row.type}|${row.id}`))].sort((a,b) => String(b.timestamp).localeCompare(String(a.timestamp))).slice(0,200);
+                    });
+                }, () => setHistorySaveError('Δεν φορτώθηκε το ιστορικό από το cloud.'));
+            }, [firebaseReady, currentUser]);
             
             const [statsFilter, setStatsFilter] = useState('all');
             const [uploadProgress, setUploadProgress] = useState(0);
@@ -424,8 +437,10 @@ interface BackOfficeViewProps {
             const pushVersionHistory = (entry) => {
                 const historyEntry = {
                     ...entry,
+                    localId: crypto.randomUUID(),
                     timestamp: new Date().toISOString()
                 };
+                void persistHistory(db, historyEntry).catch(() => setHistorySaveError('Η αλλαγή έγινε, αλλά το ιστορικό δεν αποθηκεύτηκε στο cloud. Κράτησε ένα backup.'));
                 setVersionHistory(prev => {
                     const next = [historyEntry, ...prev].slice(0, 200);
                     try {
@@ -457,7 +472,7 @@ interface BackOfficeViewProps {
                     return {
                         ...base,
                         before: action.oldData || action.data || null,
-                        after: action.newData || action.data || null
+                        after: { ...(action.oldData || {}), ...(action.newData || action.data || {}) }
                     };
                 }
 
@@ -465,14 +480,14 @@ interface BackOfficeViewProps {
                     return {
                         ...base,
                         before: (action.items || []).map(item => ({ id: item.id, ...(item.oldData || {}) })),
-                        after: (action.items || []).map(item => ({ id: item.id, ...(item.newData || {}) }))
+                        after: (action.items || []).map(item => ({ id: item.id, ...(item.oldData || {}), ...(item.newData || {}) }))
                     };
                 }
 
                 if (action.type === 'BULK_DELETE') {
                     return {
                         ...base,
-                        before: (action.items || []).map(item => item.data || item),
+                        before: (action.items || []).map(item => ({ ...(item.data || item), id: item.id || item.data?.id })),
                         after: null
                     };
                 }
@@ -582,6 +597,23 @@ interface BackOfficeViewProps {
                     setSettingsLoadError('');
                     if (docSnap.exists()) {
                         const data = docSnap.data();
+                        if (Array.isArray(data.customFields?.customCategories)) setCustomCategories(data.customFields.customCategories);
+                        if (Array.isArray(data.customFields?.customCollections)) setCustomCollections(data.customFields.customCollections);
+                        if (Array.isArray(data.customFields?.customStatuses)) setCustomStatuses(data.customFields.customStatuses);
+                        if (Array.isArray(data.customFields?.customMaterials)) setCustomMaterials(data.customFields.customMaterials);
+                        if (Array.isArray(data.customFields?.customPlatforms)) setCustomPlatforms(data.customFields.customPlatforms);
+                        if (Array.isArray(data.customFields?.customColors)) setCustomColors(data.customFields.customColors);
+                        if (Array.isArray(data.customFields?.statusOptionOrder)) setStatusOptionOrder(data.customFields.statusOptionOrder);
+                        if (Array.isArray(data.customFields?.collectionOptionOrder)) setCollectionOptionOrder(data.customFields.collectionOptionOrder);
+                        if (Array.isArray(data.customFields?.platformOptionOrder)) setPlatformOptionOrder(data.customFields.platformOptionOrder);
+                        if (Array.isArray(data.customFields?.colorOptionOrder)) setColorOptionOrder(data.customFields.colorOptionOrder);
+                        if (Array.isArray(data.customFields?.materialOptionOrder)) setMaterialOptionOrder(data.customFields.materialOptionOrder);
+                        if (Array.isArray(data.customFields?.hiddenCategoryOptions)) setHiddenCategoryOptions(data.customFields.hiddenCategoryOptions);
+                        if (Array.isArray(data.customFields?.hiddenStatusOptions)) setHiddenStatusOptions(data.customFields.hiddenStatusOptions);
+                        if (Array.isArray(data.customFields?.hiddenCollectionOptions)) setHiddenCollectionOptions(data.customFields.hiddenCollectionOptions);
+                        if (Array.isArray(data.customFields?.hiddenPlatformOptions)) setHiddenPlatformOptions(data.customFields.hiddenPlatformOptions);
+                        if (Array.isArray(data.customFields?.hiddenColorOptions)) setHiddenColorOptions(data.customFields.hiddenColorOptions);
+                        if (Array.isArray(data.customFields?.hiddenMaterialOptions)) setHiddenMaterialOptions(data.customFields.hiddenMaterialOptions);
                         setShopSettings(prev => ({
                             fontFamily: data.fontFamily || prev.fontFamily,
                             primaryColor: data.primaryColor || prev.primaryColor,
@@ -641,14 +673,18 @@ interface BackOfficeViewProps {
             const handleSaveSettings = async () => {
                 setIsSavingSettings(true);
                 try {
-                    await setDoc(doc(db, "settings", "shop"), shopSettings, { merge: true });
+                    const settingsRef = doc(db, "settings", "shop");
+                    const beforeSettings = (await getDoc(settingsRef)).data() || {};
+                    const savedSettings = { ...shopSettings, customFields: { customCategories, customCollections, customStatuses, customMaterials, customPlatforms, customColors, statusOptionOrder, collectionOptionOrder, platformOptionOrder, colorOptionOrder, materialOptionOrder, hiddenCategoryOptions, hiddenStatusOptions, hiddenCollectionOptions, hiddenPlatformOptions, hiddenColorOptions, hiddenMaterialOptions } };
+                    await setDoc(settingsRef, savedSettings, { merge: true });
                     pushVersionHistory({
                         type: 'SETTINGS_UPDATE',
                         id: 'settings/shop',
                         name: 'Ρυθμίσεις shop',
                         message: 'Αποθηκεύτηκαν οι ρυθμίσεις shop.',
-                        before: null,
-                        after: shopSettings
+                        collection: 'settings',
+                        before: beforeSettings,
+                        after: { ...beforeSettings, ...savedSettings }
                     });
                     alert("Οι ρυθμίσεις αποθηκεύτηκαν! Το Shop ενημερώθηκε σε πραγματικό χρόνο.");
                 } catch (err) {
@@ -986,19 +1022,19 @@ interface BackOfficeViewProps {
             const allFormCategories = useMemo(() => {
                 const embedded = jewelryList.map(item => item.category);
                 const order = shopSettings.categoryOrder || [];
-                return sortByUsage(Array.from(new Set([...BASE_CATEGORIES, ...customCategories, ...embedded])).filter(cat => cat && !hiddenCategoryOptions.includes(cat)), categoryUsageCounts, order);
+                return sortByUsage(Array.from(new Set([...BASE_CATEGORIES, ...customCategories, ...order, ...embedded])).filter(cat => cat && !hiddenCategoryOptions.includes(cat)), categoryUsageCounts, order);
             }, [jewelryList, customCategories, hiddenCategoryOptions, shopSettings.categoryOrder, categoryUsageCounts]);
 
             const settingsCategoryOptions = useMemo(() => {
                 const embedded = jewelryList.map(item => item.category);
                 const order = shopSettings.categoryOrder || [];
-                return orderOptions(Array.from(new Set([...BASE_CATEGORIES, ...customCategories, ...embedded])).filter(cat => cat && !hiddenCategoryOptions.includes(cat)), order);
+                return orderOptions(Array.from(new Set([...BASE_CATEGORIES, ...customCategories, ...order, ...embedded])).filter(cat => cat && !hiddenCategoryOptions.includes(cat)), order);
             }, [jewelryList, customCategories, hiddenCategoryOptions, shopSettings.categoryOrder]);
             
             const allFilterCategories = useMemo(() => {
                 const embedded = jewelryList.map(item => item.category);
                 const order = shopSettings.categoryOrder || [];
-                return Array.from(new Set([...BASE_CATEGORIES, ...customCategories, ...embedded]))
+                return Array.from(new Set([...BASE_CATEGORIES, ...customCategories, ...order, ...embedded]))
                     .filter(cat => cat && !hiddenCategoryOptions.includes(cat))
                     .sort((a, b) => {
                         const indexA = order.indexOf(a);
@@ -2146,8 +2182,7 @@ interface BackOfficeViewProps {
                 const condition = String(row.condition || '').trim();
                 const description = String(row.description || '').trim();
                 const imageUrls = uniqueVintedUrls([...(Array.isArray(row.photos) ? row.photos : []), ...(Array.isArray(row.images) ? row.images : []), ...splitVintedList(row.image_urls)])
-                    .filter(url => !/logo|avatar|icon|placeholder|blur|thumbnail|sprite/i.test(url))
-                    .slice(0, 20);
+                    .filter(url => !/logo|avatar|icon|placeholder|blur|thumbnail|sprite/i.test(url));
                 const normalizedStatus = String(row.status || 'Διαθέσιμο').trim();
                 const mediaList = imageUrls.map(imageUrl => ({
                     url: imageUrl,
@@ -2952,27 +2987,14 @@ interface BackOfficeViewProps {
             const handleUndo = async () => {
                 if (!lastAction) return;
                 try {
-                    if (lastAction.type === 'UPDATE') {
-                        await updateDoc(doc(db, "jewelry", lastAction.id), lastAction.oldData || lastAction.data);
-                    } else if (lastAction.type === 'DELETE') {
-                        await setDoc(doc(db, "jewelry", lastAction.id), stripClientId(lastAction.data));
-                    } else if (lastAction.type === 'BULK_UPDATE') {
-                        if (lastAction.items.length > 500) throw new Error('Η αναίρεση υπερβαίνει το όριο των 500 εγγραφών.');
-                        const batch = writeBatch(db);
-                        lastAction.items.forEach(item => batch.update(doc(db, "jewelry", item.id), item.oldData));
-                        await batch.commit();
-                    } else if (lastAction.type === 'BULK_DELETE') {
-                        if (lastAction.items.length > 500) throw new Error('Η αναίρεση υπερβαίνει το όριο των 500 εγγραφών.');
-                        const batch = writeBatch(db);
-                        lastAction.items.forEach(item => batch.set(doc(db, "jewelry", item.id), stripClientId(item.data)));
-                        await batch.commit();
-                    }
+                    const original = buildHistoryEntryFromAction(lastAction);
+                    await restoreHistory(db, original);
                     setUndoStack(prev => prev.slice(0, -1));
                     setRedoStack(prev => [...prev, lastAction].slice(-20));
                     setShowUndoToast(false);
                     setShowRedoToast(true);
                     pushVersionHistory({
-                        ...buildHistoryEntryFromAction(lastAction, 'UNDO'),
+                        ...buildHistoryEntryFromAction(lastAction, 'UNDO'), before: original.after || null, after: original.before || null,
                         message: 'Αναίρεση: ' + (lastAction.message || 'ενέργεια backoffice')
                     });
                 } catch (err) {
@@ -2983,21 +3005,8 @@ interface BackOfficeViewProps {
             const handleRedo = async () => {
                 if (!redoAction) return;
                 try {
-                    if (redoAction.type === 'UPDATE') {
-                        await updateDoc(doc(db, "jewelry", redoAction.id), redoAction.newData || redoAction.data);
-                    } else if (redoAction.type === 'DELETE') {
-                        await deleteDoc(doc(db, "jewelry", redoAction.id));
-                    } else if (redoAction.type === 'BULK_UPDATE') {
-                        if (redoAction.items.length > 500) throw new Error('Η επανάληψη υπερβαίνει το όριο των 500 εγγραφών.');
-                        const batch = writeBatch(db);
-                        redoAction.items.forEach(item => batch.update(doc(db, "jewelry", item.id), item.newData));
-                        await batch.commit();
-                    } else if (redoAction.type === 'BULK_DELETE') {
-                        if (redoAction.items.length > 500) throw new Error('Η επανάληψη υπερβαίνει το όριο των 500 εγγραφών.');
-                        const batch = writeBatch(db);
-                        redoAction.items.forEach(item => batch.delete(doc(db, "jewelry", item.id)));
-                        await batch.commit();
-                    }
+                    const original = buildHistoryEntryFromAction(redoAction);
+                    await restoreHistory(db, { ...original, before: original.after, after: original.before });
                     setRedoStack(prev => prev.slice(0, -1));
                     setUndoStack(prev => [...prev, redoAction].slice(-20));
                     setShowRedoToast(false);
@@ -3015,18 +3024,9 @@ interface BackOfficeViewProps {
                 if (!entry?.before || !entry.id) return;
                 if (!window.confirm('Να επαναφερθεί αυτή η προηγούμενη έκδοση;')) return;
                 try {
-                    const restoredData = {
-                        ...stripClientId(entry.before),
-                        updatedAt: serverTimestamp()
-                    };
-                    await setDoc(doc(db, "jewelry", entry.id), restoredData);
-                    pushUndoAction({
-                        type: 'UPDATE',
-                        id: entry.id,
-                        oldData: entry.after || {},
-                        newData: restoredData,
-                        message: 'Επαναφέρθηκε προηγούμενη έκδοση.'
-                    });
+                    const loaded = await loadHistory(db, entry);
+                    await restoreHistory(db, loaded);
+                    pushVersionHistory({ type: 'HISTORY_RESTORE', collection: loaded.collection || 'jewelry', id: loaded.id, message: 'Επαναφορά προηγούμενης έκδοσης', before: loaded.after, after: loaded.before });
                     setIsHistoryOpen(false);
                 } catch (err) {
                     alert("Αποτυχία επαναφοράς έκδοσης: " + err.message);
@@ -3034,6 +3034,7 @@ interface BackOfficeViewProps {
             };
 
             const canRestoreHistoryEntry = (entry) => {
+                if (entry?.cloudId) return entry.hasBefore || ['ADD', 'BULK_DUPLICATE'].includes(entry.type);
                 if (!entry) return false;
                 if ((entry.type === 'ADD' || entry.type === 'BULK_DUPLICATE') && (entry.after?.id || (Array.isArray(entry.after) && entry.after.length))) return true;
                 if (entry.id && entry.before) return true;
@@ -3048,60 +3049,16 @@ interface BackOfficeViewProps {
                 }
                 if (!window.confirm('Να γίνει επαναφορά αυτής της ενέργειας;')) return;
                 try {
-                    if (entry.type === 'ADD' && entry.after?.id) {
-                        await deleteDoc(doc(db, "jewelry", entry.after.id));
-                    } else if (entry.type === 'BULK_DUPLICATE' && Array.isArray(entry.after)) {
-                        const records = entry.after.filter(item => item.id);
-                        if (records.length > 500) throw new Error('Η επαναφορά υπερβαίνει το όριο των 500 εγγραφών.');
-                        const batch = writeBatch(db);
-                        records.forEach(item => batch.delete(doc(db, 'jewelry', item.id)));
-                        await batch.commit();
-                    } else if (entry.type === 'BULK_UPDATE') {
-                        const records = (entry.before || []).filter(item => item.id);
-                        if (records.length > 500) throw new Error('Η επαναφορά υπερβαίνει το όριο των 500 εγγραφών.');
-                        const batch = writeBatch(db);
-                        records.forEach(item => {
-                            const { id, ...oldData } = item;
-                            batch.update(doc(db, 'jewelry', id), { ...oldData, updatedAt: serverTimestamp() });
-                        });
-                        await batch.commit();
-                    } else if (entry.type === 'BULK_DELETE') {
-                        const records = (entry.before || []).filter(item => item.id);
-                        if (records.length > 500) throw new Error('Η επαναφορά υπερβαίνει το όριο των 500 εγγραφών.');
-                        const batch = writeBatch(db);
-                        records.forEach(item => batch.set(doc(db, 'jewelry', item.id), {
-                            ...stripClientId(item), updatedAt: serverTimestamp()
-                        }));
-                        await batch.commit();
-                    } else if (Array.isArray(entry.before)) {
-                        const isPartialUpdate = Array.isArray(entry.after);
-                        const records = entry.before.filter(item => item.id);
-                        if (records.length > 500) throw new Error('Η επαναφορά υπερβαίνει το όριο των 500 εγγραφών.');
-                        const batch = writeBatch(db);
-                        records.forEach(item => {
-                            const { id, ...data } = item;
-                            if (isPartialUpdate) {
-                                batch.update(doc(db, 'jewelry', id), { ...data, updatedAt: serverTimestamp() });
-                            } else {
-                                batch.set(doc(db, 'jewelry', id), { ...stripClientId(item), updatedAt: serverTimestamp() });
-                            }
-                        });
-                        await batch.commit();
-                    } else if (entry.id && entry.before) {
-                        const restoredData = {
-                            ...stripClientId(entry.before),
-                            updatedAt: serverTimestamp()
-                        };
-                        await setDoc(doc(db, "jewelry", entry.id), restoredData);
-                    }
-
+                    entry = await loadHistory(db, entry);
+                    await restoreHistory(db, entry);
                     pushVersionHistory({
                         type: 'HISTORY_RESTORE',
+                        collection: entry.collection || 'jewelry',
                         id: entry.id || '',
                         name: entry.name || 'Επαναφορά ιστορικού',
                         message: 'Έγινε επαναφορά από το ιστορικό: ' + (entry.message || entry.type || 'ενέργεια'),
                         before: entry.after || null,
-                        after: entry.before || null
+                        after: entry.type === 'BULK_DUPLICATE' ? null : entry.before || null
                     });
                     setIsHistoryOpen(false);
                 } catch (err) {
@@ -3446,7 +3403,7 @@ interface BackOfficeViewProps {
                         </div>
                         {selectedItemIds.length > 0 && (
                             <div className="flex flex-wrap gap-2">
-                                <VintedRefresh items={selectedItems} sourceUrl={getVintedSourceUrl} endpoint={getVintedApis().link} pricing={(basePrice) => ({
+                                <VintedRefresh statuses={allFormStatuses} items={selectedItems} sourceUrl={getVintedSourceUrl} endpoint={getVintedApis().link} pricing={(basePrice) => ({
                                     vintedBasePrice: basePrice,
                                     buyerFixed: parseVintedMoney(vintedPricingSettings.buyerFixed),
                                     buyerPercent: parseVintedMoney(vintedPricingSettings.buyerPercent),
@@ -4146,7 +4103,7 @@ interface BackOfficeViewProps {
                                                 
                                                 {formShopMediaList.length > 0 && (
                                                     <div className="mt-4">
-                                                        <p className="text-xs text-stone-500 mb-2 italic">Σύρετε ή επιλέξτε εικόνα ή βίντεο για Hero προϊόντος. Το πρώτο αρχείο θα είναι το κεντρικό στο Shop.</p>
+                                                        <p className="text-xs text-stone-500 mb-2 italic">Σύρετε ή επιλέξτε εικόνα ή βίντεο για κεντρικό αρχείο προϊόντος. Το πρώτο αρχείο θα είναι το κεντρικό στο Shop.</p>
                                                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                                                             {formShopMediaList.map((media, idx) => (
                                                                 <div 
@@ -4177,7 +4134,7 @@ interface BackOfficeViewProps {
                                                                     <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveShopMedia(idx); }} className="absolute top-1 right-1 bg-stone-900/80 hover:bg-rose-600 text-white rounded-full p-1 transition shadow cursor-pointer">
                                                                         <IconX />
                                                                     </button>
-                                                                     {idx > 0 && <button type="button" onClick={(e) => { e.stopPropagation(); setFormShopMediaList(prev => { const next = [...prev]; const [chosen] = next.splice(idx, 1); next.unshift(chosen); return next; }); }} className="absolute bottom-1 left-1 bg-white/95 text-stone-900 text-[9px] font-bold px-2 py-1 rounded shadow">Χρήση ως Hero</button>}
+                                                                     {idx > 0 && <button type="button" onClick={(e) => { e.stopPropagation(); setFormShopMediaList(prev => { const next = [...prev]; const [chosen] = next.splice(idx, 1); next.unshift(chosen); return next; }); }} className="absolute bottom-1 left-1 bg-white/95 text-stone-900 text-[9px] font-bold px-2 py-1 rounded shadow">Ορισμός ως κεντρική</button>}
                                                                     {media.edited && (
                                                                         <span className="absolute top-1 right-9 text-[8px] bg-amber-100 text-amber-900 font-black px-1.5 py-0.5 rounded shadow border border-amber-200">Edited</span>
                                                                     )}
@@ -5146,7 +5103,7 @@ interface BackOfficeViewProps {
                                                         <article key={`${item.sourceId || item.name}-${index}`} className="border border-stone-200 rounded-xl p-3 md:p-4 bg-white">
                                                             <div className="flex flex-col md:flex-row md:items-start gap-4">
                                                                 <div className="grid grid-cols-4 gap-2 md:w-56 shrink-0">
-                                                                    {mediaList.slice(0, 4).map((media, mediaIndex) => (
+                                                                    {mediaList.map((media, mediaIndex) => (
                                                                         <div key={`${media.url}-${mediaIndex}`} className="relative aspect-square rounded-lg overflow-hidden border border-stone-200 bg-stone-50">
                                                                             <button
                                                                                 type="button"
@@ -5305,7 +5262,9 @@ interface BackOfficeViewProps {
                                     <button onClick={() => setIsHistoryOpen(false)} className="text-stone-500 hover:text-stone-900 bg-white p-1 rounded-lg border border-stone-200"><IconX /></button>
                                 </div>
                                 <div className="max-h-[60vh] overflow-y-auto p-5 space-y-3">
-                                    {versionHistory.length === 0 && (
+                                    <CatalogBackups />
+                        {historySaveError && <p role="alert" className="p-3 text-sm text-rose-700">{historySaveError}</p>}
+                        {versionHistory.length === 0 && (
                                         <div className="text-center p-10 text-stone-400 font-bold border border-dashed border-stone-200 rounded-xl">Δεν υπάρχει ακόμη ιστορικό εκδόσεων.</div>
                                     )}
                                     {versionHistory.map((entry, idx) => (
@@ -5327,7 +5286,7 @@ interface BackOfficeViewProps {
                                     ))}
                                 </div>
                                 <div className="p-5 border-t border-stone-100 bg-stone-50 flex justify-between gap-3">
-                                    <button onClick={() => { if (window.confirm('Να καθαριστεί το τοπικό ιστορικό εκδόσεων;')) { setVersionHistory([]); localStorage.removeItem('aram_version_history'); } }} className="px-4 py-2 bg-white border border-stone-200 text-stone-500 rounded-lg text-xs font-bold hover:bg-stone-100 transition">Καθαρισμός ιστορικού</button>
+                                    <button onClick={() => { if (window.confirm('Να καθαριστεί μόνο το τοπικό ιστορικό; Οι εγγραφές cloud διατηρούνται.')) { setVersionHistory(previous => previous.filter(entry => entry.cloudId)); localStorage.removeItem('aram_version_history'); } }} className="px-4 py-2 bg-white border border-stone-200 text-stone-500 rounded-lg text-xs font-bold hover:bg-stone-100 transition">Καθαρισμός τοπικού ιστορικού</button>
                                     <button onClick={() => setIsHistoryOpen(false)} className="px-6 py-2.5 bg-stone-900 text-white rounded-lg text-sm font-bold hover:bg-stone-800 transition">Κλείσιμο</button>
                                 </div>
                             </div>

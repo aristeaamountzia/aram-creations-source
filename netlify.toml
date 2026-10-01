@@ -7,6 +7,18 @@
   node_bundler = "esbuild"
 
 [[redirects]]
+  from = "/api/catalog-backups"
+  to = "/.netlify/functions/catalog-backups"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/order-email-test"
+  to = "/.netlify/functions/order-email-test"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/media"
   to = "/.netlify/functions/media"
   status = 200
@@ -29,4 +41,3 @@
   to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
-

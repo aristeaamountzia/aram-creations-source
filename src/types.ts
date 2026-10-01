@@ -29,6 +29,7 @@ export interface ArtMediaItem {
 }
 
 export interface ArtItem {
+  portfolioOrder?: number;
   id: string;
   title: string;
   category: CategoryId;
@@ -158,4 +159,3 @@ export interface OrderRecord {
   tracking?: string;
   createdAt: any;
 }
-

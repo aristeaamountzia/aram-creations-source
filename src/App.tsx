@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SectionMode, ArtItem, JewelryItem, CartItem } from './types';
 import { Header } from './components/Header';
 import { ShopView } from './components/ShopView';
@@ -12,12 +12,18 @@ import { db } from './firebase';
 
 export const App: React.FC = () => {
   const [currentMode, setCurrentMode] = useState<SectionMode>('shop');
+  const selectMode = useCallback((mode: SectionMode) => {
+    const hash = mode === 'shop' ? '#shop' : mode === 'portfolio' ? '#portfolio' : '#admin';
+    if (window.location.hash !== hash) window.history.pushState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
+    setCurrentMode(mode);
+  }, []);
   
   // Cart state persisted in localStorage
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('aram_boutique_cart');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? Array.from(new Map(parsed.filter(entry => entry?.item?.id).map(entry => [entry.item.id, { ...entry, quantity: 1 }])).values()) : [];
     } catch {
       return [];
     }
@@ -51,23 +57,27 @@ export const App: React.FC = () => {
         setCurrentMode('admin');
       } else if (window.location.hash.startsWith('#portfolio')) {
         setCurrentMode('portfolio');
+      } else {
+        setCurrentMode('shop');
       }
     };
     handleHash();
     window.addEventListener('hashchange', handleHash);
+    window.addEventListener('popstate', handleHash);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 'a' || e.key === 'A' || e.key === 'α' || e.key === 'Α')) {
-        setCurrentMode((prev) => (prev === 'admin' ? 'shop' : 'admin'));
+        selectMode(window.location.hash === '#admin' ? 'shop' : 'admin');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('hashchange', handleHash);
+      window.removeEventListener('popstate', handleHash);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [selectMode]);
 
   const handleAddToCart = (item: JewelryItem, customInscription?: string) => {
     const max = Math.max(0, Number(item.stock ?? item.stockCount ?? 1));
@@ -76,7 +86,7 @@ export const App: React.FC = () => {
       const existingIdx = prev.findIndex((ci) => ci.item.id === item.id);
       if (existingIdx > -1) {
         const next = [...prev];
-        next[existingIdx] = { ...next[existingIdx], quantity: Math.min(max, next[existingIdx].quantity + 1) };
+        next[existingIdx] = { ...next[existingIdx], quantity: 1 };
         if (customInscription) {
           next[existingIdx].customInscription = customInscription;
         }
@@ -86,20 +96,6 @@ export const App: React.FC = () => {
       }
     });
     setIsCartOpen(true);
-  };
-
-  const handleUpdateQty = (itemId: string, delta: number) => {
-    setCartItems((prev) => {
-      return prev
-        .map((ci) => {
-          if (ci.item.id === itemId) {
-            const newQty = delta > 0 ? Math.min(ci.quantity + delta, Math.max(0, Number(ci.item.stock ?? ci.item.stockCount ?? 1))) : ci.quantity + delta;
-            return newQty > 0 ? { ...ci, quantity: newQty } : null;
-          }
-          return ci;
-        })
-        .filter(Boolean) as CartItem[];
-    });
   };
 
   const handleRemoveItem = (itemId: string) => {
@@ -130,10 +126,7 @@ export const App: React.FC = () => {
           </div>
           <button
             onClick={() => {
-              setCurrentMode('shop');
-              if (window.location.hash === '#admin') {
-                history.replaceState(null, '', window.location.pathname);
-              }
+              selectMode('shop');
             }}
             className="px-3 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-100 transition flex items-center gap-1.5 border border-stone-600 font-bold text-xs"
           >
@@ -145,7 +138,7 @@ export const App: React.FC = () => {
       {/* Header (clean for customers: Shop | Portfolio only) */}
       <Header
         currentMode={currentMode}
-        onSelectMode={setCurrentMode}
+        onSelectMode={selectMode}
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
       />
@@ -162,12 +155,7 @@ export const App: React.FC = () => {
 
         {currentMode === 'admin' && (
           <BackOfficeView
-            onExit={() => {
-              setCurrentMode('shop');
-              if (window.location.hash === '#admin') {
-                history.replaceState(null, '', window.location.pathname);
-              }
-            }}
+            onExit={() => selectMode('shop')}
           />
         )}
       </main>
@@ -177,7 +165,6 @@ export const App: React.FC = () => {
             isOpen={isCartOpen}
             onClose={() => setIsCartOpen(false)}
             items={cartItems}
-            onUpdateQty={handleUpdateQty}
             onRemoveItem={handleRemoveItem}
             onCompleted={handleClearCart}
           />
@@ -217,12 +204,12 @@ export const App: React.FC = () => {
           <div className="space-y-2 text-xs">
             <h4 className="font-bold uppercase tracking-wider text-stone-900 mb-3">Πλοήγηση</h4>
             <div>
-              <button onClick={() => setCurrentMode('shop')} className="hover:text-stone-900 transition font-medium">
+              <button onClick={() => selectMode('shop')} className="hover:text-stone-900 transition font-medium">
                 Shop (Κοσμήματα)
               </button>
             </div>
             <div>
-              <button onClick={() => setCurrentMode('portfolio')} className="hover:text-stone-900 transition font-medium">
+              <button onClick={() => selectMode('portfolio')} className="hover:text-stone-900 transition font-medium">
                 Portfolio Έργων (Wix Archive)
               </button>
             </div>
@@ -283,7 +270,7 @@ export const App: React.FC = () => {
             <span className="opacity-30">•</span>
             {/* Discreet atelier owner access */}
             <button
-              onClick={() => setCurrentMode('admin')}
+              onClick={() => selectMode('admin')}
               title="Atelier Access"
               className="text-stone-400 hover:text-stone-700 transition p-0.5 opacity-40 hover:opacity-100 flex items-center gap-1 cursor-pointer"
             >
@@ -295,4 +282,3 @@ export const App: React.FC = () => {
     </div>
   );
 };
-

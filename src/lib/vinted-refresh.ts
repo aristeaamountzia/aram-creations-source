@@ -29,7 +29,28 @@ export function vintedRefreshPatch(current: any, row: any, pricing: any) {
 
 export function refreshBaseline(item: any) {
   const stable = (value: any): any => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])])) : value;
-  return JSON.stringify(stable([item.price ?? null, item.status ?? null, item.stock ?? null, item.checkoutReservations ?? {}, item.lastVintedRefreshAt ?? null, item.sourceUrl ?? null, item.purchaseLinks ?? null, item.productLinks ?? null, item.postedPlatforms ?? null]));
+  return JSON.stringify(stable([item.price ?? null, item.status ?? null, item.stock ?? null, item.checkoutReservations ?? {}, item.lastVintedRefreshAt ?? null, item.sourceUrl ?? null, item.vintedUrl ?? null, item.purchaseLinks ?? null, item.productLinks ?? null, item.postedPlatforms ?? null, item.vintedPricing ?? null, item.vintedBasePrice ?? null, item.vintedFavorites ?? null, item.vintedViews ?? null, item.lastVintedAvailability ?? null]));
+}
+
+export type RefreshChoice = { price: boolean; availability: boolean; favorites: boolean; views: boolean; priceValue: string; statusValue: string; stockValue: string };
+export function chooseRefreshPatch(item: any, proposed: any, choices: RefreshChoice) {
+  const patch: Record<string, any> = {};
+  if (choices.price) {
+    const price = Number(choices.priceValue);
+    if (!choices.priceValue.trim() || !Number.isFinite(price) || price <= 0 || price > 100000) throw new Error('Συμπλήρωσε θετική τιμή έως 100.000 €.');
+    patch.price = Math.round(price * 100) / 100;
+    if (proposed.vintedBasePrice !== undefined) patch.vintedBasePrice = proposed.vintedBasePrice;
+    patch.vintedPricing = patch.price === proposed.price ? proposed.vintedPricing || item.vintedPricing || { sitePrice: patch.price } : { ...(proposed.vintedPricing || item.vintedPricing || {}), sitePrice: patch.price, mode: 'manual' };
+  }
+  if (choices.availability) {
+    if (Object.values(item.checkoutReservations || {}).some(q => Number(q) > 0)) throw new Error('Η καταχώρηση έχει ενεργή παραγγελία.');
+    if (!choices.statusValue || !['0','1'].includes(choices.stockValue)) throw new Error('Έλεγξε κατάσταση και απόθεμα (0 ή 1).');
+    patch.status = choices.statusValue; patch.stock = ['Πουλήθηκε','Μη διαθέσιμο','Δωρίστηκε'].includes(patch.status) ? 0 : Number(choices.stockValue);
+    if (proposed.lastVintedAvailability) patch.lastVintedAvailability = proposed.lastVintedAvailability;
+  }
+  for (const [enabled, key] of [[choices.favorites, 'vintedFavorites'], [choices.views, 'vintedViews']] as const) if (enabled && proposed[key] !== undefined) patch[key] = proposed[key];
+  for (const key of Object.keys(patch)) if (JSON.stringify(item[key]) === JSON.stringify(patch[key])) delete patch[key];
+  return patch;
 }
 
 export function vintedSourceUrl(item: any) {
@@ -38,4 +59,3 @@ export function vintedSourceUrl(item: any) {
   for (const raw of candidates) { try { const url = new URL(String(raw || '').trim()); if (url.protocol === 'https:' && !url.username && !url.password && !url.port && isVintedHost(url.hostname) && /^\/items\/\d+(?:-|\/|$)/.test(url.pathname)) return url.href; } catch {} }
   return '';
 }
-

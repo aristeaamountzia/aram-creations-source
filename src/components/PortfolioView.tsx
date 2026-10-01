@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CategoryId, ArtItem, ArtMediaItem } from '../types';
 import { CATEGORIES, ART_ITEMS } from '../data';
+import { sortPortfolio } from '../lib/portfolio-order';
 import { db } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import {
@@ -118,7 +119,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
   const closeItemDetail = () => {
     setSelectedItem(null);
     if (window.location.hash.startsWith('#portfolio/')) {
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#portfolio`);
     }
   };
 
@@ -157,7 +158,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
             const firestoreItems: ArtItem[] = [];
             const deletedIds = new Set<string>();
             snapshot.forEach((docSnap) => {
-              const data = docSnap.data();
+              const data: any = { ...ART_ITEMS.find(item => item.id === docSnap.id), ...docSnap.data() };
               if (data.isDeleted || data.deletedAt) {
                 deletedIds.add(docSnap.id);
                 return;
@@ -175,6 +176,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 id: docSnap.id,
                 ...data,
                 title: data.title || data.name || 'Χωρίς Τίτλο',
+                portfolioOrder: data.portfolioOrder,
                 description: data.description || data.notes || '',
                 image: primaryImg,
                 mediaList: resolvedMediaList,
@@ -268,7 +270,9 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     });
 
     // Sort
-    if (sortBy === 'newest') {
+    if (sortBy === 'default') {
+      result = sortPortfolio(result);
+    } else if (sortBy === 'newest') {
       result.sort((a, b) => (b.year || '').localeCompare(a.year || ''));
     } else if (sortBy === 'title') {
       result.sort((a, b) => a.title.localeCompare(b.title, 'el'));
@@ -786,7 +790,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
               {(() => {
                 const mediaList = getItemMediaList(selectedItem);
                 const currentMedia = mediaList[activeMediaIdx] || mediaList[0];
-                const isVideo = currentMedia?.type === 'video' || (selectedItem.videoUrl && activeMediaIdx === mediaList.length - 1);
+                const isVideo = currentMedia?.type === 'video';
                 const rawUrl = currentMedia?.url || selectedItem.image;
                 const normalizedUrl = isVideo ? normalizeVideoUrl(rawUrl) : rawUrl;
 
@@ -1032,7 +1036,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
             {(() => {
               const mediaList = getItemMediaList(selectedItem);
               const currentMedia = mediaList[activeMediaIdx] || mediaList[0];
-              const isVideo = currentMedia?.type === 'video' || (selectedItem.videoUrl && activeMediaIdx === mediaList.length - 1);
+              const isVideo = currentMedia?.type === 'video';
               const rawUrl = currentMedia?.url || selectedItem.image;
               const normalizedUrl = isVideo ? normalizeVideoUrl(rawUrl) : rawUrl;
 
@@ -1073,3 +1077,4 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     </div>
   );
 };
+

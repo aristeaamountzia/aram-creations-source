@@ -1,3 +1,4 @@
+import { extractListingState, classifyVintedCategory } from './server/vinted-listing';
 import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
@@ -408,7 +409,7 @@ async function handleVintedLink(req: Request, res: Response) {
             if (itemData.price?.amount && price === null) price = parseNum(itemData.price.amount);
             if (itemData.price?.amount && parseNum(itemData.price.amount) !== null) priceKnown = true;
             if (itemData.price?.currency_code) currency = itemData.price.currency_code;
-            if (itemData.is_closed || itemData.is_sold || itemData.status === "sold") isSold = true;
+            if (itemData.is_sold || itemData.status === "sold") isSold = true;
             if (itemData.is_reserved || itemData.status === "reserved") isReserved = true;
             if (itemData.is_sold === true || itemData.is_closed === true || itemData.is_reserved === true || ['sold', 'reserved', 'available'].includes(itemData.status) || (itemData.is_sold === false && itemData.is_closed === false && itemData.is_reserved === false)) {
               availabilityKnown = true;
@@ -446,7 +447,7 @@ async function handleVintedLink(req: Request, res: Response) {
           if (itemData.price?.currency_code) currency = itemData.price.currency_code;
           if (itemData.favourite_count !== undefined && favoritesCount === null) favoritesCount = parseNum(itemData.favourite_count);
           if (itemData.view_count !== undefined && viewsCount === null) viewsCount = parseNum(itemData.view_count);
-          if (itemData.is_closed || itemData.is_sold) isSold = true;
+          if (itemData.is_sold) isSold = true;
           if (itemData.is_reserved) isReserved = true;
           if (String(itemData.id) === vintedId && (itemData.is_sold === true || itemData.is_closed === true || itemData.is_reserved === true || (itemData.is_sold === false && itemData.is_closed === false && itemData.is_reserved === false))) {
             availabilityKnown = true;
@@ -562,54 +563,10 @@ async function handleVintedLink(req: Request, res: Response) {
     const favSafe = favoritesCount !== null ? favoritesCount : req.query.refresh === '1' ? null : 0;
     const viewsSafe = viewsCount !== null ? viewsCount : req.query.refresh === '1' ? null : 0;
 
-    // Detect Category accurately from text & Vinted metadata
+    const verifiedAvailability = extractListingState(html, vintedId);
+    if (verifiedAvailability) { availabilityKnown = true; isSold = verifiedAvailability.isSold; isReserved = verifiedAvailability.isReserved; availability = verifiedAvailability.availability; }
     const textCorpus = `${finalTitle} ${description} ${decodedUrl}`.toLowerCase();
-    let mappedCategory = "Άλλα";
-    const normalizedVintedCategory = extractedCategory.toLowerCase();
-    // Vinted pages can expose a category from a related item; the listing title wins.
-    if (/κολιέ|necklace|μενταγιόν|pendant|choker/i.test(finalTitle)) {
-      mappedCategory = "Κολιέ";
-    } else if (/σκουλαρίκ|earring|hoops/i.test(finalTitle)) {
-      mappedCategory = "Σκουλαρίκια";
-    } else if (/βραχιόλ|bracelet|bangle/i.test(finalTitle)) {
-      mappedCategory = "Βραχιόλια";
-    } else if (/δαχτυλίδ|ring|signet/i.test(finalTitle)) {
-      mappedCategory = "Δαχτυλίδια";
-    } else if (/earring|σκουλαρίκ/.test(normalizedVintedCategory)) {
-      mappedCategory = "Σκουλαρίκια";
-    } else if (/bracelet|βραχιόλ/.test(normalizedVintedCategory)) {
-      mappedCategory = "Βραχιόλια";
-    } else if (/ring|δαχτυλίδ/.test(normalizedVintedCategory)) {
-      mappedCategory = "Δαχτυλίδια";
-    } else if (/necklace|pendant|κολιέ|μενταγιόν/.test(normalizedVintedCategory)) {
-      mappedCategory = "Κολιέ";
-    } else if (/brooch|καρφίτσ/.test(normalizedVintedCategory)) {
-      mappedCategory = "Καρφίτσες";
-    } else if (/set|σετ/.test(normalizedVintedCategory)) {
-      mappedCategory = "Σετ";
-    } else if (/phone|case|θήκ/.test(normalizedVintedCategory)) {
-      mappedCategory = "Θήκες Κινητών";
-    } else if (/jewelry|bijoux|κοσμήμα|αξεσουάρ/.test(normalizedVintedCategory)) {
-      mappedCategory = "Άλλα";
-    } else if (normalizedVintedCategory) {
-      mappedCategory = "Άλλα";
-    } else if (/σκουλαρίκ|earring|earrings|drops|hoops/i.test(textCorpus)) {
-      mappedCategory = "Σκουλαρίκια";
-    } else if (/βραχιόλ|bracelet|cuff|bangle/i.test(textCorpus)) {
-      mappedCategory = "Βραχιόλια";
-    } else if (/δαχτυλίδ|ring|signet/i.test(textCorpus)) {
-      mappedCategory = "Δαχτυλίδια";
-    } else if (/σετ|set|combo/i.test(textCorpus)) {
-      mappedCategory = "Σετ";
-    } else if (/καρφίτσ|brooch|pin/i.test(textCorpus)) {
-      mappedCategory = "Καρφίτσες";
-    } else if (/θήκ|case|cover|phone|iphone/i.test(textCorpus)) {
-      mappedCategory = "Θήκες Κινητών";
-    } else if (/κολιέ|necklace|μενταγιόν|pendant|choker/i.test(textCorpus)) {
-      mappedCategory = "Κολιέ";
-    } else if (extractedCategory) {
-      mappedCategory = "Άλλα";
-    }
+    const mappedCategory = classifyVintedCategory(finalTitle, extractedCategory, description);
 
     // Detect Colors from text
     const colorDictionary: Record<string, string> = {
@@ -684,14 +641,14 @@ async function handleVintedLink(req: Request, res: Response) {
       viewCount: viewsSafe,
       vintedFavorites: favSafe,
       vintedViews: viewsSafe,
-      status: isSold ? "Πουλήθηκε" : isReserved ? "Κρατημένο" : "Διαθέσιμο",
+      status: isSold ? "Πουλήθηκε" : isReserved ? "Κρατημένο" : availability === 'unavailable' ? "Μη διαθέσιμο" : "Διαθέσιμο",
       isSold,
       isReserved,
       availabilityKnown,
       availability,
       brand,
       condition: cleanCondition,
-      stock: isSold ? 0 : 1,
+      stock: isSold || availability === 'unavailable' ? 0 : 1,
       materials: extractedMaterials,
       colors: normalizedColors,
       sourceUrl: decodedUrl,
@@ -767,5 +724,4 @@ app.use(express.static(path.join(process.cwd(), "public")));
 
 
 export { app };
-
 

@@ -1,10 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { applyVintedRefresh } from '../lib/vinted-storage';
 import { db } from '../firebase';
-import { vintedRefreshPatch } from '../lib/vinted-refresh';
+import { vintedRefreshPatch, chooseRefreshPatch, RefreshChoice } from '../lib/vinted-refresh';
 
-type Row = { item: any; patch: any; notes: string[]; error?: string; selected: boolean; result?: string; checkedAt?: string; remotePrice?: unknown; remoteAvailability?: string };
-export function VintedRefresh({ items, sourceUrl, endpoint, pricing }: { items: any[]; sourceUrl: (item: any) => string; endpoint: string; pricing: (amount: number) => any }) {
+type Row = { choices?: RefreshChoice; item: any; patch: any; notes: string[]; error?: string; selected: boolean; result?: string; checkedAt?: string; remotePrice?: unknown; remoteAvailability?: string };
+export function VintedRefresh({ items, sourceUrl, endpoint, pricing, statuses = ['Διαθέσιμο', 'Κρατημένο', 'Πουλήθηκε', 'Μη διαθέσιμο', 'Δωρίστηκε', 'Προσωπική Συλλογή', 'Υπό Κατασκευή'] }: { statuses?: string[]; items: any[]; sourceUrl: (item: any) => string; endpoint: string; pricing: (amount: number) => any }) {
   const [open, setOpen] = useState(false), [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false), [applying, setApplying] = useState(false), [progress, setProgress] = useState('');
   const abort = useRef<AbortController | null>(null);
@@ -24,7 +24,7 @@ export function VintedRefresh({ items, sourceUrl, endpoint, pricing }: { items: 
           const expectedId = new URL(sourceUrl(item)).pathname.match(/\/items\/(\d+)/)?.[1];
           if (!expectedId || String(payload.item.id) !== expectedId) throw new Error('Τα στοιχεία δεν αντιστοιχούν στο επιλεγμένο Vinted link.');
           const update = vintedRefreshPatch(item, payload.item, pricing(Number(payload.item.price)));
-          setRows(prev => [...prev, { item, ...update, selected: Object.keys(update.patch).length > 0, checkedAt: new Date().toLocaleTimeString('el-GR'), remotePrice: payload.item.priceKnown ? payload.item.price : undefined, remoteAvailability: payload.item.availabilityKnown ? payload.item.isSold ? 'Πουλήθηκε' : payload.item.isReserved ? 'Κρατημένο' : payload.item.availability === 'available' ? 'Διαθέσιμο' : 'Μη διαθέσιμο' : 'Δεν επιβεβαιώθηκε' }]);
+          setRows(prev => [...prev, { item, ...update, choices: { price: 'price' in update.patch, availability: 'status' in update.patch || 'stock' in update.patch, favorites: 'vintedFavorites' in update.patch, views: 'vintedViews' in update.patch, priceValue: String(update.patch.price ?? item.price ?? ''), statusValue: update.patch.status || item.status || 'Διαθέσιμο', stockValue: String(Math.min(1, Math.max(0, Number(update.patch.stock ?? item.stock ?? 1)))) }, selected: Object.keys(update.patch).length > 0, checkedAt: new Date().toLocaleTimeString('el-GR'), remotePrice: payload.item.priceKnown ? payload.item.price : undefined, remoteAvailability: payload.item.availabilityKnown ? payload.item.isSold ? 'Πουλήθηκε' : payload.item.isReserved ? 'Κρατημένο' : payload.item.availability === 'available' ? 'Διαθέσιμο' : 'Μη διαθέσιμο' : 'Δεν επιβεβαιώθηκε' }]);
         } catch (error: any) {
           if (controller.signal.aborted) break;
           setRows(prev => [...prev, { item, patch: {}, notes: [], error: error.message, selected: false }]);
@@ -38,7 +38,9 @@ export function VintedRefresh({ items, sourceUrl, endpoint, pricing }: { items: 
     setApplying(true); let saved = 0, failed = 0;
     for (const row of rows.filter(row => row.selected && !row.error && !row.result)) {
       try {
-        await applyVintedRefresh(db, row.item.id, row.item, row.patch);
+        const chosen = chooseRefreshPatch(row.item, row.patch, row.choices!);
+        if (!Object.keys(chosen).length) { setRows(prev => prev.map(r => r.item.id === row.item.id ? { ...r, selected: false, result: 'Καμία επιλεγμένη αλλαγή.' } : r)); continue; }
+        await applyVintedRefresh(db, row.item.id, row.item, chosen);
         saved++; setRows(prev => prev.map(r => r.item.id === row.item.id ? { ...r, selected: false, result: 'Αποθηκεύτηκε' } : r));
       } catch (error: any) {
         failed++; setRows(prev => prev.map(r => r.item.id === row.item.id ? { ...r, selected: false, error: error.message } : r));
@@ -46,16 +48,21 @@ export function VintedRefresh({ items, sourceUrl, endpoint, pricing }: { items: 
     }
     setProgress(`Αποθηκεύτηκαν ${saved} προϊόντα.${failed ? ` Δεν ενημερώθηκαν ${failed} προϊόντα· δες τα μηνύματα.` : ''}`); setApplying(false);
   }
+  function updateChoice(row: Row, changed: Partial<RefreshChoice>) { setRows(prev => prev.map(r => r.item.id === row.item.id ? { ...r, selected: true, choices: { ...r.choices!, ...changed } } : r)); }
   const labels: Record<string, string> = { price: 'Τιμή shop', stock: 'Απόθεμα', status: 'Κατάσταση', vintedBasePrice: 'Τιμή Vinted', vintedFavorites: 'Αγαπημένα Vinted', vintedViews: 'Προβολές Vinted' };
   return <>
     <button onClick={inspect} disabled={!candidates.length || busy || applying} title="Επίλεξε προϊόντα με Vinted link. Έως 50 ανά έλεγχο." className="px-4 py-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold disabled:opacity-50">Έλεγχος / Ανανέωση Vinted ({candidates.length})</button>
     {open && <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-3" role="dialog" aria-modal="true" aria-labelledby="vinted-refresh-heading">
       <div className="w-full max-w-3xl max-h-[90dvh] bg-white rounded-2xl flex flex-col shadow-xl">
-        <div className="p-5 border-b"><h2 id="vinted-refresh-heading" className="text-lg font-bold">Ανανέωση από Vinted</h2><p className="text-sm text-stone-600 mt-2">Πρώτα ελέγχουμε, μετά αποθηκεύεις. Τίτλοι, περιγραφές, φωτογραφίες και τοπικά αγαπημένα δεν αλλάζουν. Η τιμή shop περιλαμβάνει τις ρυθμίσεις χρεώσεων Vinted που έχεις ορίσει.</p>{candidates.length > 50 && <p className="text-sm text-amber-700">Θα ελεγχθούν τα πρώτα 50 επιλεγμένα προϊόντα.</p>}<p role="status" aria-live="polite" className="text-sm font-bold mt-3">{progress}</p></div>
+        <div className="p-5 border-b"><h2 id="vinted-refresh-heading" className="text-lg font-bold">Ανανέωση από Vinted</h2><p className="text-sm text-stone-600 mt-2">Πρώτα ελέγχουμε, μετά αποθηκεύεις. Τίτλοι, περιγραφές, φωτογραφίες και τοπικά αγαπημένα δεν αλλάζουν. Επίλεξε ξεχωριστά κάθε αλλαγή. Μπορείς να γράψεις δική σου τιμή shop ή να διορθώσεις την κατάσταση πριν αποθηκεύσεις.</p>{candidates.length > 50 && <p className="text-sm text-amber-700">Θα ελεγχθούν τα πρώτα 50 επιλεγμένα προϊόντα.</p>}<p role="status" aria-live="polite" className="text-sm font-bold mt-3">{progress}</p></div>
         <div className="overflow-y-auto p-4 space-y-3 min-h-0">{rows.map(row => <div key={row.item.id} className="border rounded-xl p-3">
-          <label className="flex items-center gap-3 font-bold text-sm"><input type="checkbox" checked={row.selected} disabled={busy || applying || !!row.error || !!row.result || !Object.keys(row.patch).length} onChange={e => setRows(prev => prev.map(r => r.item.id === row.item.id ? { ...r, selected: e.target.checked } : r))} />{row.item.name || row.item.id}</label>
+          <label className="flex items-center gap-3 font-bold text-sm"><input type="checkbox" checked={row.selected} disabled={busy || applying || !!row.error || !!row.result} onChange={e => setRows(prev => prev.map(r => r.item.id === row.item.id ? { ...r, selected: e.target.checked } : r))} />{row.item.name || row.item.id}</label>
           {row.checkedAt && <p className="text-xs text-stone-600 mt-2">Έλεγχος {row.checkedAt} · Τιμή Vinted: {row.remotePrice === undefined ? 'Δεν επιβεβαιώθηκε' : `${row.remotePrice} €`} · Κατάσταση Vinted: {row.remoteAvailability}</p>}
-          {Object.entries(row.patch).filter(([key]) => labels[key]).map(([key, value]) => <p key={key} className="text-sm mt-1">{labels[key]}: {String(row.item[key] ?? '—')} → <strong>{String(value)}</strong>{key === 'vintedBasePrice' || key === 'price' ? ' €' : ''}</p>)}
+          {row.choices && !row.error && <fieldset disabled={busy || applying || !!row.result} className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+            <label className="flex flex-wrap items-center gap-2"><input type="checkbox" aria-label={`Αποδοχή τιμής ${row.item.name}`} checked={row.choices.price} onChange={e => updateChoice(row, { price: e.target.checked })} />Τιμή shop<input aria-label={`Τιμή shop ${row.item.name}`} type="number" min="0.01" max="100000" step="0.01" value={row.choices.priceValue} onChange={e => updateChoice(row, { price: true, priceValue: e.target.value })} className="w-24 rounded border p-2" /> €<span className="text-xs text-stone-500">Τρέχουσα: {row.item.price} €</span></label>
+            <div className="space-y-2"><label className="flex gap-2"><input type="checkbox" aria-label={`Αποδοχή κατάστασης ${row.item.name}`} disabled={Object.values(row.item.checkoutReservations || {}).some(q => Number(q)>0)} checked={row.choices.availability} onChange={e => updateChoice(row, { availability: e.target.checked })} />Κατάσταση / απόθεμα</label><select aria-label={`Κατάσταση ${row.item.name}`} value={row.choices.statusValue} disabled={Object.values(row.item.checkoutReservations || {}).some(q => Number(q)>0)} onChange={e => updateChoice(row,{ availability: true, statusValue: e.target.value, stockValue: ['Πουλήθηκε','Μη διαθέσιμο','Δωρίστηκε'].includes(e.target.value) ? '0' : '1' })} className="max-w-full rounded border p-2">{Array.from(new Set([...statuses, row.choices.statusValue])).map(status => <option key={status}>{status}</option>)}</select><select aria-label={`Απόθεμα ${row.item.name}`} disabled={Object.values(row.item.checkoutReservations || {}).some(q => Number(q)>0)} value={row.choices.stockValue} onChange={e => updateChoice(row,{ availability: true, stockValue: e.target.value })} className="ml-2 rounded border p-2"><option value="0">0 τεμάχια</option><option value="1">1 τεμάχιο</option></select><p className="text-xs text-stone-500">Τρέχουσα: {row.item.status} · {row.item.stock ?? 1} τεμ.</p></div>
+            {(['vintedFavorites','vintedViews'] as const).filter(key => row.patch[key] !== undefined).map(key => <label key={key} className="flex gap-2"><input type="checkbox" checked={key === 'vintedFavorites' ? row.choices!.favorites : row.choices!.views} onChange={e => updateChoice(row, key === 'vintedFavorites' ? { favorites: e.target.checked } : { views: e.target.checked })} />{labels[key]}: {row.item[key] ?? '—'} → {row.patch[key]}</label>)}
+          </fieldset>}
           {!Object.keys(row.patch).length && !row.error && <p className="text-sm text-stone-500 mt-2">Καμία αλλαγή στα διαθέσιμα στοιχεία.</p>}
           {row.notes.map(note => <p key={note} className="text-xs text-amber-800 mt-2">{note}</p>)}
           {row.error && <p role="alert" className="text-sm text-rose-700 mt-2">{row.error} Δεν αποθηκεύτηκε αλλαγή για αυτό το προϊόν.</p>}
@@ -66,5 +73,4 @@ export function VintedRefresh({ items, sourceUrl, endpoint, pricing }: { items: 
     </div>}
   </>;
 }
-
 
