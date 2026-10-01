@@ -7,6 +7,8 @@ import { BackOfficeView } from './components/BackOfficeView';
 import { CartDrawer } from './components/CartDrawer';
 import { ContactModal } from './components/ContactModal';
 import { ShieldCheck, Mail, MapPin, ExternalLink, Lock } from 'lucide-react';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { db } from './firebase';
 
 export const App: React.FC = () => {
   const [currentMode, setCurrentMode] = useState<SectionMode>('shop');
@@ -21,6 +23,13 @@ export const App: React.FC = () => {
     }
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const cartIds = cartItems.map(entry => entry.item.id).sort().join(',');
+  useEffect(() => {
+    const unsubscribes = cartIds.split(',').filter(Boolean).map(id => onSnapshot(doc(db, 'jewelry', id), snapshot => {
+      setCartItems(items => items.map(entry => entry.item.id === id ? { ...entry, item: snapshot.exists() ? { ...entry.item, ...snapshot.data(), id } : { ...entry.item, stock: 0, status: 'Μη διαθέσιμο' } } : entry));
+    }, () => {}));
+    return () => unsubscribes.forEach(unsubscribe => unsubscribe());
+  }, [cartIds]);
 
   // Contact artist modal
   const [contactArtItem, setContactArtItem] = useState<ArtItem | null>(null);
@@ -61,11 +70,13 @@ export const App: React.FC = () => {
   }, []);
 
   const handleAddToCart = (item: JewelryItem, customInscription?: string) => {
+    const max = Math.max(0, Number(item.stock ?? item.stockCount ?? 1));
+    if (!max || item.status !== 'Διαθέσιμο') return;
     setCartItems((prev) => {
       const existingIdx = prev.findIndex((ci) => ci.item.id === item.id);
       if (existingIdx > -1) {
         const next = [...prev];
-        next[existingIdx].quantity += 1;
+        next[existingIdx] = { ...next[existingIdx], quantity: Math.min(max, next[existingIdx].quantity + 1) };
         if (customInscription) {
           next[existingIdx].customInscription = customInscription;
         }
@@ -82,7 +93,7 @@ export const App: React.FC = () => {
       return prev
         .map((ci) => {
           if (ci.item.id === itemId) {
-            const newQty = ci.quantity + delta;
+            const newQty = delta > 0 ? Math.min(ci.quantity + delta, Math.max(0, Number(ci.item.stock ?? ci.item.stockCount ?? 1))) : ci.quantity + delta;
             return newQty > 0 ? { ...ci, quantity: newQty } : null;
           }
           return ci;
@@ -168,6 +179,7 @@ export const App: React.FC = () => {
             items={cartItems}
             onUpdateQty={handleUpdateQty}
             onRemoveItem={handleRemoveItem}
+            onCompleted={handleClearCart}
           />
 
       {/* Contact Artist Modal */}
@@ -283,3 +295,4 @@ export const App: React.FC = () => {
     </div>
   );
 };
+
