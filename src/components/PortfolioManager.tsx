@@ -1,4 +1,5 @@
 import { MediaDownload } from './MediaDownload';
+import { CatalogExcelExport } from './CatalogExcelExport';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { VideoUploadStatus } from './VideoUploadStatus';
 import { prepareVideoUpload, VideoProgress } from '../lib/video-compression';
@@ -215,7 +216,7 @@ export const PortfolioManager: React.FC<{ onBack: () => void }> = ({ onBack }) =
   return <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-5 pb-20">
     <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
       <div><div className="flex items-center gap-2"><button type="button" onClick={onBack} className="rounded-lg bg-stone-100 px-3 py-2 text-sm font-bold">Shop</button><span className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-bold text-white">Portfolio</span></div><p className="mt-2 text-xs text-stone-500">{allItems.filter(item => !item.isDeleted && !item.deletedAt).length} ενεργά έργα · {allItems.filter(item => item.isDeleted || item.deletedAt).length} στο αρχείο</p></div>
-      <div className="flex flex-wrap gap-2"><button type="button" onClick={exportCsv} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Εξαγωγή CSV</button><button type="button" onClick={() => { setForm(emptyForm()); setVideoProgress(null); setEditorTab('basics'); setAiSuggestion(null); setError(''); }} className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-bold text-white">+ Νέα καταχώρηση</button></div>
+      <div className="flex flex-wrap gap-2"><CatalogExcelExport /><button type="button" onClick={exportCsv} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Εξαγωγή CSV</button><button type="button" onClick={() => { setForm(emptyForm()); setVideoProgress(null); setEditorTab('basics'); setAiSuggestion(null); setError(''); }} className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-bold text-white">+ Νέα καταχώρηση</button></div>
     </header>
     {error && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
     <section className="rounded-2xl border border-stone-200 bg-white p-4 space-y-3" aria-label="Φίλτρα Portfolio">

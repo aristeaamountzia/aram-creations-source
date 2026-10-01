@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
 import { CatalogBackups } from './CatalogBackups';
+import { CatalogExcelExport } from './CatalogExcelExport';
 import { OrdersManager } from './OrdersManager';
 import { VintedRefresh } from './VintedRefresh';
 import { MediaDownload } from './MediaDownload';
@@ -3339,7 +3340,8 @@ interface BackOfficeViewProps {
                                 <button onClick={() => setIsHistoryOpen(true)} className="flex items-center justify-center px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg transition font-bold text-xs" title="Ιστορικό εκδόσεων">
                                     Ιστορικό
                                 </button>
-                                <button onClick={exportToCSV} className="flex items-center justify-center px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg transition font-bold text-xs" title="Εξαγωγή σε Excel (CSV)">
+                                <CatalogExcelExport />
+                                <button onClick={exportToCSV} className="flex items-center justify-center px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg transition font-bold text-xs" title="Εξαγωγή CSV χωρίς ενσωματωμένες εικόνες">
                                     <IconDownload /> <span className="ml-2">CSV</span>
                                 </button>
                                 <button onClick={() => setIsSettingsOpen(true)} className="flex items-center justify-center p-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg transition" title="Διαχείριση Συστήματος & Εμφάνισης Shop">
