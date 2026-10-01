@@ -17,20 +17,20 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 text-stone-900 shadow-sm transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3 md:h-20 md:flex md:justify-between md:gap-4 md:py-0">
         
         {/* Brand Identity */}
         <button
           onClick={() => onSelectMode('shop')}
           type="button"
           aria-label="Aram Creations — επιστροφή στο Shop"
-          className="cursor-pointer group flex items-center gap-3.5 shrink-0 bg-transparent border-0 text-left p-0"
+          className="cursor-pointer group flex min-w-0 items-center gap-2.5 md:gap-3.5 bg-transparent border-0 text-left p-0"
           id="header-brand"
         >
           <img
             src="/logo.png"
             alt="Aram Creations"
-            className="w-10 h-10 object-contain group-hover:scale-105 transition-transform"
+            className="w-9 h-10 md:w-10 shrink-0 object-contain group-hover:scale-105 transition-transform"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               if (target.src.endsWith('/logo.png')) {
@@ -38,18 +38,18 @@ export const Header: React.FC<HeaderProps> = ({
               }
             }}
           />
-          <div>
+          <div className="min-w-0">
             <div className="text-lg sm:text-xl font-bold tracking-tight text-stone-900 group-hover:text-stone-700 transition-colors" style={{ fontFamily: 'Jura, sans-serif' }}>
               aram.creations
             </div>
-            <div className="text-[10px] tracking-widest text-stone-500 uppercase font-medium">
+            <div className="text-[8px] sm:text-[10px] tracking-wide sm:tracking-widest text-stone-500 uppercase font-medium">
               Χειροποίητα Κοσμήματα & Τέχνη
             </div>
           </div>
         </button>
 
         {/* Navigation: Clean & Elegant (Shop | Portfolio) */}
-        <nav className="flex items-center p-1 bg-stone-100 border border-stone-200/80 rounded-xl">
+        <nav aria-label="Shop και Portfolio" className="col-span-2 row-start-2 flex justify-center items-center p-1 bg-stone-100 border border-stone-200/80 rounded-xl md:order-none">
           <button
             id="nav-btn-shop"
             onClick={() => onSelectMode('shop')}
@@ -84,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Right actions: Cart Drawer trigger & external links */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="col-start-2 row-start-1 flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Cart Bag Button */}
           <button
             onClick={onOpenCart}
