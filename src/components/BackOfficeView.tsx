@@ -522,23 +522,30 @@ interface BackOfficeViewProps {
 
             useEffect(() => {
                 if (!firebaseReady) return;
+                let authVersion = 0;
                 const unsubscribe = onAuthStateChanged(auth, (user) => {
+                    const version = ++authVersion;
+                    setAuthReady(false);
                     setCurrentUser(user || null);
-                    setAuthReady(true);
                     if (!user) {
                         setIsAdminClaim(false);
                         setJewelryList([]);
                         setIsLoading(false);
+                        setAuthReady(true);
                         return;
                     }
                     user.getIdTokenResult(true).then((tokenResult) => {
+                        if (version !== authVersion) return;
                         setIsAdminClaim(tokenResult.claims.admin === true || user.email?.toLowerCase() === 'aristeaamnta@gmail.com');
                     }).catch((error) => {
+                        if (version !== authVersion) return;
                         console.error('Could not verify admin claim:', error);
                         setIsAdminClaim(false);
+                    }).finally(() => {
+                        if (version === authVersion) setAuthReady(true);
                     });
                 });
-                return () => unsubscribe();
+                return () => { authVersion++; unsubscribe(); };
             }, [firebaseReady]);
 
             useEffect(() => writeStoredList('aram_custom_categories', customCategories), [customCategories]);
@@ -5257,7 +5264,7 @@ interface BackOfficeViewProps {
                                 <div className="p-5 border-b border-stone-100 bg-amber-50 flex items-center justify-between">
                                     <div>
                                         <h2 className="text-lg font-black text-stone-800">Ιστορικό εκδόσεων</h2>
-                                        <p className="text-xs font-bold text-stone-500">Τοπική μνήμη τελευταίων {versionHistory.length} αλλαγών σε αυτό το backoffice.</p>
+                                        <p className="text-xs font-bold text-stone-500">Τελευταίες {versionHistory.length} αλλαγές. Οι νέες καταγραφές αποθηκεύονται ιδιωτικά στο cloud· το παλαιότερο τοπικό ιστορικό παραμένει σε αυτόν τον browser.</p>
                                     </div>
                                     <button onClick={() => setIsHistoryOpen(false)} className="text-stone-500 hover:text-stone-900 bg-white p-1 rounded-lg border border-stone-200"><IconX /></button>
                                 </div>
