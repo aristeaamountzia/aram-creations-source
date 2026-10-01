@@ -2,6 +2,9 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { OrdersManager } from './OrdersManager';
 import { VintedRefresh } from './VintedRefresh';
+import { MediaDownload } from './MediaDownload';
+import { editableBlob } from '../lib/media-files';
+import { vintedSourceUrl } from '../lib/vinted-refresh';
 import { db, auth, storage } from "../firebase";
 import {
   collection,
@@ -379,6 +382,7 @@ interface BackOfficeViewProps {
             });
             const [vintedPreviewImage, setVintedPreviewImage] = useState(null);
             const [imageEditorTarget, setImageEditorTarget] = useState(null);
+            const [imageEditorError, setImageEditorError] = useState('');
             const [imageEditorSettings, setImageEditorSettings] = useState({ rotate: 0, zoom: 1, panX: 0, panY: 0, brightness: 100, contrast: 100, cropAspect: 'square' });
             const [imageEditorImageInfo, setImageEditorImageInfo] = useState({ width: 0, height: 0 });
             const [isApplyingImageEdit, setIsApplyingImageEdit] = useState(false);
@@ -533,7 +537,7 @@ interface BackOfficeViewProps {
                 setCatalogLoadError('');
                 const q = query(collection(db, "jewelry"), orderBy("createdAt", "desc"));
                 const unsubscribe = onSnapshot(q, (snapshot) => {
-                    const fetchedItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    const fetchedItems = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
                     setJewelryList(fetchedItems);
                     setCatalogLoadError('');
                     setIsLoading(false);
@@ -774,28 +778,19 @@ interface BackOfficeViewProps {
 
             const mediaToAiImageDataUrl = async (media) => {
                 if (!media?.url) return '';
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.crossOrigin = 'anonymous';
-                    img.onload = () => {
-                        try {
-                            const canvas = document.createElement('canvas');
-                            const maxSize = 768;
-                            const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
-                            canvas.width = Math.max(Math.round(img.width * ratio), 1);
-                            canvas.height = Math.max(Math.round(img.height * ratio), 1);
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            resolve(canvas.toDataURL('image/jpeg', 0.78));
-                        } catch (err) {
-                            resolve('');
-                        }
-                    };
-                    img.onerror = () => resolve('');
-                    img.src = media.url;
-                });
+                let loaded = null;
+                try {
+                    loaded = await loadEditableImage(media);
+                    const img = loaded.img;
+                    const canvas = document.createElement('canvas');
+                    const ratio = Math.min(768 / img.width, 768 / img.height, 1);
+                    canvas.width = Math.max(Math.round(img.width * ratio), 1);
+                    canvas.height = Math.max(Math.round(img.height * ratio), 1);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    return canvas.toDataURL('image/jpeg', 0.78);
+                } catch { return ''; }
+                finally { loaded?.cleanup?.(); }
             };
-
             const getAiImageDataUrls = async () => {
                 const mediaItems = getAiImageMediaCandidates().slice(0, 3);
                 const dataUrls = await Promise.all(mediaItems.map(mediaToAiImageDataUrl));
@@ -1222,11 +1217,17 @@ interface BackOfficeViewProps {
                 return 'Ροζ';
             };
 
-            const analyzeImageForSmartTags = (previewUrl, fileName = '') => {
+            const analyzeImageForSmartTags = async (previewUrl, fileName = '') => {
+                let temporaryUrl = '';
+                if (/^https:/i.test(previewUrl)) {
+                    try { temporaryUrl = URL.createObjectURL(await editableBlob({ url: previewUrl })); previewUrl = temporaryUrl; }
+                    catch { return { colors: detectColorsFromSignals(getSmartSignalText(fileName)), category: detectCategoryFromSignals(getSmartSignalText(fileName)), source: fileName }; }
+                }
                 return new Promise((resolve) => {
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
                     img.onload = () => {
+                        if (temporaryUrl) URL.revokeObjectURL(temporaryUrl);
                         try {
                             const canvas = document.createElement('canvas');
                             const size = 80;
@@ -1259,7 +1260,7 @@ interface BackOfficeViewProps {
                             });
                         }
                     };
-                    img.onerror = () => resolve({ colors: detectColorsFromSignals(getSmartSignalText(fileName)), category: detectCategoryFromSignals(getSmartSignalText(fileName)), source: fileName || 'κύρια εικόνα', imageHints: [] });
+                    img.onerror = () => { if (temporaryUrl) URL.revokeObjectURL(temporaryUrl); resolve({ colors: detectColorsFromSignals(getSmartSignalText(fileName)), category: detectCategoryFromSignals(getSmartSignalText(fileName)), source: fileName || 'κύρια εικόνα', imageHints: [] }); };
                     img.src = previewUrl;
                 });
             };
@@ -1438,6 +1439,7 @@ interface BackOfficeViewProps {
                     alert('Τα GIF διατηρούν την κίνησή τους. Η επεξεργασία με crop ή φίλτρα θα τα μετέτρεπε σε στατική εικόνα, γι\' αυτό δεν εφαρμόζεται.');
                     return;
                 }
+                setImageEditorError('');
                 setImageEditorTarget({ scope, index });
                 setImageEditorImageInfo({ width: 0, height: 0 });
                 setImageEditorSettings({ rotate: 0, zoom: 1, panX: 0, panY: 0, brightness: 100, contrast: 100, cropAspect: 'square' });
@@ -1529,46 +1531,22 @@ interface BackOfficeViewProps {
                 }
             };
 
-            const getEditableImageCandidates = (media) => {
-                const candidates = [];
-                if (media?.fileObj) {
-                    const objectUrl = URL.createObjectURL(media.fileObj);
-                    candidates.push({ url: objectUrl, revoke: () => URL.revokeObjectURL(objectUrl) });
-                }
-                if (media?.url) {
-                    const proxiedUrl = (/images\d*\.vinted\.net|firebasestorage\.googleapis\.com|firebasestorage\.app/i.test(media.url))
-                        ? `${getVintedApis().image}?url=${encodeURIComponent(media.url)}`
-                        : '';
-                    if (proxiedUrl) candidates.push({ url: proxiedUrl, crossOrigin: 'anonymous' });
-                    candidates.push({ url: media.url, crossOrigin: 'anonymous' });
-                    if (/^(blob:|data:)/i.test(media.url) || media.url.startsWith(window.location.origin) || !/^https?:/i.test(media.url)) {
-                        candidates.push({ url: media.url });
-                    }
-                }
-                return candidates;
-            };
-
             const loadEditableImage = async (media) => {
-                const candidates = getEditableImageCandidates(media);
-                for (const candidate of candidates) {
-                    try {
-                        const img = await new Promise((resolve, reject) => {
-                            const nextImg = new Image();
-                            if (candidate.crossOrigin) nextImg.crossOrigin = candidate.crossOrigin;
-                            nextImg.onload = () => resolve(nextImg);
-                            nextImg.onerror = () => reject(new Error('image load failed'));
-                            nextImg.src = candidate.url;
-                        });
-                        return { img, cleanup: candidate.revoke || null };
-                    } catch (err) {
-                        if (candidate.revoke) candidate.revoke();
-                    }
-                }
-                throw new Error('Δεν μπόρεσα να ανοίξω αυτή τη φωτογραφία για επεξεργασία.');
+                const blob = await editableBlob(media);
+                const url = URL.createObjectURL(blob);
+                try {
+                    const img = await new Promise((resolve, reject) => {
+                        const nextImg = new Image();
+                        nextImg.onload = () => resolve(nextImg);
+                        nextImg.onerror = () => reject(new Error('Το αρχείο δεν είναι έγκυρη στατική εικόνα.'));
+                        nextImg.src = url;
+                    });
+                    return { img, cleanup: () => URL.revokeObjectURL(url) };
+                } catch (error) { URL.revokeObjectURL(url); throw error; }
             };
-
             const applyImageEditor = async () => {
                 if (!imageEditorTarget || !imageEditorMedia || isApplyingImageEdit) return;
+                setImageEditorError('');
                 setIsApplyingImageEdit(true);
                 let loadedImage = null;
                 try {
@@ -1647,7 +1625,7 @@ interface BackOfficeViewProps {
                     }
                     setImageEditorTarget(null);
                 } catch (err) {
-                    alert(err.message || 'Σφάλμα επεξεργασίας εικόνας.');
+                    setImageEditorError(err.message || 'Σφάλμα επεξεργασίας εικόνας.');
                 } finally {
                     if (loadedImage?.cleanup) loadedImage.cleanup();
                     setIsApplyingImageEdit(false);
@@ -2269,10 +2247,7 @@ interface BackOfficeViewProps {
                 }
             };
 
-            const getVintedSourceUrl = (item) => {
-                const links = [...(item?.purchaseLinks || []), ...(item?.productLinks || []), ...(item?.postedPlatforms || [])];
-                return String(item?.sourceUrl || item?.vintedUrl || links.find(link => /vinted/i.test(String(link?.site || link?.label || '')))?.url || '').trim();
-            };
+            const getVintedSourceUrl = vintedSourceUrl;
 
             const extensionFromContentType = (contentType) => {
                 if (/png/i.test(contentType || '')) return 'png';
@@ -4151,7 +4126,8 @@ interface BackOfficeViewProps {
                                                                         <img src={media.url} className="w-full h-full object-cover pointer-events-none" />
                                                                     )}
                                                                     
-                                                                    {media.type !== 'video' && (
+                                                                    <MediaDownload media={media} name={formName || 'aram-media'} className="absolute bottom-1 right-1 z-10" />
+                                                                    {media.type !== 'video' && !isAnimatedGifMedia(media) && (
                                                                         <button type="button" onClick={(e) => { e.stopPropagation(); openImageEditor('shop', idx); }} className="absolute top-1 left-1 bg-white/90 hover:bg-white text-stone-800 rounded-full p-1 transition shadow cursor-pointer border border-stone-200" title="Επεξεργασία εικόνας">
                                                                             <IconEdit />
                                                                         </button>
@@ -4205,7 +4181,8 @@ interface BackOfficeViewProps {
                                                                     
                                                                     <div className="absolute top-1 left-1 bg-stone-800 text-white text-[9px] px-1 rounded shadow-sm">🔒 Κρυφό</div>
 
-                                                                    {media.type !== 'video' && (
+                                                                    <MediaDownload media={media} name={formName || 'aram-private-media'} className="absolute top-8 right-1 z-10" />
+                                                                    {media.type !== 'video' && !isAnimatedGifMedia(media) && (
                                                                         <button type="button" onClick={(e) => { e.stopPropagation(); openImageEditor('private', idx); }} className="absolute bottom-1 left-1 bg-white/90 hover:bg-white text-stone-800 rounded-full p-1 transition shadow cursor-pointer border border-stone-200" title="Επεξεργασία εικόνας">
                                                                             <IconEdit />
                                                                         </button>
@@ -4250,7 +4227,7 @@ interface BackOfficeViewProps {
                             <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[94vh] flex flex-col">
                                 <div className="p-4 border-b border-stone-100 flex items-center justify-between gap-3">
                                     <div>
-                                        <h2 className="text-lg font-black text-stone-900">Editor εικόνας</h2>
+                                        <h2 className="text-lg font-black text-stone-900">Editor εικόνας</h2>{imageEditorError && <p role="alert" className="mt-2 text-sm text-rose-700">{imageEditorError}</p>}
                                         <p className="text-xs font-bold text-stone-500">Ρύθμισε τη φωτογραφία πριν αποθηκευτεί στο προϊόν.</p>
                                     </div>
                                     <button type="button" onClick={closeImageEditor} className="p-2 bg-stone-100 hover:bg-stone-200 rounded-full text-stone-600 transition">
@@ -4428,6 +4405,7 @@ interface BackOfficeViewProps {
                                         );
                                     })()}
                                     
+                                    <MediaDownload media={(currentItem.mediaList || [{ url: currentItem.imageUrl, type: currentItem.fileType }])[activeDetailMediaIdx] || { url: currentItem.imageUrl }} name={currentItem.name || 'aram-media'} className="absolute top-12 right-3 z-10" />
                                     {currentItem.stock > 1 && <div className="absolute bottom-6 left-6 bg-stone-900/90 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg flex items-center gap-1.5"><IconBox /> Απόθεμα: {currentItem.stock} τμχ</div>}
                                 </div>
 
@@ -4895,7 +4873,7 @@ interface BackOfficeViewProps {
                                                         <input type="url" placeholder="https://.../video.mp4" value={shopSettings.heroVideoUrl || ''} onChange={e => setShopSettings(prev => ({ ...prev, heroVideoUrl: e.target.value }))} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" />
                                                         <input type="file" accept="video/*" onChange={e => handleHeroVideoUpload(e.target.files?.[0])} className="w-full text-xs" />
                                                         {heroUploadStatus && <p role="status" className="text-xs text-stone-600">{heroUploadStatus}</p>}
-                                                        {shopSettings.heroVideoUrl && <video src={shopSettings.heroVideoUrl} controls muted className="max-h-36 w-full rounded-lg bg-black" />}
+                                                        {shopSettings.heroVideoUrl && <MediaDownload media={{ url: shopSettings.heroVideoUrl, type: 'video' }} name="aram-hero-video" />}{shopSettings.heroVideoUrl && <video src={shopSettings.heroVideoUrl} controls muted className="max-h-36 w-full rounded-lg bg-black" />}
                                                     </div>
                                                 </div>
                                             </section>
@@ -5336,5 +5314,8 @@ interface BackOfficeViewProps {
                 </div>
             );
         }
+
+
+
 
 
