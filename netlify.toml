@@ -7,6 +7,12 @@
   node_bundler = "esbuild"
 
 [[redirects]]
+  from = "/api/media"
+  to = "/.netlify/functions/media"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/orders"
   to = "/.netlify/functions/orders"
   status = 200
