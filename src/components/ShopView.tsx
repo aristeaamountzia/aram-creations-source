@@ -1,3 +1,4 @@
+import { CatalogControls } from './CatalogControls';
 import React, { useState, useEffect, useMemo } from 'react';
 import { JewelryItem } from '../types';
 import { JEWELRY_CATALOG } from '../data';
@@ -469,7 +470,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const activeMedia = selectedMediaList[activeMediaIndex] || selectedMediaList[0];
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: shopSettings.bgColor, color: shopSettings.textColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
+    <div className="catalog-view shop-view min-h-screen" style={{ backgroundColor: shopSettings.bgColor, color: shopSettings.textColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
       {/* Authentic Artisan Hero Banner */}
       <section className="relative overflow-hidden py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center" style={{ backgroundColor: shopSettings.heroBgColor, color: shopSettings.heroTitleColor }}>
         {shopSettings.heroVideoUrl && <video className="absolute inset-0 h-full w-full object-cover" src={shopSettings.heroVideoUrl} autoPlay muted loop playsInline aria-hidden="true" />}
@@ -506,52 +507,11 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
         
-        {/* Category Navigation Bar */}
-        <div className="border-b border-stone-200 pb-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 horizontal-scrollbar">
-            {visibleCategories.map((cat) => {
-              const isSelected = selectedCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  aria-pressed={selectedCategory === cat}
-                  className={`px-4 py-2 text-xs font-bold whitespace-nowrap transition-all border ${isSelected ? 'text-white shadow-sm' : 'bg-white text-stone-700 border-stone-200 hover:border-stone-400'}`}
-                  style={{ borderRadius: shopSettings.borderRadius, ...(isSelected ? { backgroundColor: shopSettings.primaryColor, borderColor: shopSettings.primaryColor } : {}) }}
-                >
-                  {cat}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Filter & Search Bar */}
-        <div className="bg-white border border-stone-200/90 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Search box */}
-          <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Αναζήτηση με όνομα, υλικό, χρώμα..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl bg-stone-50 border border-stone-200 text-xs font-medium text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 focus:bg-white transition"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                aria-label="Καθαρισμός αναζήτησης"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Filters: Available only, Favorites only, Sort */}
-          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-start md:justify-end">
+        <CatalogControls label="Φίλτρα Shop" search={searchQuery} onSearch={setSearchQuery}
+          placeholder="Αναζήτηση με όνομα, υλικό, χρώμα..."
+          categories={visibleCategories.map(category => ({ id: category, label: category }))}
+          selectedCategory={selectedCategory} onCategory={setSelectedCategory} accent={shopSettings.primaryColor}
+          actions={<>
             <button
               onClick={() => setAvailableOnly(!availableOnly)}
               aria-pressed={availableOnly}
@@ -578,7 +538,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             </button>
 
             {/* Sort Select */}
-            <div className="flex max-w-full min-w-0 items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-700">
+            <div className="catalog-sort flex max-w-full min-w-0 items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-700">
               <span className="text-[11px] text-stone-400 uppercase font-bold">Ταξινόμηση:</span>
               <select
                 value={sortBy}
@@ -592,8 +552,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 <option value="price-desc">Τιμή (Υψηλή → Χαμηλή)</option>
               </select>
             </div>
-          </div>
-        </div>
+          </>} />
 
         {/* Catalog Results Header */}
         <div className="flex items-center justify-between text-xs font-bold text-stone-500 px-1">
@@ -676,7 +635,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   role="group"
                   tabIndex={0}
                   aria-label={`${item.name || item.title || 'Κόσμημα'}. Πατήστε Enter για λεπτομέρειες.`}
-                  className={`group bg-white border border-stone-200/90 rounded-2xl overflow-hidden hover:border-stone-400 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer ${
+                  className={`catalog-card group bg-white border border-stone-200/90 rounded-2xl overflow-hidden hover:border-stone-400 hover:shadow-sm transition-all duration-300 flex flex-col justify-between cursor-pointer ${
                     !isAvailable ? 'opacity-85' : ''
                   }`}
                   style={{ borderRadius: shopSettings.borderRadius }}

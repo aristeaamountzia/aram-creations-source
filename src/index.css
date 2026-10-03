@@ -104,3 +104,96 @@
 @media (prefers-reduced-motion: reduce) {
   .section-entrance { transition: none; }
 }
+
+/* Shared design tokens apply to the shop, portfolio and every back-office screen. */
+.aram-site {
+  --ui-accent: #1c1917;
+  --ui-border: #e7e5e4;
+  --ui-surface: #fafafa;
+  --ui-muted: #716b76;
+  --ui-radius: 10px;
+}
+.aram-site[data-section="portfolio"] { --ui-accent: #6253ae; }
+.aram-site :is(button, input, select, textarea) { font-family: inherit; }
+.aram-site :is(button, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) { border-radius: var(--ui-radius); }
+.aram-site :is(.font-black, .font-extrabold) { font-weight: 600; }
+.aram-site :is(.shadow-sm, .shadow-md, .shadow-lg):not(.fixed) { box-shadow: none; }
+.backoffice-view { padding-top: 32px; font-size: 14px; }
+.backoffice-view :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea) {
+  font-size: 13px;
+  border-color: var(--ui-border);
+}
+.backoffice-view :is(header, article, .rounded-xl, .rounded-2xl, .rounded-3xl) { border-radius: 12px; }
+.catalog-controls { min-width: 0; width: 100%; display: grid; gap: 20px; }
+.catalog-categories {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--ui-border);
+}
+.catalog-categories button,
+.catalog-filter-actions > button,
+.catalog-filter-actions > select,
+.catalog-sort {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: #fff;
+  color: #57534e;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.catalog-categories button { flex-shrink: 0; }
+.catalog-controls button[aria-pressed="true"] { background: var(--ui-accent); border-color: var(--ui-accent); color: #fff; }
+.catalog-controls button:hover:not([aria-pressed="true"]):not(:disabled) { background: var(--ui-surface); border-color: #a8a29e; }
+.catalog-count { font-size: 11px; opacity: .8; }
+.catalog-filter-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+}
+.catalog-search { position: relative; width: 320px; min-width: 0; flex: 0 1 320px; }
+.catalog-search > svg { position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; color: var(--ui-muted); }
+.catalog-search input {
+  width: 100%; height: 40px; padding: 8px 36px;
+  border: 1px solid var(--ui-border); border-radius: var(--ui-radius);
+  background: var(--ui-surface); color: #292524; font-size: 13px; font-weight: 500;
+}
+.catalog-search input::placeholder { color: var(--ui-muted); }
+.catalog-search > button { position: absolute; top: 9px; right: 9px; padding: 3px; color: var(--ui-muted); }
+.catalog-search > button svg { width: 16px; height: 16px; }
+.catalog-filter-actions { display: flex; flex: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.catalog-filter-actions > button svg { width: 16px; height: 16px; }
+.catalog-sort { max-width: 100%; justify-content: flex-start; background: var(--ui-surface); }
+.catalog-sort > span { font-size: 11px; font-weight: 500; color: var(--ui-muted); }
+.catalog-sort select { min-width: 0; max-width: 100%; padding: 0; background: transparent; font-size: 13px; font-weight: 500; border: 0; outline: none; }
+.catalog-category-note { padding: 12px 16px; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 12px; font-size: 13px; color: #57534e; }
+.aram-site .catalog-card { border-radius: 12px !important; border-color: var(--ui-border); box-shadow: none; }
+.aram-site .catalog-card h3 { font-family: inherit; font-size: 18px; font-weight: 600; }
+.aram-site .catalog-card:hover { border-color: #a8a29e; box-shadow: none; }
+.aram-site :focus-visible { outline-color: var(--ui-accent); }
+@media (max-width: 1023px) {
+  .catalog-filter-panel { flex-direction: column; align-items: stretch; }
+  .catalog-search { width: 100%; flex-basis: auto; }
+  .catalog-filter-actions { justify-content: flex-start; }
+}
+@media (max-width: 480px) {
+  .catalog-filter-panel { padding: 12px; gap: 12px; }
+  .catalog-sort { width: 100%; }
+  .catalog-sort select { flex: 1; }
+}

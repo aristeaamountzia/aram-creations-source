@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { CatalogControls } from './CatalogControls';
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
 import { CatalogBackups } from './CatalogBackups';
@@ -3309,7 +3310,7 @@ interface BackOfficeViewProps {
             }
 
             return (
-                <div className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto pb-20 relative">
+                <div className="backoffice-view min-h-screen p-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-20 relative">
                     
                     <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-5 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-stone-200">
                         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Κατάλογος">
@@ -3377,12 +3378,12 @@ interface BackOfficeViewProps {
                         </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row flex-wrap gap-4 mb-8 bg-white p-4 rounded-xl shadow-sm border border-stone-200">
-                        <input type="text" placeholder="Αναζήτηση (όνομα, συλλογή, υλικό, χρώμα)..." className="flex-1 min-w-[220px] px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-stone-400 bg-stone-50" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                        <select className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 focus:outline-none focus:border-stone-400 text-sm" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                            <option value="Όλα">Όλες οι Κατηγορίες</option>
-                            {allFilterCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                        </select>
+                    <div className="mb-6">
+                      <CatalogControls label="Φίλτρα Back Office Shop" search={searchQuery} onSearch={setSearchQuery}
+                        placeholder="Αναζήτηση (όνομα, συλλογή, υλικό, χρώμα)..."
+                        categories={[{ id: 'Όλα', label: 'Όλες οι Κατηγορίες' }, ...allFilterCategories.map(category => ({ id: category, label: category }))]}
+                        selectedCategory={selectedCategory} onCategory={setSelectedCategory}
+                        actions={<>
                         <select className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 focus:outline-none focus:border-stone-400 text-sm" value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)}>
                             <option value="Όλα">Όλα τα Χρώματα</option>
                             {allFilterColors.map(col => <option key={col} value={col}>{col}</option>)}
@@ -3400,6 +3401,7 @@ interface BackOfficeViewProps {
                             <button onClick={() => setViewMode('grid')} className={`p-2 transition ${viewMode === 'grid' ? 'bg-stone-200 text-stone-800' : 'bg-white text-stone-400 hover:text-stone-600'}`}><IconGrid /></button>
                             <button onClick={() => setViewMode('list')} className={`p-2 transition ${viewMode === 'list' ? 'bg-stone-200 text-stone-800' : 'bg-white text-stone-400 hover:text-stone-600'}`}><IconList /></button>
                         </div>
+                        </>} />
                     </div>
 
                     <div className="mb-6 bg-white border border-stone-200 rounded-xl shadow-sm p-3 flex flex-col md:flex-row md:items-center gap-3 justify-between">
@@ -5320,7 +5322,6 @@ interface BackOfficeViewProps {
                 </div>
             );
         }
-
 
 
 

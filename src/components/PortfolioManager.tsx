@@ -1,5 +1,6 @@
 import { MediaDownload } from './MediaDownload';
 import { CatalogExcelExport } from './CatalogExcelExport';
+import { CatalogControls } from './CatalogControls';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { VideoUploadStatus } from './VideoUploadStatus';
 import { prepareVideoUpload, VideoProgress } from '../lib/video-compression';
@@ -213,21 +214,22 @@ export const PortfolioManager: React.FC<{ onBack: () => void }> = ({ onBack }) =
     finally { setAiWorking(false); }
   };
 
-  return <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-5 pb-20">
+  return <main className="backoffice-view max-w-7xl mx-auto p-4 sm:px-6 lg:px-8 space-y-5 pb-20">
     <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
       <div><div className="flex items-center gap-2"><button type="button" onClick={onBack} className="rounded-lg bg-stone-100 px-3 py-2 text-sm font-bold">Shop</button><span className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-bold text-white">Portfolio</span></div><p className="mt-2 text-xs text-stone-500">{allItems.filter(item => !item.isDeleted && !item.deletedAt).length} ενεργά έργα · {allItems.filter(item => item.isDeleted || item.deletedAt).length} στο αρχείο</p></div>
       <div className="flex flex-wrap gap-2"><CatalogExcelExport /><button type="button" onClick={exportCsv} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Εξαγωγή CSV</button><button type="button" onClick={() => { setForm(emptyForm()); setVideoProgress(null); setEditorTab('basics'); setAiSuggestion(null); setError(''); }} className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-bold text-white">+ Νέα καταχώρηση</button></div>
     </header>
     {error && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
-    <section className="rounded-2xl border border-stone-200 bg-white p-4 space-y-3" aria-label="Φίλτρα Portfolio">
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
-        <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Αναζήτηση τίτλου, περιγραφής ή υλικού" aria-label="Αναζήτηση έργου Portfolio" className="w-full rounded-lg border border-stone-200 p-2.5 text-sm" />
-        <select aria-label="Κατηγορία Portfolio" value={categoryFilter} onChange={event => setCategoryFilter(event.target.value as CategoryId | 'all')} className="rounded-lg border border-stone-200 p-2.5 text-sm"><option value="all">Όλες οι κατηγορίες</option>{CATEGORIES.filter(cat => cat.id !== 'jewelry').map(cat => <option key={cat.id} value={cat.id}>{cat.title}</option>)}</select>
+    <CatalogControls label="Φίλτρα Back Office Portfolio" search={query} onSearch={setQuery}
+      placeholder="Αναζήτηση τίτλου, περιγραφής ή υλικού"
+      categories={[{ id: 'all', label: 'Όλες οι Κατηγορίες' }, ...CATEGORIES.filter(category => category.id !== 'jewelry').map(category => ({ id: category.id, label: category.title }))]}
+      selectedCategory={categoryFilter} onCategory={id => setCategoryFilter(id as CategoryId | 'all')}
+      actions={<>
         <select aria-label="Κατάσταση Portfolio" value={visibilityFilter} onChange={event => { setVisibilityFilter(event.target.value as 'active' | 'archived'); setSelectedIds([]); }} className="rounded-lg border border-stone-200 p-2.5 text-sm"><option value="active">Ενεργά</option><option value="archived">Αρχείο</option></select>
         <div className="flex rounded-lg border border-stone-200 overflow-hidden"><button type="button" aria-pressed={view === 'grid'} onClick={() => setView('grid')} className={view === 'grid' ? 'bg-stone-900 px-3 text-sm text-white' : 'px-3 text-sm'}>Πλέγμα</button><button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')} className={view === 'list' ? 'bg-stone-900 px-3 text-sm text-white' : 'px-3 text-sm'}>Λίστα</button></div>
-      </div>
+      </>}>
       {visibilityFilter === 'active' && <div className="flex flex-wrap items-center gap-3 text-xs text-stone-600"><label><input type="checkbox" checked={items.length > 0 && items.every(item => selectedIds.includes(item.id))} onChange={event => setSelectedIds(event.target.checked ? items.map(item => item.id) : [])} /> Επιλογή όλων</label><span>{selectedItems.length} επιλεγμένα</span><button type="button" disabled={!selectedItems.length} onClick={bulkArchive} className="rounded border border-rose-200 px-2 py-1 text-rose-700 disabled:opacity-40">Αρχειοθέτηση επιλεγμένων</button></div>}
-    </section>
+    </CatalogControls>
     <p className="mb-3 text-xs text-stone-500">Σύρε ένα έργο πάνω σε άλλο για να αλλάξεις τη σειρά. Στο κινητό χρησιμοποίησε τα βέλη ↑ ↓. Η σειρά εφαρμόζεται στην προεπιλεγμένη προβολή Portfolio.</p><p role="status" className="mb-3 text-sm text-emerald-700">{orderMessage}</p>{loading ? <p>Φόρτωση Portfolio…</p> : items.length === 0 ? <p className="rounded-xl border border-dashed border-stone-300 bg-white p-10 text-center text-sm text-stone-500">Δεν βρέθηκαν έργα με αυτά τα φίλτρα.</p> : <div className={view === 'grid' ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'flex flex-col gap-3'}>{items.map(item => <article key={item.id} draggable={visibilityFilter === 'active' && !reordering}
       onDragStart={event => { if ((event.target as HTMLElement).closest('button,input,select')) { event.preventDefault(); return; } setDraggedId(item.id); event.dataTransfer.setData('text/plain', item.id); event.dataTransfer.effectAllowed = 'move'; }}
       onDragOver={event => { if (draggedId && draggedId !== item.id && !reordering) event.preventDefault(); }}
