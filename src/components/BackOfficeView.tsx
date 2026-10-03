@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
@@ -5120,7 +5121,10 @@ interface BackOfficeViewProps {
                                                                                 type="button"
                                                                                 className="absolute bottom-1 left-1 z-10 w-7 h-7 rounded-full bg-white/90 text-stone-800 flex items-center justify-center shadow border border-stone-200"
                                                                                 title="Άνοιγμα φωτογραφίας"
-                                                                                onClick={() => setVintedPreviewImage(previewVintedImageSrc(media.url))}
+                                                                                onClick={() => {
+                                                                                    const images = mediaList.filter(entry => entry.type !== 'video' && entry.url).map(entry => ({ url: previewVintedImageSrc(entry.url) }));
+                                                                                    if (images.length) setVintedPreviewImage({ images, index: images.findIndex(entry => entry.url === previewVintedImageSrc(media.url)), title: item.name || 'Vinted preview' });
+                                                                                }}
                                                                             >
                                                                                 <IconEye />
                                                                             </button>
@@ -5136,7 +5140,10 @@ interface BackOfficeViewProps {
                                                                                 type="button"
                                                                                 className="block w-full h-full"
                                                                                 title="Άνοιγμα φωτογραφίας"
-                                                                                onClick={() => setVintedPreviewImage(previewVintedImageSrc(media.url))}
+                                                                                onClick={() => {
+                                                                                    const images = mediaList.filter(entry => entry.type !== 'video' && entry.url).map(entry => ({ url: previewVintedImageSrc(entry.url) }));
+                                                                                    if (images.length) setVintedPreviewImage({ images, index: images.findIndex(entry => entry.url === previewVintedImageSrc(media.url)), title: item.name || 'Vinted preview' });
+                                                                                }}
                                                                             >
                                                                                 <img src={previewVintedImageSrc(media.url)} alt="" className="w-full h-full object-cover" loading="lazy" />
                                                                             </button>
@@ -5246,21 +5253,10 @@ interface BackOfficeViewProps {
                     )}
 
                     {vintedPreviewImage && (
-                        <div className="fixed inset-0 bg-stone-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-[70]" onClick={() => setVintedPreviewImage(null)}>
-                            <div className="relative max-w-5xl max-h-[92vh] w-full flex items-center justify-center">
-                                <button
-                                    type="button"
-                                    onClick={(event) => { event.stopPropagation(); setVintedPreviewImage(null); }}
-                                    className="absolute -top-3 -right-3 z-10 w-10 h-10 rounded-full bg-white text-stone-900 shadow-lg flex items-center justify-center border border-stone-200"
-                                    title="Κλείσιμο"
-                                >
-                                    <IconX />
-                                </button>
-                                <img src={vintedPreviewImage} alt="" className="max-w-full max-h-[92vh] object-contain rounded-xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()} />
-                            </div>
-                        </div>
+                        <ImageLightbox images={vintedPreviewImage.images} index={vintedPreviewImage.index} title={vintedPreviewImage.title}
+                            onIndexChange={index => setVintedPreviewImage(previous => previous && ({ ...previous, index }))}
+                            onClose={() => setVintedPreviewImage(null)} />
                     )}
-
 
                     {isHistoryOpen && (
                         <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50">

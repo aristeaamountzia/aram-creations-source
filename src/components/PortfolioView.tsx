@@ -1,3 +1,4 @@
+import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import React, { useState, useEffect, useMemo } from 'react';
 import { CategoryId, ArtItem, ArtMediaItem } from '../types';
@@ -248,7 +249,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     };
     // Keyboard navigation for modal
     useEffect(() => {
-        if (!selectedItem)
+        if (!selectedItem || isZoomOpen)
             return;
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -297,6 +298,8 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     };
     const activeCategoryMeta = artCategories.find((c) => c.id === selectedCatId);
     const totalVideoCount = items.filter(itemHasVideo).length;
+    const zoomImages = (selectedItem ? getItemMediaList(selectedItem) : [])
+        .map((media, index) => ({ ...media, mediaIndex: index })).filter(media => media.type !== 'video');
     return (<div className={`portfolio-view min-h-screen pb-24 font-sans transition-colors duration-300 ${'bg-[#faf9ff] text-[#252134] selection:bg-[#e4dcfa]'}`}>
       
       {/* Toast Notification */}
@@ -638,28 +641,12 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
           </div>
         </div>)}
 
-      {/* 5. Fullscreen Lightbox / Zoom Modal */}
-      {isZoomOpen && selectedItem && (<div className="fixed inset-0 z-60 bg-black/95 backdrop-blur-lg flex items-center justify-center p-4" onClick={() => setIsZoomOpen(false)}>
-          <button onClick={() => setIsZoomOpen(false)} className="absolute top-6 right-6 z-10 p-3 rounded-full bg-stone-900/90 text-stone-200 hover:text-white border border-stone-700" title="Κλείσιμο Fullscreen (Esc)">
-            <X className="w-6 h-6"/>
-          </button>
-
-          <div className="max-w-5xl max-h-[90vh] flex flex-col items-center justify-center relative" onClick={(e) => e.stopPropagation()}>
-            {(() => {
-                const mediaList = getItemMediaList(selectedItem);
-                const currentMedia = mediaList[activeMediaIdx] || mediaList[0];
-                const isVideo = currentMedia?.type === 'video';
-                const rawUrl = currentMedia?.url || selectedItem.image;
-                const normalizedUrl = isVideo ? normalizeVideoUrl(rawUrl) : rawUrl;
-                return isVideo ? (isEmbedVideo(normalizedUrl) ? (<iframe src={getEmbedVideoUrl(normalizedUrl)} title={selectedItem.title} className="w-[85vw] h-[75vh] max-w-4xl border-0 rounded-xl" allowFullScreen/>) : (<video src={normalizedUrl} controls autoPlay className="max-h-[85vh] max-w-full rounded-xl"/>)) : (<img src={normalizedUrl} alt={selectedItem.title} referrerPolicy="no-referrer" className="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl"/>);
-            })()}
-
-            <div className="mt-3 text-center">
-              <h3 className="text-stone-100 font-sans text-lg">{selectedItem.title}</h3>
-              <p className="text-stone-400 text-xs font-sans mt-0.5">{selectedItem.medium}</p>
-            </div>
-          </div>
-        </div>)}
+      {isZoomOpen && selectedItem && zoomImages.length > 0 && (
+        <ImageLightbox images={zoomImages} title={selectedItem.title}
+          index={zoomImages.findIndex(media => media.mediaIndex === activeMediaIdx)}
+          onIndexChange={index => setActiveMediaIdx(zoomImages[index].mediaIndex)}
+          onClose={() => setIsZoomOpen(false)} />
+      )}
 
     </div>);
 };

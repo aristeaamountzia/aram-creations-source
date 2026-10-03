@@ -1,3 +1,4 @@
+import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import React, { useState, useEffect, useMemo } from 'react';
 import { JewelryItem } from '../types';
@@ -468,6 +469,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   }, [selectedItem]);
 
   const activeMedia = selectedMediaList[activeMediaIndex] || selectedMediaList[0];
+  const zoomImages = selectedMediaList.map((media, index) => ({ ...media, mediaIndex: index })).filter(media => media.type !== 'video');
 
   return (
     <div className="catalog-view shop-view min-h-screen" style={{ backgroundColor: shopSettings.bgColor, color: shopSettings.textColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
@@ -1125,24 +1127,11 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
         </div>
       )}
 
-      {/* Lightbox Modal for High-Resolution Media Inspection */}
-      {isLightboxOpen && activeMedia && activeMedia.type !== 'video' && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setIsLightboxOpen(false)}
-        >
-          <button
-            onClick={() => setIsLightboxOpen(false)}
-            className="absolute top-4 right-4 p-3 rounded-full bg-white/20 text-white hover:bg-white/40 transition"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <img
-            src={activeMedia.url}
-            alt="Μεγέθυνση κοσμήματος"
-            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
-          />
-        </div>
+      {isLightboxOpen && selectedItem && zoomImages.length > 0 && (
+        <ImageLightbox images={zoomImages} title={selectedItem.name || selectedItem.title || 'Κόσμημα'}
+          index={zoomImages.findIndex(media => media.mediaIndex === activeMediaIndex)}
+          onIndexChange={index => setActiveMediaIndex(zoomImages[index].mediaIndex)}
+          onClose={() => setIsLightboxOpen(false)} />
       )}
 
       {Object.entries(shopSettings.fallbackLinks).some(([, url]) => /^https:\/\//i.test(url)) && (
