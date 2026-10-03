@@ -57,3 +57,50 @@
 .horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(120, 113, 108, 0.75);
 }
+
+/* Shared, minimal chrome; the two entrances keep each section explicit. */
+.site-header {
+  background: #fff;
+  border-color: #e7e5e4;
+  color: #1c1917;
+}
+.site-header[data-section="portfolio"] {
+  background: #fcfbff;
+  border-color: #e5def3;
+  color: #29223c;
+}
+.brand-caption { color: #716a75; }
+.header-action { background: #fff; border-color: #e7e5e4; }
+.header-action:hover { background: #fafafa; }
+.section-entrance {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 72px;
+  padding: 12px 18px;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  background: #fff;
+  color: #514d49;
+  text-align: left;
+  transition: background-color 160ms, border-color 160ms, color 160ms;
+}
+.section-entrance:hover { background: #fafafa; }
+.entrance-caption { color: #716b76; }
+.entrance-shop[aria-pressed="true"] { background: #1c1917; border-color: #1c1917; color: #fff; }
+.entrance-portfolio { background: #faf8ff; border-color: #e5def3; color: #51438a; }
+.entrance-portfolio:hover { background: #f2edfc; }
+.entrance-portfolio[aria-pressed="true"] { background: #6253ae; border-color: #6253ae; color: #fff; }
+.section-entrance[aria-pressed="true"] .entrance-caption { color: #f0ecfa; }
+.site-header[data-section="portfolio"] .header-action { color: #6253ae; border-color: #e5def3; }
+.aram-site[data-section="portfolio"] { background: #faf9ff; }
+.aram-site[data-section="portfolio"] .site-footer { background: #f7f5fc; border-color: #e5def3; }
+.portfolio-view :focus-visible { outline-color: #7067d6; }
+.portfolio-view .horizontal-scrollbar { scrollbar-color: #c1b8df transparent; }
+@media (max-width: 480px) {
+  .section-entrance { padding: 10px 12px; gap: 8px; min-height: 70px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-entrance { transition: none; }
+}

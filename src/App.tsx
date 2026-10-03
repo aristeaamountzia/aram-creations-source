@@ -114,7 +114,7 @@ export const App: React.FC = () => {
   const totalCartCount = cartItems.reduce((acc, ci) => acc + ci.quantity, 0);
 
   return (
-    <div className="min-h-screen w-full min-w-0 flex flex-col bg-[#fafafa] text-[#1c1917]">
+    <div data-section={currentMode} className="aram-site min-h-screen w-full min-w-0 flex flex-col bg-white text-[#1c1917]">
       {/* Discreet owner banner when admin view is active */}
       {currentMode === 'admin' && (
         <div className="bg-stone-900 text-stone-200 border-b border-stone-800 px-4 py-2.5 flex flex-wrap gap-3 items-center justify-between text-xs z-50">
@@ -141,6 +141,7 @@ export const App: React.FC = () => {
         onSelectMode={selectMode}
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
+        onContactArtist={() => handleContactArtist()}
       />
 
       {/* Main Content Body */}
@@ -177,13 +178,13 @@ export const App: React.FC = () => {
       />
 
       {/* Footer */}
-      <footer className="bg-[#f5f5f4] border-t border-stone-200/90 text-stone-600 py-12 px-4 sm:px-6 lg:px-8">
+      <footer className="site-footer bg-[#fafafa] border-t border-stone-200/90 text-stone-600 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Col */}
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <img 
-                src="/logo.png" 
+                src={currentMode === 'portfolio' ? '/logo-portfolio.png' : '/logo.png'}
                 alt="Aram Creations" 
                 className="w-8 h-8 object-contain"
                 onError={(e) => {
