@@ -70,36 +70,52 @@
   color: #29223c;
 }
 .brand-caption { color: #716a75; }
+.header-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; padding: 12px 0; }
+.header-brand { justify-self: start; max-width: 100%; }
+.brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header-row > .header-action { justify-self: end; position: relative; }
+.section-entrances { display: flex; gap: 6px; align-items: center; }
 .header-action { background: #fff; border-color: #e7e5e4; }
 .header-action:hover { background: #fafafa; }
 .section-entrance {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 7px;
   min-width: 0;
-  min-height: 72px;
-  padding: 12px 18px;
+  min-height: 42px;
+  padding: 8px 14px;
   border: 1px solid #e7e5e4;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
   color: #514d49;
-  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
   transition: background-color 160ms, border-color 160ms, color 160ms;
 }
 .section-entrance:hover { background: #fafafa; }
-.entrance-caption { color: #716b76; }
 .entrance-shop[aria-pressed="true"] { background: #1c1917; border-color: #1c1917; color: #fff; }
 .entrance-portfolio { background: #faf8ff; border-color: #e5def3; color: #51438a; }
 .entrance-portfolio:hover { background: #f2edfc; }
 .entrance-portfolio[aria-pressed="true"] { background: #6253ae; border-color: #6253ae; color: #fff; }
-.section-entrance[aria-pressed="true"] .entrance-caption { color: #f0ecfa; }
 .site-header[data-section="portfolio"] .header-action { color: #6253ae; border-color: #e5def3; }
 .aram-site[data-section="portfolio"] { background: #faf9ff; }
 .aram-site[data-section="portfolio"] .site-footer { background: #f7f5fc; border-color: #e5def3; }
 .portfolio-view :focus-visible { outline-color: #7067d6; }
 .portfolio-view .horizontal-scrollbar { scrollbar-color: #c1b8df transparent; }
-@media (max-width: 480px) {
-  .section-entrance { padding: 10px 12px; gap: 8px; min-height: 70px; }
+@media (max-width: 767px) {
+  .header-row { grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; padding: 10px 0; }
+  .header-brand { gap: 6px; }
+  .header-brand img { width: 24px; height: 36px; }
+  .header-brand .brand-name { font-size: 13px; }
+  .header-brand .brand-caption { display: none; }
+  .section-entrances { gap: 4px; }
+  .section-entrance { padding: 8px 9px; gap: 5px; min-height: 44px; font-size: 13px; }
+  .section-entrance svg { width: 14px; height: 14px; }
+  .header-row > .header-action { width: 40px; min-height: 44px; justify-content: center; padding: 8px; }
+  .header-action > span:not(.rounded-full) { display: none; }
+  .header-action > .rounded-full { position: absolute; right: -5px; top: -5px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .section-entrance { transition: none; }
