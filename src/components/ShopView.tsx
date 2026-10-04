@@ -474,10 +474,10 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   return (
     <div className="catalog-view shop-view min-h-screen" style={{ backgroundColor: shopSettings.bgColor, color: shopSettings.textColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
       {/* Authentic Artisan Hero Banner */}
-      <section className="relative overflow-hidden py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center" style={{ backgroundColor: shopSettings.heroBgColor, color: shopSettings.heroTitleColor }}>
+      <section className={`shop-hero ${shopSettings.heroVideoUrl ? 'catalog-hero--video' : ''} relative overflow-hidden py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center`} style={{ backgroundColor: shopSettings.heroBgColor, color: shopSettings.heroTitleColor }}>
         {shopSettings.heroVideoUrl && <video className="absolute inset-0 h-full w-full object-cover" src={shopSettings.heroVideoUrl} autoPlay muted loop playsInline aria-hidden="true" />}
         {shopSettings.heroVideoUrl && <div className="absolute inset-0 bg-black/50" aria-hidden="true" />}
-        <div className="relative max-w-4xl mx-auto space-y-4">
+        <div className="relative w-full max-w-4xl mx-auto space-y-4">
           <h1 className={`${shopSettings.heroTitleSize} font-bold tracking-tight break-words`} style={{ color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroTitleColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
             {shopSettings.heroTitle}
           </h1>
@@ -1147,4 +1147,3 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
     </div>
   );
 };
-

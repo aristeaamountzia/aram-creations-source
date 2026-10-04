@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mail, Pause, Play } from 'lucide-react';
+import { Mail } from 'lucide-react';
 
 export function portfolioHeroVideoUrl(value: unknown): string {
   const text = typeof value === 'string' ? value.trim() : '';
@@ -14,11 +14,10 @@ export function PortfolioHero({ videoUrl = '', itemCount, categoryCount, videoCo
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
-  const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const source = portfolioHeroVideoUrl(videoUrl);
   const hasVideo = Boolean(source) && !failed;
-  useEffect(() => { setFailed(false); setPaused(true); }, [source]);
+  useEffect(() => { setFailed(false); }, [source]);
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => setReducedMotion(preference.matches);
@@ -28,20 +27,14 @@ export function PortfolioHero({ videoUrl = '', itemCount, categoryCount, videoCo
   useEffect(() => {
     if (reducedMotion) videoRef.current?.pause();
   }, [reducedMotion]);
-  const togglePlayback = async () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) { try { await video.play(); } catch { setPaused(true); } }
-    else video.pause();
-  };
-  return <section className="portfolio-hero relative overflow-hidden border-b border-[#e5def3] bg-white px-4 py-16 text-center sm:px-6 sm:py-20">
+  return <section className={`portfolio-hero ${hasVideo && showStats ? 'catalog-hero--video' : ''} relative overflow-hidden border-b border-[#e5def3] bg-white px-4 py-16 text-center sm:px-6 sm:py-20`}>
     {hasVideo && <>
       <video key={source} ref={videoRef} src={source} autoPlay={!reducedMotion} muted loop playsInline preload="metadata"
         aria-hidden="true" className="absolute inset-0 h-full w-full object-cover"
-        onError={() => setFailed(true)} onLoadedData={event => setPaused(event.currentTarget.paused)} onPause={() => setPaused(true)} onPlay={() => setPaused(false)} />
+        onError={() => setFailed(true)} />
       <div className="absolute inset-0 bg-black/55" aria-hidden="true" />
     </>}
-    <div className="relative mx-auto max-w-4xl">
+    <div className="relative mx-auto w-full max-w-4xl">
       <h1 className={`mt-4 text-3xl font-bold tracking-tight md:text-4xl ${hasVideo ? 'text-white' : 'text-[#252134]'}`}>Έργα & Δημιουργίες</h1>
       <p className={`mx-auto mt-4 max-w-2xl text-sm leading-relaxed sm:text-base ${hasVideo ? 'text-white' : 'text-[#675f79]'}`}>
         Γλυπτική, σχέδιο, φωτογραφία και ψηφιακές δημιουργίες. Κάθε έργο έχει τη δική του ιστορία.
@@ -56,9 +49,5 @@ export function PortfolioHero({ videoUrl = '', itemCount, categoryCount, videoCo
         </button>
       </div>}
     </div>
-    {hasVideo && <button type="button" onClick={togglePlayback} aria-label={paused ? 'Αναπαραγωγή βίντεο Portfolio' : 'Παύση βίντεο Portfolio'}
-      className="absolute bottom-3 right-3 flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/40 bg-black/40 p-2 text-white">
-      {paused ? <Play className="h-4 w-4" aria-hidden="true" /> : <Pause className="h-4 w-4" aria-hidden="true" />}
-    </button>}
   </section>;
 }
