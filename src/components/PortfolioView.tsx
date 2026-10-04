@@ -1,11 +1,12 @@
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
+import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
 import React, { useState, useEffect, useMemo } from 'react';
 import { CategoryId, ArtItem, ArtMediaItem } from '../types';
 import { CATEGORIES, ART_ITEMS } from '../data';
 import { sortPortfolio } from '../lib/portfolio-order';
 import { db } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { Palette, Eye, Mail, ArrowUpRight, Sparkles, Filter, Search, Film, Image as ImageIcon, Heart, Share2, ChevronLeft, ChevronRight, X, Maximize2, ZoomIn, Play, Layers, Compass, SlidersHorizontal, Check, ExternalLink, Info } from 'lucide-react';
 interface PortfolioViewProps {
     onContactArtist: (item?: ArtItem) => void;
@@ -44,7 +45,11 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     const [items, setItems] = useState<ArtItem[]>(ART_ITEMS);
     const [selectedCatId, setSelectedCatId] = useState<CategoryId | 'all'>('all');
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterMode, setFilterMode] = useState<'all' | 'video' | 'multiple' | 'favorites'>('all');
+    const [filterMode, setFilterMode] = useState<'all' | 'favorites'>('all');
+    const [heroVideoUrl, setHeroVideoUrl] = useState('');
+    useEffect(() => onSnapshot(doc(db, 'settings', 'shop'), snapshot => {
+        setHeroVideoUrl(portfolioHeroVideoUrl(snapshot.data()?.portfolioHeroVideoUrl));
+    }, error => console.warn('Portfolio hero settings could not be loaded:', error)), []);
     const [sortBy, setSortBy] = useState<'default' | 'newest' | 'title' | 'category'>('default');
     const [favorites, setFavorites] = useState<string[]>(() => {
         try {
@@ -187,15 +192,6 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
             if (selectedCatId !== 'all' && item.category !== selectedCatId) {
                 return false;
             }
-            // Media mode filter
-            if (filterMode === 'video' && !itemHasVideo(item)) {
-                return false;
-            }
-            if (filterMode === 'multiple') {
-                const media = getItemMediaList(item);
-                if (media.length <= 1)
-                    return false;
-            }
             if (filterMode === 'favorites' && !favorites.includes(item.id)) {
                 return false;
             }
@@ -311,34 +307,8 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
           {shareError}
         </div>)}
 
-      {/* Portfolio introduction follows the Shop's typography and spacing. */}
-      <section className={`border-b px-4 py-16 text-center transition-colors duration-300 sm:px-6 sm:py-20 ${'border-[#e5def3] bg-white'}`}>
-        <div className="mx-auto max-w-4xl">
-          <h1 className={`mt-4 text-3xl font-bold tracking-tight md:text-4xl ${'text-[#252134]'}`}>
-            Έργα & Δημιουργίες
-          </h1>
-
-          <p className={`mx-auto mt-4 max-w-2xl text-sm leading-relaxed sm:text-base ${'text-[#675f79]'}`}>
-            Γλυπτική, σχέδιο, φωτογραφία και ψηφιακές δημιουργίες. Κάθε έργο έχει τη δική του ιστορία.
-          </p>
-
-          <div className="mt-5 flex flex-wrap justify-center gap-2.5 text-[11px] font-bold">
-            {[`${items.length} έργα`, `${artCategories.length} κατηγορίες`, `${totalVideoCount} έργα με βίντεο`].map(label => (<span key={label} className={`rounded-full border px-3.5 py-1 ${'border-[#e5def3] bg-[#f7f5fd] text-[#675f79]'}`}>
-                {label}
-              </span>))}
-          </div>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              
-              
-
-              <button onClick={() => onContactArtist()} className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-xs font-bold transition sm:text-sm ${'bg-[#6253ae] hover:bg-[#544695] text-white'}`}>
-                <Mail className="w-4 h-4"/>
-                <span>Ανάθεση Έργου / Επικοινωνία</span>
-              </button>
-          </div>
-        </div>
-      </section>
+      <PortfolioHero videoUrl={heroVideoUrl} itemCount={items.length} categoryCount={artCategories.length}
+        videoCount={totalVideoCount} onContactArtist={() => onContactArtist()} />
 
       <div className="catalog-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <CatalogControls label="Φίλτρα Portfolio" search={searchTerm} onSearch={setSearchTerm}
@@ -347,8 +317,6 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
           selectedCategory={selectedCatId} onCategory={id => setSelectedCatId(id as CategoryId | 'all')}
           actions={<>
             <button type="button" aria-pressed={filterMode === 'all'} onClick={() => setFilterMode('all')}>Όλα ({items.length})</button>
-            <button type="button" aria-pressed={filterMode === 'video'} onClick={() => setFilterMode('video')}><Film aria-hidden="true" />Με Βίντεο ({totalVideoCount})</button>
-            <button type="button" aria-pressed={filterMode === 'multiple'} onClick={() => setFilterMode('multiple')}><Layers aria-hidden="true" />Gallery & Multi-Shot</button>
             <button type="button" aria-pressed={filterMode === 'favorites'} onClick={() => setFilterMode('favorites')}><Heart aria-hidden="true" />Αγαπημένα ({favorites.length})</button>
             <div className="catalog-sort"><span>Ταξινόμηση:</span><select aria-label="Ταξινόμηση Portfolio" value={sortBy} onChange={event => setSortBy(event.target.value as any)}>
               <option value="default">Προτεινόμενα</option><option value="newest">Νεότερα</option><option value="title">Αλφαβητικά (Α-Ω)</option><option value="category">Ανά Κατηγορία</option>

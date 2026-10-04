@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
+import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
 import { CatalogBackups } from './CatalogBackups';
@@ -85,6 +86,7 @@ interface BackOfficeViewProps {
             heroTitle: 'Χειροποίητες Δημιουργίες',
             heroSubtitle: 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.',
             heroVideoUrl: '',
+            portfolioHeroVideoUrl: '',
             announcementEnabled: false,
             announcementText: '',
             announcementLink: '',
@@ -322,6 +324,7 @@ interface BackOfficeViewProps {
             // --- SHOP SETTINGS STATE (ΠΛΗΡΕΣ) ---
             const [shopSettings, setShopSettings] = useState(DEFAULT_SHOP_SETTINGS);
             const [heroUploadStatus, setHeroUploadStatus] = useState('');
+            const [portfolioHeroUploadStatus, setPortfolioHeroUploadStatus] = useState('');
             const [isSavingSettings, setIsSavingSettings] = useState(false);
             const [activeSettingsTab, setActiveSettingsTab] = useState('fields');
             const [draggedCategoryIdx, setDraggedCategoryIdx] = useState(null);
@@ -637,6 +640,7 @@ interface BackOfficeViewProps {
                             heroTitle: data.heroTitle || prev.heroTitle,
                             heroSubtitle: data.heroSubtitle || prev.heroSubtitle,
                             heroVideoUrl: data.heroVideoUrl || '',
+                            portfolioHeroVideoUrl: data.portfolioHeroVideoUrl || '',
                             announcementEnabled: Boolean(data.announcementEnabled),
                             announcementText: data.announcementText || '',
                             announcementLink: data.announcementLink || '',
@@ -684,6 +688,7 @@ interface BackOfficeViewProps {
                 setIsSavingSettings(true);
                 try {
                     const settingsRef = doc(db, "settings", "shop");
+                    if (shopSettings.portfolioHeroVideoUrl.trim() && !portfolioHeroVideoUrl(shopSettings.portfolioHeroVideoUrl)) throw new Error('Βάλε έγκυρο σύνδεσμο http ή https για το βίντεο Portfolio.');
                     const beforeSettings = (await getDoc(settingsRef)).data() || {};
                     const savedSettings = { ...shopSettings, customFields: { customCategories, customCollections, customStatuses, customMaterials, customPlatforms, customColors, statusOptionOrder, collectionOptionOrder, platformOptionOrder, colorOptionOrder, materialOptionOrder, hiddenCategoryOptions, hiddenStatusOptions, hiddenCollectionOptions, hiddenPlatformOptions, hiddenColorOptions, hiddenMaterialOptions } };
                     await setDoc(settingsRef, savedSettings, { merge: true });
@@ -696,7 +701,7 @@ interface BackOfficeViewProps {
                         before: beforeSettings,
                         after: { ...beforeSettings, ...savedSettings }
                     });
-                    alert("Οι ρυθμίσεις αποθηκεύτηκαν! Το Shop ενημερώθηκε σε πραγματικό χρόνο.");
+                    alert("Οι ρυθμίσεις αποθηκεύτηκαν! Το Shop και το Portfolio ενημερώθηκαν σε πραγματικό χρόνο.");
                 } catch (err) {
                     alert("Σφάλμα κατά την αποθήκευση των ρυθμίσεων: " + err.message);
                 } finally {
@@ -704,22 +709,25 @@ interface BackOfficeViewProps {
                 }
             };
 
-            const handleHeroVideoUpload = async (file) => {
+            const handleHeroVideoUpload = async (file, section = 'shop') => {
                 if (!file || mediaPreparing) return;
+                const isPortfolioHero = section === 'portfolio';
+                const setStatus = isPortfolioHero ? setPortfolioHeroUploadStatus : setHeroUploadStatus;
                 setMediaPreparing(true);
-                setHeroUploadStatus('');
+                setStatus('');
+                setVideoProgress(null);
                 try {
                     const prepared = await prepareLocalVideo(file);
-                    setHeroUploadStatus('Ανέβασμα συμπιεσμένου βίντεο...');
+                    setStatus('Ανέβασμα συμπιεσμένου βίντεο...');
                     const safeName = prepared.name.replace(/[^a-zA-Z0-9._-]/g, '') || 'hero-video.mp4';
-                    const fileRef = firebaseRef(storage, `jewelry/hero/${Date.now()}-${safeName}`);
+                    const fileRef = firebaseRef(storage, `jewelry/hero/${section}/${Date.now()}-${safeName}`);
                     const task = uploadBytesResumable(fileRef, prepared, { contentType: prepared.type });
                     await new Promise((resolve, reject) => task.on('state_changed', null, reject, resolve));
                     const url = await getDownloadURL(task.snapshot.ref);
-                    setShopSettings(prev => ({ ...prev, heroVideoUrl: url }));
-                    setHeroUploadStatus('Το βίντεο ανέβηκε. Πάτησε Αποθήκευση ρυθμίσεων για να εμφανιστεί στο Shop.');
+                    setShopSettings(prev => ({ ...prev, [isPortfolioHero ? 'portfolioHeroVideoUrl' : 'heroVideoUrl']: url }));
+                    setStatus(`Το βίντεο ανέβηκε. Πάτησε Αποθήκευση ρυθμίσεων για να εμφανιστεί στο ${isPortfolioHero ? 'Portfolio' : 'Shop'}.`);
                 } catch (error) {
-                    setHeroUploadStatus(`Αποτυχία ανεβάσματος: ${error.message}`);
+                    setStatus(`Αποτυχία ανεβάσματος: ${error.message}`);
                 } finally { setMediaPreparing(false); }
             };
 
@@ -727,6 +735,7 @@ interface BackOfficeViewProps {
                 const base = mode === 'minimal' ? MINIMAL_SHOP_SETTINGS : DEFAULT_SHOP_SETTINGS;
                 setShopSettings({
                     ...base,
+                    portfolioHeroVideoUrl: shopSettings.portfolioHeroVideoUrl || '',
                     categoryOrder: shopSettings.categoryOrder?.length ? shopSettings.categoryOrder : base.categoryOrder,
                     fallbackLinks: { ...base.fallbackLinks, ...(shopSettings.fallbackLinks || {}) },
                     aiAssistant: { ...base.aiAssistant, ...(shopSettings.aiAssistant || {}) }
@@ -4531,7 +4540,7 @@ interface BackOfficeViewProps {
                                     <button disabled={mediaPreparing || isSavingSettings} onClick={() => setIsSettingsOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1 rounded-lg border border-stone-200 disabled:opacity-40"><IconX /></button>
                                 </div>
 
-                                <div className="flex border-b border-stone-200 bg-stone-50 px-4 pt-2">
+                                <div className="flex flex-wrap border-b border-stone-200 bg-stone-50 px-4 pt-2">
                                     <button 
                                         onClick={() => setActiveSettingsTab('fields')} 
                                         className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'fields' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
@@ -4543,6 +4552,10 @@ interface BackOfficeViewProps {
                                         className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'shop' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
                                     >
                                         Σχεδιασμός Shop
+                                    </button>
+                                    <button type="button" onClick={() => setActiveSettingsTab('portfolio')}
+                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'portfolio' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}>
+                                        Σχεδιασμός Portfolio
                                     </button>
                                     <button 
                                         onClick={() => setActiveSettingsTab('assistant')} 
@@ -4938,6 +4951,39 @@ interface BackOfficeViewProps {
                                         </div>
                                     )}
 
+                                    {activeSettingsTab === 'portfolio' && (
+                                        <div className="space-y-6">
+                                            <section className="rounded-xl border border-stone-200 p-4 space-y-3">
+                                                <h3 className="text-sm font-bold text-stone-800">Βίντεο αρχικής Portfolio</h3>
+                                                <p className="text-sm text-stone-500">Εμφανίζεται πίσω από το «Έργα & Δημιουργίες», χωρίς ήχο και σε επανάληψη. Χωρίς βίντεο παραμένει το λευκό φόντο.</p>
+                                                <label htmlFor="portfolio-hero-video-url" className="block text-xs font-bold text-stone-600">Σύνδεσμος αρχείου βίντεο (προαιρετικό)</label>
+                                                <input id="portfolio-hero-video-url" type="url" placeholder="https://.../video.mp4" disabled={mediaPreparing || isSavingSettings}
+                                                    value={shopSettings.portfolioHeroVideoUrl || ''} onChange={e => setShopSettings(prev => ({ ...prev, portfolioHeroVideoUrl: e.target.value }))}
+                                                    className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" />
+                                                <p className="text-xs text-stone-500">Χρησιμοποίησε απευθείας σύνδεσμο αρχείου MP4 ή WebM ή ανέβασε ένα αρχείο παρακάτω.</p>
+                                                <label htmlFor="portfolio-hero-video-file" className="block text-xs font-bold text-stone-600">Ανέβασμα από υπολογιστή</label>
+                                                <input id="portfolio-hero-video-file" type="file" accept="video/*" disabled={mediaPreparing || isSavingSettings}
+                                                    aria-label="Ανέβασμα βίντεο Hero Portfolio" onChange={e => { handleHeroVideoUpload(e.target.files?.[0], 'portfolio'); e.target.value = ''; }} className="w-full text-xs" />
+                                                <p className="text-xs text-stone-500">{VIDEO_UPLOAD_HELP}</p>
+                                                <VideoUploadStatus value={videoProgress} busy={videoCompressing} onCancel={() => videoAbort.current?.abort()} />
+                                                {portfolioHeroUploadStatus && <p role="status" className="text-xs text-stone-600">{portfolioHeroUploadStatus}</p>}
+                                                {shopSettings.portfolioHeroVideoUrl && <div className="flex flex-wrap items-center gap-3">
+                                                    <MediaDownload media={{ url: shopSettings.portfolioHeroVideoUrl, type: 'video' }} name="aram-portfolio-hero-video" />
+                                                    <button type="button" disabled={mediaPreparing || isSavingSettings} onClick={() => {
+                                                        setShopSettings(prev => ({ ...prev, portfolioHeroVideoUrl: '' }));
+                                                        setPortfolioHeroUploadStatus('Το βίντεο αφαιρέθηκε από την προεπισκόπηση. Πάτησε Αποθήκευση Ρυθμίσεων για να εφαρμοστεί.');
+                                                    }} className="rounded-lg border border-stone-200 px-3 py-2 text-xs">Αφαίρεση βίντεο</button>
+                                                </div>}
+                                            </section>
+                                            <section>
+                                                <h3 className="mb-3 text-xs font-bold text-stone-500">Προεπισκόπηση αρχικής Portfolio</h3>
+                                                <div className="overflow-hidden rounded-xl border border-stone-200">
+                                                    <PortfolioHero videoUrl={shopSettings.portfolioHeroVideoUrl} itemCount={0} categoryCount={0} videoCount={0}
+                                                        onContactArtist={() => {}} showContact={false} showStats={false} />
+                                                </div>
+                                            </section>
+                                        </div>
+                                    )}
                                     {activeSettingsTab === 'assistant' && (
                                         <div className="animate-fade-in space-y-5">
                                             <section className="border border-violet-100 rounded-xl p-5 bg-violet-50/35 shadow-sm space-y-5">
@@ -4994,7 +5040,7 @@ interface BackOfficeViewProps {
                                 </div>
                                 <div className="p-5 border-t border-stone-100 bg-stone-50 flex justify-end gap-3">
                                     <button disabled={mediaPreparing || isSavingSettings} onClick={() => setIsSettingsOpen(false)} className="px-6 py-2.5 bg-white border border-stone-200 text-stone-700 rounded-lg text-sm font-bold hover:bg-stone-100 transition disabled:opacity-40">Κλείσιμο</button>
-                                    {(activeSettingsTab === 'shop' || activeSettingsTab === 'assistant') && (
+                                    {(activeSettingsTab === 'shop' || activeSettingsTab === 'portfolio' || activeSettingsTab === 'assistant') && (
                                         <button onClick={handleSaveSettings} disabled={isSavingSettings || mediaPreparing} className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition shadow-md flex items-center gap-2">
                                             {isSavingSettings ? 'Αποθήκευση...' : 'Αποθήκευση Ρυθμίσεων'}
                                         </button>
