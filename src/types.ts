@@ -7,7 +7,8 @@ export type CategoryId =
   | 'photography'
   | 'graphic-design'
   | 'drawings'
-  | 'art-projects';
+  | 'art-projects'
+  | (string & {});
 
 export type SectionMode = 'shop' | 'portfolio' | 'admin';
 

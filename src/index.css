@@ -240,3 +240,8 @@
   .image-lightbox-prev { left: max(8px, env(safe-area-inset-left)); }
   .image-lightbox-next { right: max(8px, env(safe-area-inset-right)); }
 }
+
+.lightbox-video { width:100%; height:100%; max-width:1440px; }
+.image-lightbox-caption .lightbox-external-link { pointer-events:auto; display:inline-block; margin-top:6px; text-decoration:underline; font-size:12px; }
+.hero-embed { overflow:hidden; }
+.hero-embed iframe { position:absolute; top:50%; left:50%; width:max(100%, 177.78vh); height:max(100%, 56.25vw); transform:translate(-50%,-50%); }

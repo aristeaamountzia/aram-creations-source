@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
+import { PortfolioDesignSettings } from './PortfolioDesignSettings';
+import { DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, validatePortfolioDesign } from '../lib/portfolio-settings';
 import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
@@ -87,6 +89,7 @@ interface BackOfficeViewProps {
             heroSubtitle: 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.',
             heroVideoUrl: '',
             portfolioHeroVideoUrl: '',
+            portfolioDesign: DEFAULT_PORTFOLIO_DESIGN,
             announcementEnabled: false,
             announcementText: '',
             announcementLink: '',
@@ -641,6 +644,7 @@ interface BackOfficeViewProps {
                             heroSubtitle: data.heroSubtitle || prev.heroSubtitle,
                             heroVideoUrl: data.heroVideoUrl || '',
                             portfolioHeroVideoUrl: data.portfolioHeroVideoUrl || '',
+                            portfolioDesign: normalizePortfolioDesign(data.portfolioDesign),
                             announcementEnabled: Boolean(data.announcementEnabled),
                             announcementText: data.announcementText || '',
                             announcementLink: data.announcementLink || '',
@@ -689,6 +693,7 @@ interface BackOfficeViewProps {
                 try {
                     const settingsRef = doc(db, "settings", "shop");
                     if (shopSettings.portfolioHeroVideoUrl.trim() && !portfolioHeroVideoUrl(shopSettings.portfolioHeroVideoUrl)) throw new Error('Βάλε έγκυρο σύνδεσμο http ή https για το βίντεο Portfolio.');
+                    validatePortfolioDesign(normalizePortfolioDesign(shopSettings.portfolioDesign));
                     const beforeSettings = (await getDoc(settingsRef)).data() || {};
                     const savedSettings = { ...shopSettings, customFields: { customCategories, customCollections, customStatuses, customMaterials, customPlatforms, customColors, statusOptionOrder, collectionOptionOrder, platformOptionOrder, colorOptionOrder, materialOptionOrder, hiddenCategoryOptions, hiddenStatusOptions, hiddenCollectionOptions, hiddenPlatformOptions, hiddenColorOptions, hiddenMaterialOptions } };
                     await setDoc(settingsRef, savedSettings, { merge: true });
@@ -736,6 +741,7 @@ interface BackOfficeViewProps {
                 setShopSettings({
                     ...base,
                     portfolioHeroVideoUrl: shopSettings.portfolioHeroVideoUrl || '',
+                    portfolioDesign: shopSettings.portfolioDesign || DEFAULT_PORTFOLIO_DESIGN,
                     categoryOrder: shopSettings.categoryOrder?.length ? shopSettings.categoryOrder : base.categoryOrder,
                     fallbackLinks: { ...base.fallbackLinks, ...(shopSettings.fallbackLinks || {}) },
                     aiAssistant: { ...base.aiAssistant, ...(shopSettings.aiAssistant || {}) }
@@ -4953,6 +4959,7 @@ interface BackOfficeViewProps {
 
                                     {activeSettingsTab === 'portfolio' && (
                                         <div className="space-y-6">
+                                            <PortfolioDesignSettings value={shopSettings.portfolioDesign} onChange={value => setShopSettings(prev => ({...prev, portfolioDesign:value}))} />
                                             <section className="rounded-xl border border-stone-200 p-4 space-y-3">
                                                 <h3 className="text-sm font-bold text-stone-800">Βίντεο αρχικής Portfolio</h3>
                                                 <p className="text-sm text-stone-500">Εμφανίζεται πίσω από το «Έργα & Δημιουργίες», χωρίς ήχο και σε επανάληψη. Χωρίς βίντεο παραμένει το λευκό φόντο.</p>
@@ -4960,7 +4967,7 @@ interface BackOfficeViewProps {
                                                 <input id="portfolio-hero-video-url" type="url" placeholder="https://.../video.mp4" disabled={mediaPreparing || isSavingSettings}
                                                     value={shopSettings.portfolioHeroVideoUrl || ''} onChange={e => setShopSettings(prev => ({ ...prev, portfolioHeroVideoUrl: e.target.value }))}
                                                     className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" />
-                                                <p className="text-xs text-stone-500">Χρησιμοποίησε απευθείας σύνδεσμο αρχείου MP4 ή WebM ή ανέβασε ένα αρχείο παρακάτω.</p>
+                                                <p className="text-xs text-stone-500">Δέχεται YouTube (και Shorts), Vimeo, απευθείας MP4 / WebM ή αρχείο από τον υπολογιστή.</p>
                                                 <label htmlFor="portfolio-hero-video-file" className="block text-xs font-bold text-stone-600">Ανέβασμα από υπολογιστή</label>
                                                 <input id="portfolio-hero-video-file" type="file" accept="video/*" disabled={mediaPreparing || isSavingSettings}
                                                     aria-label="Ανέβασμα βίντεο Hero Portfolio" onChange={e => { handleHeroVideoUpload(e.target.files?.[0], 'portfolio'); e.target.value = ''; }} className="w-full text-xs" />
@@ -4978,7 +4985,7 @@ interface BackOfficeViewProps {
                                             <section>
                                                 <h3 className="mb-3 text-xs font-bold text-stone-500">Προεπισκόπηση αρχικής Portfolio</h3>
                                                 <div className="overflow-hidden rounded-xl border border-stone-200">
-                                                    <PortfolioHero videoUrl={shopSettings.portfolioHeroVideoUrl} itemCount={0} categoryCount={0} videoCount={0}
+                                                    <PortfolioHero design={normalizePortfolioDesign(shopSettings.portfolioDesign)} videoUrl={shopSettings.portfolioHeroVideoUrl} itemCount={0} categoryCount={0} videoCount={0}
                                                         onContactArtist={() => {}} showContact={false} showStats={false} />
                                                 </div>
                                             </section>

@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {isVideoUrl,portfolioMedia,videoLink} from '../src/lib/video-links';
+import {normalizePortfolioDesign,portfolioStatusLabel,validatePortfolioDesign} from '../src/lib/portfolio-settings';
+import {parseWixProject,wixProjectUrl,WIX_BASE} from '../server/wix-project';
+import wixHandler from '../netlify/functions/wix-project';
+const id='M7lc1UVf-VE';
+for(const url of [`https://youtu.be/${id}?si=test`,`https://youtube.com/watch?v=${id}`,`https://youtube.com/shorts/${id}`,`https://youtube.com/live/${id}`,`https://www.youtube-nocookie.com/embed/${id}`]) {
+  assert.equal(videoLink(url)?.id,id); assert.equal(isVideoUrl(url),true);
+}
+assert.equal(videoLink(`https://youtube.com.evil.test/watch?v=${id}`),null);
+assert.equal(videoLink('javascript:alert(1)'),null);
+assert.equal(isVideoUrl('https://cdn.test/movie.mp4?alt=media'),true);
+const media=portfolioMedia({mediaList:[{url:'https://cdn.test/photo.jpg',type:'image'},{url:`https://youtu.be/${id}`,type:'image'}],videoUrl:`https://youtube.com/watch?v=${id}`});
+assert.equal(media.length,2); assert.equal(media[1].type,'video');
+assert.equal(portfolioMedia({mediaList:[{url:'https://cdn.test/photo.jpg',type:'image'}],videoUrl:'https://cdn.test/movie.webm'}).length,2);
+const design=normalizePortfolioDesign();
+const renamed={...design,categories:[...design.categories].reverse(),statuses:design.statuses.map(s=>s.id==='Διαθέσιμο'?{...s,label:'Έτοιμο για έκθεση'}:s)};
+validatePortfolioDesign(renamed);
+assert.equal(portfolioStatusLabel(renamed,'Διαθέσιμο'),'Έτοιμο για έκθεση');
+assert.equal(renamed.categories[0].id,design.categories.at(-1)!.id);
+assert.throws(()=>validatePortfolioDesign({...design,categories:[design.categories[0],design.categories[0]]}));
+assert.throws(()=>wixProjectUrl('https://evil.test/-aristea-amountzia'));
+assert.throws(()=>wixProjectUrl('https://aristeaamnta.wixsite.com/other-site'));
+const project=parseWixProject(`<title>Test</title><main><h1>&Delta;&omicron;&kappa;&iota;&mu;ή</h1><p>Κείμενο &#0; με &amp;.</p><img src="https://static.wixstatic.com/media/art.jpg/v1/fill/w_100/art.jpg" alt="Έργο"><img src="https://static.wixstatic.com/media/art.jpg/v1/fill/w_500/art.jpg"><iframe src="https://youtube.com/embed/${id}"></iframe></main>`,WIX_BASE);
+assert.equal(project.title,'Δοκιμή'); assert.ok(!project.text.includes('\0'));
+assert.equal(project.media.length,1); assert.equal(project.media[0].url,'https://static.wixstatic.com/media/art.jpg');
+assert.equal(project.links[0],`https://youtube.com/embed/${id}`);
+assert.equal((await wixHandler(new Request('https://local/api/wix-project',{method:'POST'}))).status,401);
+assert.equal((await wixHandler(new Request('https://local/api/wix-project'))).status,405);
+console.log('Portfolio media, settings, Wix parsing and endpoint authorization checks passed.');

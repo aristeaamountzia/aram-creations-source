@@ -37,6 +37,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/wix-project"
+  to = "/.netlify/functions/wix-project"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200

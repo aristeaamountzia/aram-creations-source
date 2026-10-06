@@ -1,3 +1,7 @@
+import { usePortfolioDesign } from '../lib/use-portfolio-design';
+import { portfolioStatusLabel } from '../lib/portfolio-settings';
+import { portfolioMedia } from '../lib/video-links';
+import { VideoPlayer } from './VideoPlayer';
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
@@ -11,36 +15,10 @@ import { Palette, Eye, Mail, ArrowUpRight, Sparkles, Filter, Search, Film, Image
 interface PortfolioViewProps {
     onContactArtist: (item?: ArtItem) => void;
 }
-const normalizeVideoUrl = (rawUrl?: string): string => {
-    const url = String(rawUrl || '').trim();
-    if (!url)
-        return '';
-    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/i) || url.match(/[?&]id=([^&]+)/i);
-    if (driveMatch?.[1] && /drive\.google\.com/i.test(url)) {
-        return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
-    }
-    return url;
-};
-const isEmbedVideo = (url: string) => {
-    return /youtube\.com|youtu\.be|vimeo\.com|drive\.google\.com/i.test(url);
-};
-const getEmbedVideoUrl = (url: string) => {
-    if (/drive\.google\.com/i.test(url)) {
-        return url;
-    }
-    const yt = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
-    if (yt?.[1]) {
-        return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&mute=0&rel=0`;
-    }
-    const vimeo = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/videos\/|album\/(\d+)\/video\/|video\/|)(\d+)/i);
-    if (vimeo?.[3]) {
-        return `https://player.vimeo.com/video/${vimeo[3]}?autoplay=1`;
-    }
-    return url;
-};
 export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist }) => {
     // Only the 8 independent art categories (excluding jewelry which is in Shop)
-    const artCategories = useMemo(() => CATEGORIES.filter((c) => c.id !== 'jewelry'), []);
+    const design = usePortfolioDesign();
+    const artCategories = design.categories;
     // Firebase Live Sync with fallback to ART_ITEMS
     const [items, setItems] = useState<ArtItem[]>(ART_ITEMS);
     const [selectedCatId, setSelectedCatId] = useState<CategoryId | 'all'>('all');
@@ -163,27 +141,14 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
             e.stopPropagation();
         setFavorites((prev) => prev.includes(id) ? prev.filter((fid) => fid !== id) : [...prev, id]);
     };
-    // Helper to extract media list for any item
-    const getItemMediaList = (item: ArtItem): ArtMediaItem[] => {
-        if (item.mediaList && item.mediaList.length > 0) {
-            return item.mediaList;
-        }
-        const list: ArtMediaItem[] = [];
-        if (item.image) {
-            list.push({ url: item.image, type: 'image', title: item.title });
-        }
-        if (item.videoUrl) {
-            list.push({ url: item.videoUrl, type: 'video', title: `${item.title} (Video)` });
-        }
-        return list.length > 0 ? list : [{ url: item.image || '', type: 'image', title: item.title }];
-    };
+    const getItemMediaList = portfolioMedia;
     // Helper to check if item has video
     const itemHasVideo = (item: ArtItem): boolean => {
         if (item.videoUrl)
             return true;
         if (item.mediaList && item.mediaList.some((m) => m.type === 'video'))
             return true;
-        return false;
+        return getItemMediaList(item).some(m => m.type === 'video');
     };
     // Filter and sort items
     const filteredAndSortedItems = useMemo(() => {
@@ -203,7 +168,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 const medMatch = item.medium?.toLowerCase().includes(q);
                 const dimMatch = item.dimensions?.toLowerCase().includes(q);
                 const yearMatch = item.year?.toLowerCase().includes(q);
-                const catMatch = CATEGORIES.find((c) => c.id === item.category)?.title.toLowerCase().includes(q);
+                const catMatch = artCategories.find((c) => c.id === item.category)?.title.toLowerCase().includes(q);
                 if (!titleMatch && !descMatch && !medMatch && !dimMatch && !yearMatch && !catMatch) {
                     return false;
                 }
@@ -224,7 +189,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
             result.sort((a, b) => a.category.localeCompare(b.category));
         }
         return result;
-    }, [items, selectedCatId, filterMode, favorites, searchTerm, sortBy]);
+    }, [items, selectedCatId, filterMode, favorites, searchTerm, sortBy, artCategories]);
     // Current item navigation in modal
     const currentIndex = selectedItem
         ? filteredAndSortedItems.findIndex((it) => it.id === selectedItem.id)
@@ -295,7 +260,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     const activeCategoryMeta = artCategories.find((c) => c.id === selectedCatId);
     const totalVideoCount = items.filter(itemHasVideo).length;
     const zoomImages = (selectedItem ? getItemMediaList(selectedItem) : [])
-        .map((media, index) => ({ ...media, mediaIndex: index })).filter(media => media.type !== 'video');
+        .map((media, index) => ({ ...media, mediaIndex: index }));
     return (<div className={`portfolio-view min-h-screen pb-24 font-sans transition-colors duration-300 ${'bg-[#faf9ff] text-[#252134] selection:bg-[#e4dcfa]'}`}>
       
       {/* Toast Notification */}
@@ -307,7 +272,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
           {shareError}
         </div>)}
 
-      <PortfolioHero videoUrl={heroVideoUrl} itemCount={items.length} categoryCount={artCategories.length}
+      <PortfolioHero design={design} videoUrl={heroVideoUrl} itemCount={items.length} categoryCount={artCategories.length}
         videoCount={totalVideoCount} onContactArtist={() => onContactArtist()} />
 
       <div className="catalog-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
@@ -352,7 +317,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
             </button>
           </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {filteredAndSortedItems.map((item) => {
-                const cat = CATEGORIES.find((c) => c.id === item.category);
+                const cat = artCategories.find((c) => c.id === item.category);
                 const mediaList = getItemMediaList(item);
                 const hasVideo = itemHasVideo(item);
                 const isFav = favorites.includes(item.id);
@@ -368,7 +333,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                     }} role="group" tabIndex={0} aria-label={`${item.title}. Πατήστε Enter για άνοιγμα έργου.`} className={`catalog-card group cursor-pointer rounded-2xl overflow-hidden border transition-all duration-300 flex flex-col justify-between hover:shadow-sm ${'bg-white border-[#e5def3] hover:border-stone-400'}`}>
                   {/* Media Visual Container */}
                   <div className="relative aspect-[4/3] overflow-hidden bg-[#f3f0fa]">
-                    <img src={item.image} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 "/>
+                    {mediaList[0]?.type === 'video' ? <div className="flex h-full items-center justify-center bg-[#ede8fb]"><Play className="h-12 w-12 text-[#6253ae]" aria-label="Έργο με βίντεο" /></div> : <img src={mediaList[0]?.url || item.image} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 "/>}
 
                     
 
@@ -407,7 +372,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
                       {/* Status badge */}
                       {item.status && (<span className="text-[10px] font-sans text-[#514663] bg-white/95 backdrop-blur-md px-2 py-0.5 rounded border border-[#e2dcf0]">
-                          {item.status}
+                          {portfolioStatusLabel(design, item.status)}
                         </span>)}
                     </div>
                   </div>
@@ -475,11 +440,11 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 const currentMedia = mediaList[activeMediaIdx] || mediaList[0];
                 const isVideo = currentMedia?.type === 'video';
                 const rawUrl = currentMedia?.url || selectedItem.image;
-                const normalizedUrl = isVideo ? normalizeVideoUrl(rawUrl) : rawUrl;
+                const normalizedUrl = rawUrl;
                 return (<div className="flex flex-col h-full justify-between">
                     {/* Main Media Stage */}
                     <div className="aspect-[4/3] sm:aspect-square w-full bg-black rounded-xl overflow-hidden relative flex items-center justify-center border border-stone-800/80 shadow-inner group">
-                      {isVideo ? (isEmbedVideo(normalizedUrl) ? (<iframe src={getEmbedVideoUrl(normalizedUrl)} title={selectedItem.title} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>) : (<video key={normalizedUrl} src={normalizedUrl} controls autoPlay loop playsInline className="w-full h-full object-contain"/>)) : (<>
+                      {isVideo ? (<VideoPlayer url={normalizedUrl} title={selectedItem.title} autoPlay />) : (<>
                           <img src={normalizedUrl} alt={selectedItem.title} referrerPolicy="no-referrer" className="w-full h-full object-contain cursor-zoom-in" onClick={() => setIsZoomOpen(true)}/>
                           <button onClick={() => setIsZoomOpen(true)} className="absolute bottom-3 right-3 p-2 rounded-lg bg-stone-900/80 hover:bg-stone-800 text-stone-200 border border-stone-700/80 text-xs flex items-center gap-1.5 transition opacity-90 group-hover:opacity-100" title="Μεγέθυνση σε πλήρη οθόνη">
                             <Maximize2 className="w-3.5 h-3.5"/>
@@ -493,6 +458,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                       </div>
                     </div>
 
+                    {isVideo && <button type="button" onClick={() => setIsZoomOpen(true)} className="mt-2 rounded-lg border px-3 py-2 text-sm">Προβολή βίντεο σε πλήρη οθόνη</button>}
                     {/* Thumbnails Gallery Strip */}
                     {mediaList.length > 1 && (<div className={`mt-3 pt-3 border-t ${'border-[#d8cfea]'}`}>
                         <div className={`text-[11px] font-sans mb-2 flex items-center justify-between ${'text-[#675f79]'}`}>
@@ -525,13 +491,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`text-xs font-sans uppercase px-2.5 py-1 rounded ${'text-[#5b516d] bg-stone-100'}`}>
-                      {CATEGORIES.find((c) => c.id === selectedItem.category)?.title}
+                      {artCategories.find((c) => c.id === selectedItem.category)?.title}
                     </span>
                     {selectedItem.year && (<span className={`text-xs font-sans px-2 py-1 rounded ${'text-[#675f79] bg-stone-100'}`}>
                         {selectedItem.year}
                       </span>)}
                     {selectedItem.status && (<span className={`text-xs font-sans px-2.5 py-1 rounded ${'text-emerald-800 bg-emerald-50 border border-emerald-200'}`}>
-                        {selectedItem.status}
+                        {portfolioStatusLabel(design, selectedItem.status)}
                       </span>)}
                   </div>
 
@@ -547,12 +513,12 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
                 <div className={`mt-2 text-xs font-sans flex items-center gap-1.5 ${'text-[#6253ae]'}`}>
                   <Palette className="w-3.5 h-3.5"/>
-                  <span>{selectedItem.medium}</span>
+                  <span>{design.labels.medium}: {selectedItem.medium}</span>
                 </div>
 
                 {selectedItem.dimensions && (<div className={`mt-1 text-xs font-sans flex items-center gap-1.5 ${'text-[#675f79]'}`}>
                     <Compass className="w-3.5 h-3.5"/>
-                    <span>Διαστάσεις: {selectedItem.dimensions}</span>
+                    <span>{design.labels.dimensions}: {selectedItem.dimensions}</span>
                   </div>)}
 
                 {/* Curatorial Description */}
