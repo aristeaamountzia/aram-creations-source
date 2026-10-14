@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/vite-env.d.ts", "src/lib/emulator-target.ts", "server/test-isolation.ts", "tests/stage1/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

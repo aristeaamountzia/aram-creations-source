@@ -1,3 +1,4 @@
+import { emulatorServices, testModeEnabled } from '../../server/test-isolation';
 import { createHash } from 'node:crypto';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -7,6 +8,7 @@ import { notifyOrder } from '../../server/order-notifications';
 
 const reply = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 function database() {
+  if (testModeEnabled()) return emulatorServices('stage1-orders');
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) throw new OrderError('Η καταχώρηση παραγγελιών δεν είναι ακόμη διαθέσιμη.', 503);
   const credentials = JSON.parse(raw);
@@ -111,3 +113,4 @@ return async function handler(request: Request, context: { ip?: string }) {
 }
 }
 export default createOrdersHandler();
+

@@ -1,3 +1,5 @@
+import { assertEmulatorIsolation } from './test-isolation';
+assertEmulatorIsolation();
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
@@ -37,3 +39,4 @@ try {
   for (const entry of entries.docs) await realDb.recursiveDelete(entry.ref);
   await terminate(db); await deleteApp(app); await admin.delete();
 }
+

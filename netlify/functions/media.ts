@@ -1,9 +1,11 @@
+import { testModeEnabled } from '../../server/test-isolation';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getStorage } from 'firebase-admin/storage';
 import { mediaFilename, mediaLocation } from '../../server/media-path';
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 export default async function handler(request: Request) {
+  if (testModeEnabled()) return json({ error: 'External media and signed links are disabled in the stage-one sandbox.' }, 503);
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
   if (!token) return json({ error: 'Συνδέσου στο Back Office.' }, 401);
@@ -49,4 +51,5 @@ export default async function handler(request: Request) {
     return json({ error: error?.code === 404 ? 'Το αρχείο δεν υπάρχει πλέον στο Storage.' : 'Δεν ολοκληρώθηκε η πρόσβαση στο αρχείο. Δοκίμασε ξανά.' }, error?.code === 404 ? 404 : 502);
   }
 }
+
 

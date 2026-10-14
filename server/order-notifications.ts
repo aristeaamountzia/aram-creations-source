@@ -1,6 +1,8 @@
+import { testModeEnabled } from './test-isolation';
 import type { Firestore } from 'firebase-admin/firestore';
 export const OWNER_EMAIL = 'aristeaamnta@gmail.com';
 export async function sendOrderEmail(id: string, payload: { number: string; total: number }, send = fetch) {
+  if (testModeEnabled()) return `stage1-email-suppressed/${id}`;
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new Error('MAIL_NOT_CONFIGURED');
   const response = await send('https://api.resend.com/emails', {
@@ -37,3 +39,4 @@ export async function retryNotifications(db: Firestore) {
   const pending = await db.collection('orderNotifications').where('state', '==', 'pending').limit(2).get();
   for (const row of pending.docs) await notifyOrder(db, row.id);
 }
+

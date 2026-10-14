@@ -1,8 +1,10 @@
+import { emulatorServices, testModeEnabled } from './test-isolation';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { getStorage } from 'firebase-admin/storage';
 export function adminDatabase() {
+  if (testModeEnabled()) return emulatorServices('stage1-catalog-services');
   const credentials = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
   if (credentials.project_id !== 'aramcreations-e1529') throw new Error('Firebase credentials unavailable');
   const app = getApps().find(a => a.name === 'catalog-services') || initializeApp({ credential: cert(credentials), projectId: credentials.project_id, storageBucket: 'aramcreations-e1529.firebasestorage.app' }, 'catalog-services');
@@ -15,3 +17,4 @@ export async function requireAdmin(request: Request) {
   if (!user || !(user.admin === true || user.email?.toLowerCase() === 'aristeaamnta@gmail.com')) throw new Error('ADMIN_REQUIRED');
   return services;
 }
+

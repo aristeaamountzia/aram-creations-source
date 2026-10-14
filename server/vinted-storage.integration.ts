@@ -1,3 +1,5 @@
+import { assertEmulatorIsolation } from './test-isolation';
+assertEmulatorIsolation();
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
@@ -28,4 +30,5 @@ try {
   await assert.rejects(applyVintedRefresh(db, 'fixture', baseline, { stock: 0 }, collection));
   console.log('PASS: actual browser SDK authentication, Vinted price/status write, backup and concurrent-order protection.');
 } finally { await deleteDoc(ref).catch(() => {}); await signOut(auth); await terminate(db); await deleteApp(app); await admin.delete(); }
+
 

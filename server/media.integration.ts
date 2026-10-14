@@ -1,3 +1,5 @@
+import { assertEmulatorIsolation } from './test-isolation';
+assertEmulatorIsolation();
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
@@ -65,4 +67,5 @@ try {
   await Promise.all(getApps().map(app => app.delete()));
   delete process.env.FIREBASE_SERVICE_ACCOUNT;
 }
+
 

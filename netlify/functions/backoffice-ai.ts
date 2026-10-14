@@ -1,3 +1,4 @@
+import { testModeEnabled } from '../../server/test-isolation';
 import { timingSafeEqual } from "node:crypto";
 import { GoogleGenAI } from "@google/genai";
 import { getApps, initializeApp } from "firebase-admin/app";
@@ -53,6 +54,7 @@ function promptFor(input: AiInput): string {
 }
 
 export default async function handleRequest(request: Request) {
+  if (testModeEnabled()) return json({ error: 'AI provider calls are disabled in the stage-one sandbox.' }, 503);
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
     if (!(await isAuthorized(request))) {
@@ -95,4 +97,5 @@ export default async function handleRequest(request: Request) {
     return json({ error: "Η δημιουργία AI απέτυχε προσωρινά." }, 500);
   }
 }
+
 

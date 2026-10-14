@@ -1,3 +1,5 @@
+import { assertEmulatorIsolation } from './test-isolation';
+assertEmulatorIsolation();
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -61,3 +63,4 @@ try {
   }
   await app.delete();
 }
+

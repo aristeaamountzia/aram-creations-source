@@ -1,3 +1,4 @@
+throw new Error('Production deployment verification is not authorized in stage one. Use pnpm test:stage1.');
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { initializeApp as initializeAdmin, cert } from 'firebase-admin/app';
@@ -30,3 +31,4 @@ try {
   }
   console.log('PASS: deployed admin authentication, order list, private backup list/download, path validation.');
 } finally { await signOut(auth); await deleteApp(app); await admin.delete(); }
+

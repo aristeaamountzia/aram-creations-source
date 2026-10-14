@@ -1,8 +1,10 @@
+import { testModeEnabled } from '../../server/test-isolation';
 import {cert,getApps,initializeApp} from 'firebase-admin/app';
 import {getAuth} from 'firebase-admin/auth';
 import {fetchWixProject} from '../../server/wix-project';
 const json=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 export default async function handler(request:Request) {
+  if (testModeEnabled()) return json({ error: 'Wix calls are disabled in the stage-one sandbox.' }, 503);
   if(request.method!=='POST')return json({error:'Method not allowed'},405);
   const token=request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
   if(!token)return json({error:'Συνδέσου στο Back Office.'},401);
@@ -17,3 +19,4 @@ export default async function handler(request:Request) {
     return json(await fetchWixProject(typeof body.url==='string'?body.url:undefined));
   } catch(error:any) { return json({error:error.message||'Δεν ολοκληρώθηκε η ανάγνωση του Wix.'},502); }
 }
+

@@ -1,0 +1,11 @@
+{
+  "score": 1,
+  "summary": "Repository baseline exposes complete catalog records, including hidden products and internal fields. Proposed protections are emulator-only and have not been deployed.",
+  "findings": [
+    { "check": "Field-Level vs. Identity-Level Security", "severity": "critical", "issue": "Anonymous reads of jewelry return every field, including mixed notes, cost, storage and media references; showInShop does not restrict access.", "recommendation": "Use an explicit public projection and administrator-only canonical records, with separately approved migration and rules." },
+    { "check": "Business Logic vs. Rules", "severity": "major", "issue": "Public view/favorite code attempts direct product writes, while repository rules require administrator access.", "recommendation": "Plan a bounded server-side metrics endpoint; do not relax product-write rules. Production behavior is not write-tested." },
+    { "check": "Authority Source", "severity": "moderate", "issue": "The fallback admin-email authorization does not check email_verified.", "recommendation": "Review verified identity/admin-claim requirements separately; the emulator proposal tests denial of an unverified email fallback." },
+    { "check": "Business Logic vs. Rules", "severity": "critical", "issue": "A published Storage download token permits a read even when the SDK is denied by rules.", "recommendation": "Do not publish private object tokens; inventory/revoke existing tokens when a production conversion is separately approved." },
+    { "check": "The Update Bypass / Type Safety / Storage Abuse", "severity": "minor", "issue": "Catalog create/update rules share the admin check but do not validate schemas or field sizes. Storage does bound upload size and content type. No ordinary-user write bypass was demonstrated.", "recommendation": "Validate public projection schemas at the trusted publisher, with matching defensive rules in the approved production design." }
+  ]
+}

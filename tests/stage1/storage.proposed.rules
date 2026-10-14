@@ -1,0 +1,9 @@
+// PROPOSAL: emulator only. Private object paths never contain published download tokens.
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() { return request.auth != null && request.auth.token.get('admin', false) == true; }
+    match /publicMedia/{path=**} { allow read: if true; allow write: if isAdmin(); }
+    match /{path=**} { allow read, write: if isAdmin(); }
+  }
+}

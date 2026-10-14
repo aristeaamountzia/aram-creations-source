@@ -1,3 +1,4 @@
+import { testModeEnabled } from './server/test-isolation';
 import { extractListingState, classifyVintedCategory } from './server/vinted-listing';
 import "dotenv/config";
 import express from "express";
@@ -10,6 +11,10 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 
 const app = express();
+app.use((req, res, next) => {
+  if (testModeEnabled()) return res.status(503).json({ error: 'External API/AI/import routes are disabled in the stage-one sandbox.' });
+  next();
+});
 
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ limit: "25mb", extended: true }));
@@ -724,4 +729,5 @@ app.use(express.static(path.join(process.cwd(), "public")));
 
 
 export { app };
+
 
