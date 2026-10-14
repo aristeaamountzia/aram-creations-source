@@ -1,16 +1,14 @@
+import { recordPublicMetric } from '../lib/public-metrics';
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import React, { useState, useEffect, useMemo } from 'react';
 import { JewelryItem } from '../types';
-import { JEWELRY_CATALOG } from '../data';
 import { db } from '../firebase';
 import { DEFAULT_SHOP_SETTINGS, normalizeShopSettings, ShopSettings } from '../shopSettings';
 import {
-  collection,
+  collection, query, where,
   doc,
   onSnapshot,
-  updateDoc,
-  increment
 } from 'firebase/firestore';
 import {
   ShoppingBag,
@@ -245,7 +243,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
 
   useEffect(() => {
-    return onSnapshot(doc(db, 'settings', 'shop'), (snapshot) => {
+    return onSnapshot(doc(db, 'publicSettings', 'shop'), (snapshot) => {
       setShopSettings(normalizeShopSettings(snapshot.exists() ? snapshot.data() : undefined));
     }, (error) => console.warn('Shop settings could not be loaded:', error));
   }, []);
@@ -277,7 +275,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   useEffect(() => {
     let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
     try {
-      const jewelryColl = collection(db, 'jewelry');
+      const jewelryColl = query(collection(db, 'publicCatalog'), where('showInShop', '==', true));
       const unsubscribe = onSnapshot(jewelryColl, (snapshot) => {
         if (fallbackTimer) clearTimeout(fallbackTimer);
         const items = snapshot.docs.map((docSnap) => ({
@@ -291,12 +289,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
         setIsCatalogLoading(false);
       }, (err) => {
         console.warn('Firestore live subscription fallback:', err);
-        setJewelryList(JEWELRY_CATALOG);
+        setJewelryList([]);
         setCatalogOffline(true);
         setIsCatalogLoading(false);
       });
       fallbackTimer = setTimeout(() => {
-        setJewelryList((current) => current.length ? current : JEWELRY_CATALOG);
+        setJewelryList([]);
         setCatalogOffline(true);
         setIsCatalogLoading(false);
       }, 8000);
@@ -306,7 +304,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       };
     } catch (e) {
       console.warn('Firestore initialization fallback:', e);
-      setJewelryList(JEWELRY_CATALOG);
+      setJewelryList([]);
       setCatalogOffline(true);
       setIsCatalogLoading(false);
     }
@@ -320,8 +318,9 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
     // Track view once per browser session for each item
     const sessionKey = `aram_viewed_${item.id}`;
-    if (!sessionStorage.getItem(sessionKey)) {
-      sessionStorage.setItem(sessionKey, 'true');
+    let viewed = false;
+    try { viewed = Boolean(sessionStorage.getItem(sessionKey)); sessionStorage.setItem(sessionKey, 'true'); } catch {}
+    if (!viewed) {
 
       // Optimistically update local view count
       setJewelryList((prev) =>
@@ -340,11 +339,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
       // Persist view to Firestore
       try {
-        const itemRef = doc(db, 'jewelry', item.id);
-      updateDoc(itemRef, {
-          views: increment(1),
-          viewCount: increment(1)
-        }).catch((err) => console.warn('Could not persist view count:', err));
+        recordPublicMetric(item.id, 'view', 1).catch((err) => console.warn('Could not persist view count:', err));
       } catch (_) {}
     }
   };
@@ -394,12 +389,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
     // Persist to Firestore
     try {
-      const itemRef = doc(db, 'jewelry', itemId);
-      updateDoc(itemRef, {
-        likes: increment(delta),
-        favorites: increment(delta),
-        shopFavorites: increment(delta)
-      }).catch((err) => console.warn('Could not persist like:', err));
+      recordPublicMetric(itemId, 'favorite', delta).catch((err) => console.warn('Could not persist like:', err));
     } catch (_) {}
   };
 
@@ -1147,3 +1137,4 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
     </div>
   );
 };
+

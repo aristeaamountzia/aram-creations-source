@@ -14,7 +14,7 @@ export async function requireAdmin(request: Request) {
   const services = adminDatabase();
   const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
   const user = token ? await services.auth.verifyIdToken(token).catch(() => null) : null;
-  if (!user || !(user.admin === true || user.email?.toLowerCase() === 'aristeaamnta@gmail.com')) throw new Error('ADMIN_REQUIRED');
+  if (!user || !(user.admin === true || user.email_verified === true && user.email?.toLowerCase() === 'aristeaamnta@gmail.com')) throw new Error('ADMIN_REQUIRED');
   return services;
 }
 

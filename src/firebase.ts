@@ -1,3 +1,4 @@
+import { configureCatalogWrites } from './lib/catalog-write';
 import { browserEmulatorTarget } from './lib/emulator-target';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
@@ -27,3 +28,19 @@ if (target) {
   connectFirestoreEmulator(db, target.firestore.host, target.firestore.port);
   connectStorageEmulator(storage, target.storage.host, target.storage.port);
 }
+
+configureCatalogWrites(db, async payload => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Συνδέσου στη διαχείριση πριν αποθηκεύσεις.');
+  const body = JSON.stringify(payload);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch('/api/catalog-write', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${await user.getIdToken()}` }, body });
+      const result = await response.json();
+      if (!response.ok) { const error = Object.assign(new Error(result.error || 'Αποτυχία αποθήκευσης.'), { code: result.code, status: response.status }); throw error; }
+      return;
+    } catch (error: any) {
+      if (error.status && error.status < 500 || attempt === 2) throw error;
+    }
+  }
+});

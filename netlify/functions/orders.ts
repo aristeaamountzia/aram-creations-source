@@ -1,3 +1,5 @@
+import { requirePrivacyRuntime } from '../../server/catalog-publication';
+import { projectProduct } from '../../server/public-projection';
 import { emulatorServices, testModeEnabled } from '../../server/test-isolation';
 import { createHash } from 'node:crypto';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
@@ -18,16 +20,17 @@ function database() {
   return { db: getFirestore(app), auth: getAuth(app) };
 }
 
-export function createOrdersHandler(connect: typeof database = database, notify: typeof notifyOrder = notifyOrder) {
+export function createOrdersHandler(connect: typeof database = database, notify: typeof notifyOrder = notifyOrder, publish: typeof projectProduct = projectProduct) {
 return async function handler(request: Request, context: { ip?: string }) {
   try {
+    requirePrivacyRuntime();
     const { db, auth } = connect();
     const url = new URL(request.url);
     if (request.method === 'GET' || request.method === 'PATCH') {
       const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
       if (!token) return reply({ error: 'Απαιτείται σύνδεση διαχειριστή.' }, 401);
       const user = await auth.verifyIdToken(token).catch(() => null);
-      if (!user || !(user.admin === true || user.email?.toLowerCase() === 'aristeaamnta@gmail.com')) return reply({ error: 'Δεν επιτρέπεται η πρόσβαση.' }, 403);
+      if (!user || !(user.admin === true || user.email_verified === true && user.email?.toLowerCase() === 'aristeaamnta@gmail.com')) return reply({ error: 'Δεν επιτρέπεται η πρόσβαση.' }, 403);
       if (request.method === 'GET') {
         let query = db.collection('orders').orderBy('createdAt', 'desc').limit(100);
         const cursor = url.searchParams.get('after');
@@ -46,8 +49,9 @@ return async function handler(request: Request, context: { ip?: string }) {
         if (!snapshot.exists) throw new OrderError('Η παραγγελία δεν βρέθηκε.', 404);
         const order = snapshot.data()!;
         nextStatus(order.status, status, order.paymentMethod);
+        const publicProducts = await Promise.all(order.items.map((item: { id: string }) => transaction.get(db.doc(`publicCatalog/${item.id}`))));
         const products = await Promise.all(order.items.map((item: { id: string }) => transaction.get(db.doc(`jewelry/${item.id}`))));
-        for (const product of products) {
+        for (const [index, product] of products.entries()) {
           if (!product.exists) continue;
           const data = product.data()!;
           const reserved = Number(data.checkoutReservations?.[id] || 0);
@@ -59,6 +63,13 @@ return async function handler(request: Request, context: { ip?: string }) {
           } else if (status === 'delivered') {
             transaction.update(product.ref, { [`checkoutReservations.${id}`]: FieldValue.delete() });
           }
+        }
+        for (const [index, product] of products.entries()) {
+          if (!product.exists) continue;
+          const data = product.data()!; const reserved = Number(data.checkoutReservations?.[id] || 0);
+          const next = reserved && status === 'cancelled' ? { ...data, stock: 1, status: ['Κρατημένο', 'Πουλήθηκε'].includes(data.status) ? 'Διαθέσιμο' : data.status } : reserved && ['paid', 'shipped'].includes(status) && Number(data.stock) === 0 && data.status === 'Κρατημένο' ? { ...data, status: 'Πουλήθηκε' } : data;
+          const projection = publish(next, publicProducts[index].data()?.mediaList || []);
+          if (projection) transaction.set(db.doc(`publicCatalog/${product.id}`), projection); else transaction.delete(db.doc(`publicCatalog/${product.id}`));
         }
         transaction.update(ref, { status, tracking: typeof tracking === 'string' ? tracking.slice(0, 200) : order.tracking || '', updatedAt: new Date().toISOString(), history: [...(order.history || []), { status, at: new Date().toISOString(), by: user.uid }] });
       });
@@ -88,6 +99,8 @@ return async function handler(request: Request, context: { ip?: string }) {
       const freshWindow = !rateData || now.getTime() - rateData.startedAt > 3600000;
       if (!freshWindow && rateData.count >= 8) throw new OrderError('Έγιναν πολλά αιτήματα. Δοκίμασε αργότερα ή επικοινώνησε μαζί μας.', 429);
       const snapshots = await Promise.all(input.items.map(item => transaction.get(db.doc(`jewelry/${item.id}`))));
+      const publicSnapshots = await Promise.all(input.items.map(item => transaction.get(db.doc(`publicCatalog/${item.id}`))));
+      if (snapshots.some(s => s.data()?.showInShop === false)) throw new OrderError('Ένα προϊόν δεν είναι δημόσια διαθέσιμο.', 409);
       const priced = priceOrder(input, snapshots.map(doc => doc.exists ? { ...doc.data(), id: doc.id } : null));
       if (Math.round(priced.total * 100) !== input.expectedTotalCents) throw new OrderError('Η τιμή ή τα μεταφορικά άλλαξαν. Έλεγξε το νέο σύνολο στο καλάθι και δοκίμασε ξανά.', 409);
       const number = `ARAM-${now.toISOString().slice(0, 10).replaceAll('-', '')}-${input.requestId.slice(0, 8).toUpperCase()}`;
@@ -95,6 +108,8 @@ return async function handler(request: Request, context: { ip?: string }) {
         const product = snapshots[index];
         const data = product.data()!;
         const remaining = 0;
+        const projection = publish({ ...data, stock: remaining, status: remaining === 0 ? 'Κρατημένο' : data.status }, publicSnapshots[index].data()?.mediaList || []);
+        if (projection) transaction.set(db.doc(`publicCatalog/${product.id}`), projection); else transaction.delete(db.doc(`publicCatalog/${product.id}`));
         transaction.update(product.ref, { stock: remaining, [`checkoutReservations.${ref.id}`]: input.items[index].quantity, ...(remaining === 0 ? { status: 'Κρατημένο' } : {}) });
       }
       transaction.set(rateRef, { count: freshWindow ? 1 : rateData!.count + 1, startedAt: freshWindow ? now.getTime() : rateData!.startedAt, expiresAt: new Date(now.getTime() + 86400000) });

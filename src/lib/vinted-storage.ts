@@ -1,4 +1,5 @@
-import { doc, Firestore, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { doc, Firestore, serverTimestamp } from 'firebase/firestore';
+import { runTransaction } from './catalog-write';
 import { refreshBaseline } from './vinted-refresh';
 import { persistHistory } from './catalog-history';
 export async function applyVintedRefresh(db: Firestore, id: string, baseline: any, patch: Record<string, any>, collection = 'jewelry') {
@@ -16,3 +17,4 @@ export async function applyVintedRefresh(db: Firestore, id: string, baseline: an
   });
   await persistHistory(db, { type: 'VINTED_REFRESH', id, name: baseline.name || id, message: 'Επιλεγμένες αλλαγές από Vinted', collection, timestamp: new Date().toISOString(), before: savedBefore, after: patch }).catch(() => { throw new Error('Οι αλλαγές αποθηκεύτηκαν, αλλά δεν καταγράφηκαν στο cloud ιστορικό. Υπάρχει το backup στο προϊόν.'); });
 }
+

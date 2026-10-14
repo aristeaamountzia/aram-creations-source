@@ -1,3 +1,7 @@
+import uploadHandler from './netlify/functions/private-upload';
+import publicMediaHandler from './netlify/functions/public-media';
+import catalogWriteHandler from './netlify/functions/catalog-write';
+import catalogMetricsHandler from './netlify/functions/catalog-metrics';
 import { testModeEnabled } from './server/test-isolation';
 import { extractListingState, classifyVintedCategory } from './server/vinted-listing';
 import "dotenv/config";
@@ -11,6 +15,22 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 
 const app = express();
+app.all('/api/private-upload', express.raw({ type: '*/*', limit: '30mb' }), async (req, res) => {
+  const response = await uploadHandler(new Request(`http://127.0.0.1${req.originalUrl}`, { method: req.method, headers: req.headers as Record<string, string>, body: new Uint8Array(req.body) }));
+  res.status(response.status); response.headers.forEach((v, k) => res.setHeader(k, v)); res.end(Buffer.from(await response.arrayBuffer()));
+});
+app.get('/api/public-media', async (req, res) => {
+  const response = await publicMediaHandler(new Request(`http://127.0.0.1${req.originalUrl}`, { headers: req.headers as Record<string, string> }));
+  res.status(response.status); response.headers.forEach((v, k) => res.setHeader(k, v));
+  if (!response.body) return res.end();
+  const { Readable } = await import('node:stream'); Readable.fromWeb(response.body as any).pipe(res);
+});
+for (const [route, handler] of [['/api/catalog-write', catalogWriteHandler], ['/api/catalog-metrics', catalogMetricsHandler]] as const) {
+  app.post(route, express.text({ type: 'application/json', limit: '8mb' }), async (req, res) => {
+    const response = await handler(new Request(`http://127.0.0.1${route}`, { method: 'POST', headers: req.headers as Record<string, string>, body: req.body }), { ip: req.ip });
+    res.status(response.status); response.headers.forEach((value, key) => res.setHeader(key, value)); res.send(await response.text());
+  });
+}
 app.use((req, res, next) => {
   if (testModeEnabled()) return res.status(503).json({ error: 'External API/AI/import routes are disabled in the stage-one sandbox.' });
   next();
@@ -70,7 +90,7 @@ async function handleBackofficeAi(req: Request, res: Response) {
       try {
         if (!getApps().length) initializeApp({ projectId: 'aramcreations-e1529' });
         const decoded = await getAdminAuth().verifyIdToken(bearer);
-        verifiedAdmin = decoded.admin === true || decoded.email?.toLowerCase() === 'aristeaamnta@gmail.com';
+        verifiedAdmin = decoded.admin === true || decoded.email_verified === true && decoded.email?.toLowerCase() === 'aristeaamnta@gmail.com';
       } catch (error) {
         console.warn('Invalid Firebase admin token for AI request');
       }

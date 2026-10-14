@@ -11,6 +11,30 @@
   ignore = "exit 0"
 
 [[redirects]]
+  from = "/api/private-upload"
+  to = "/.netlify/functions/private-upload"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/public-media"
+  to = "/.netlify/functions/public-media"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/catalog-write"
+  to = "/.netlify/functions/catalog-write"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/catalog-metrics"
+  to = "/.netlify/functions/catalog-metrics"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/catalog-backups"
   to = "/.netlify/functions/catalog-backups"
   status = 200
@@ -52,3 +76,6 @@
   status = 200
   force = true
 
+
+[context."codex/stage-2-public-private-2026-10-14"]
+  ignore = "exit 0"

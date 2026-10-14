@@ -4,11 +4,13 @@ export const BACKUP_PREFIX = 'backups/catalog/';
 export async function createBackup(now = new Date()) {
   const { db, bucket } = adminDatabase();
   const collections: Record<string, any[]> = {};
-  for (const name of ['jewelry', 'portfolio', 'settings', 'orders']) {
+  for (const name of ['jewelry', 'portfolio', 'settings', 'orders', 'publicCatalog', 'publicPortfolio', 'publicSettings', 'catalogHistory', 'catalogOperations', 'catalogMediaCleanup', 'catalogMediaArchives', 'catalogMetricEvents', 'catalogMetricLimits', 'orderRateLimits', 'orderNotifications']) {
     const snapshot = await db.collection(name).get();
     collections[name] = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
   }
-  const backup = { format: 'aram-catalog-v1', createdAt: now.toISOString(), mediaIncluded: false, collections };
+  const historyParts: any[] = [];
+  for (const entry of collections.catalogHistory || []) { const parts = await db.collection(`catalogHistory/${entry.id}/parts`).get(); parts.docs.forEach(part => historyParts.push({ path: part.ref.path, data: part.data() })); }
+  const backup = { historyParts, format: 'aram-catalog-v1', createdAt: now.toISOString(), mediaIncluded: false, collections };
   const bytes = gzipSync(JSON.stringify(backup));
   // Rotating slots: 24 hours at 30-minute intervals plus 7 daily snapshots.
   const halfHour = Math.floor(now.getTime() / 1800000) % 48;
@@ -28,3 +30,4 @@ export async function downloadBackup(name: string) {
   const [bytes] = await adminDatabase().bucket.file(`${BACKUP_PREFIX}${name}`).download();
   return gunzipSync(bytes);
 }
+

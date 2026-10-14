@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function admin() { return request.auth != null && (request.auth.token.get('admin', false) == true || (request.auth.token.get('email', '') == 'aristeaamnta@gmail.com' && request.auth.token.get('email_verified', false) == true)); }
+    match /publicMedia/{path=**} { allow read: if admin(); allow write: if false; }
+    match /jewelry/{path=**} {
+      allow delete: if admin();
+      allow create, update: if false;
+    }
+    match /privateMedia/{path=**} {
+      allow delete: if admin();
+      allow create, update: if false;
+    }
+    match /{path=**} {
+      allow read: if admin();
+      allow create, update: if false;
+    }
+  }
+}

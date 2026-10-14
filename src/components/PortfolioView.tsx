@@ -10,7 +10,7 @@ import { CategoryId, ArtItem, ArtMediaItem } from '../types';
 import { CATEGORIES, ART_ITEMS } from '../data';
 import { sortPortfolio } from '../lib/portfolio-order';
 import { db } from '../firebase';
-import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { query, where, collection, doc, onSnapshot } from 'firebase/firestore';
 import { Palette, Eye, Mail, ArrowUpRight, Sparkles, Filter, Search, Film, Image as ImageIcon, Heart, Share2, ChevronLeft, ChevronRight, X, Maximize2, ZoomIn, Play, Layers, Compass, SlidersHorizontal, Check, ExternalLink, Info } from 'lucide-react';
 interface PortfolioViewProps {
     onContactArtist: (item?: ArtItem) => void;
@@ -19,13 +19,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     // Only the 8 independent art categories (excluding jewelry which is in Shop)
     const design = usePortfolioDesign();
     const artCategories = design.categories;
-    // Firebase Live Sync with fallback to ART_ITEMS
-    const [items, setItems] = useState<ArtItem[]>(ART_ITEMS);
+    // Read only the sanitized public projection.
+    const [items, setItems] = useState<ArtItem[]>([]);
     const [selectedCatId, setSelectedCatId] = useState<CategoryId | 'all'>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [filterMode, setFilterMode] = useState<'all' | 'favorites'>('all');
     const [heroVideoUrl, setHeroVideoUrl] = useState('');
-    useEffect(() => onSnapshot(doc(db, 'settings', 'shop'), snapshot => {
+    useEffect(() => onSnapshot(doc(db, 'publicSettings', 'shop'), snapshot => {
         setHeroVideoUrl(portfolioHeroVideoUrl(snapshot.data()?.portfolioHeroVideoUrl));
     }, error => console.warn('Portfolio hero settings could not be loaded:', error)), []);
     const [sortBy, setSortBy] = useState<'default' | 'newest' | 'title' | 'category'>('default');
@@ -87,7 +87,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     // Optional Firestore real-time sync for portfolio items
     useEffect(() => {
         try {
-            const colRef = collection(db, 'portfolio');
+            const colRef = query(collection(db, 'publicPortfolio'), where('showInShop', '==', true));
             const unsubscribe = onSnapshot(colRef, (snapshot) => {
                 const firestoreItems: ArtItem[] = [];
                 const deletedIds = new Set<string>();
@@ -110,7 +110,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                         ...data,
                         title: data.title || data.name || 'Χωρίς Τίτλο',
                         portfolioOrder: data.portfolioOrder,
-                        description: data.description || data.notes || '',
+                        description: data.description || '',
                         image: primaryImg,
                         mediaList: resolvedMediaList,
                         videoUrl: data.videoUrl || (data.fileType === 'video' ? primaryImg : undefined)
@@ -118,22 +118,19 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 });
                 // Merge with local static items, avoiding duplicates and skipping deleted
                 const combinedMap = new Map<string, ArtItem>();
-                ART_ITEMS.forEach((it) => {
-                    if (!deletedIds.has(it.id))
-                        combinedMap.set(it.id, it);
-                });
+
                 firestoreItems.forEach((it) => {
                     if (!deletedIds.has(it.id))
                         combinedMap.set(it.id, it);
                 });
                 setItems(Array.from(combinedMap.values()));
             }, (error) => {
-                console.warn('Firestore portfolio sync offline, using local curated catalog:', error);
+                setItems([]); console.warn('Public portfolio unavailable:', error);
             });
             return () => unsubscribe();
         }
         catch (e) {
-            console.warn('Firebase portfolio not configured, using ART_ITEMS', e);
+            setItems([]); console.warn('Public portfolio unavailable', e);
         }
     }, []);
     const toggleFavorite = (id: string, e?: React.MouseEvent) => {
@@ -262,7 +259,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     const zoomImages = (selectedItem ? getItemMediaList(selectedItem) : [])
         .map((media, index) => ({ ...media, mediaIndex: index }));
     return (<div className={`portfolio-view min-h-screen pb-24 font-sans transition-colors duration-300 ${'bg-[#faf9ff] text-[#252134] selection:bg-[#e4dcfa]'}`}>
-      
+
       {/* Toast Notification */}
       {copiedToast && (<div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-xs animate-in fade-in slide-in-from-bottom-2 border ${'bg-stone-900 text-white border-stone-800'}`}>
           <Check className="w-4 h-4 text-emerald-400"/>
@@ -293,7 +290,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
       {/* 3. Artwork Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Results Header */}
         <div className={`flex items-center justify-between text-xs mb-6 font-sans ${'text-[#675f79]'}`}>
           <span>Εμφάνιση {filteredAndSortedItems.length} έργων</span>
@@ -335,7 +332,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                   <div className="relative aspect-[4/3] overflow-hidden bg-[#f3f0fa]">
                     {mediaList[0]?.type === 'video' ? <div className="flex h-full items-center justify-center bg-[#ede8fb]"><Play className="h-12 w-12 text-[#6253ae]" aria-label="Έργο με βίντεο" /></div> : <img src={mediaList[0]?.url || item.image} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 "/>}
 
-                    
+
 
                     {/* Top Badges */}
                     <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
@@ -383,7 +380,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                       <h3 className={`font-sans text-lg sm:text-xl transition-colors line-clamp-1 ${'text-[#252134] group-hover:text-[#5b516d]'}`}>
                         {item.title}
                       </h3>
-                      
+
                       <div className={`mt-1 text-xs font-sans line-clamp-1 ${'text-[#675f79]'}`}>
                         {item.medium}
                       </div>
@@ -584,3 +581,4 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
     </div>);
 };
+

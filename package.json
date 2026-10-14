@@ -13,7 +13,9 @@
     "lint": "tsc --noEmit",
     "test:stage1": "node scripts/stage1.mjs",
     "test:unit": "node --import ./tests/stage1/network-guard.mjs --import tsx --test server/catalog-excel.test.ts server/media-path.test.ts server/orders-core.test.ts server/request-check.test.ts server/video-policy.test.ts server/vinted-api.test.ts server/vinted-refresh.test.ts tests/portfolio-features.test.ts",
-    "lint:stage1": "tsc --noEmit --project tsconfig.stage1.json"
+    "lint:stage1": "tsc --noEmit --project tsconfig.stage1.json",
+    "test:stage2": "node scripts/stage2.mjs",
+    "lint:stage2": "tsc --noEmit --project tsconfig.stage2.json"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

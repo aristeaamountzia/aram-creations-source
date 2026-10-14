@@ -1,4 +1,5 @@
-import { collection, doc, Firestore, getDoc, runTransaction, serverTimestamp, writeBatch, deleteField, Timestamp } from 'firebase/firestore';
+import { collection, doc, Firestore, getDoc, serverTimestamp, deleteField, Timestamp } from 'firebase/firestore';
+import { runTransaction, writeBatch } from './catalog-write';
 
 const plain = (value: any) => JSON.parse(JSON.stringify(value ?? null));
 const equal = (a: any, b: any) => JSON.stringify(plain(a)) === JSON.stringify(plain(b));
@@ -64,3 +65,4 @@ export async function restoreHistory(db: Firestore, entry: any) {
     });
   });
 }
+

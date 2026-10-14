@@ -1,0 +1,11 @@
+// Stage-two emulator and future release candidate. Never deployed in this stage.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function admin() { return request.auth != null && (request.auth.token.get('admin', false) == true || (request.auth.token.get('email', '') == 'aristeaamnta@gmail.com' && request.auth.token.get('email_verified', false) == true)); }
+    match /publicCatalog/{id} { allow read: if resource.data.showInShop == true; allow write: if false; }
+    match /publicPortfolio/{id} { allow read: if resource.data.showInShop == true; allow write: if false; }
+    match /publicSettings/{id} { allow read: if true; allow write: if false; }
+    match /{document=**} { allow read: if admin(); allow write: if false; }
+  }
+}

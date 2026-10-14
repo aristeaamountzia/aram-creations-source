@@ -21,7 +21,7 @@ async function isAuthorized(request: Request): Promise<boolean> {
     try {
       if (!getApps().length) initializeApp({ projectId: "aramcreations-e1529" });
       const user = await getAuth().verifyIdToken(bearer);
-      if (user.admin === true || user.email?.toLowerCase() === "aristeaamnta@gmail.com") return true;
+      if (user.admin === true || user.email_verified === true && user.email?.toLowerCase() === "aristeaamnta@gmail.com") return true;
     } catch {
       console.warn("Invalid Firebase admin token for AI request");
     }

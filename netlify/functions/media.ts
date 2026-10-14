@@ -1,3 +1,6 @@
+import { adminDatabase } from '../../server/admin-database';
+import { emulatorServices } from '../../server/test-isolation';
+import { ownedMediaPath } from '../../server/catalog-publication';
 import { testModeEnabled } from '../../server/test-isolation';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -5,27 +8,36 @@ import { getStorage } from 'firebase-admin/storage';
 import { mediaFilename, mediaLocation } from '../../server/media-path';
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 export default async function handler(request: Request) {
-  if (testModeEnabled()) return json({ error: 'External media and signed links are disabled in the stage-one sandbox.' }, 503);
+  const emulator = testModeEnabled();
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
   if (!token) return json({ error: 'Συνδέσου στο Back Office.' }, 401);
   try {
-    const credentials = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
-    if (credentials.project_id !== 'aramcreations-e1529') return json({ error: 'Η πρόσβαση στα media δεν είναι διαθέσιμη.' }, 503);
-    const app = getApps().find(app => app.name === 'media') || initializeApp({ credential: cert(credentials) }, 'media');
+    const credentials = emulator ? {} : JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+    if (!emulator && credentials.project_id !== 'aramcreations-e1529') return json({ error: 'Η πρόσβαση στα media δεν είναι διαθέσιμη.' }, 503);
+    const app = emulator ? emulatorServices('stage2-media').app : getApps().find(app => app.name === 'media') || initializeApp({ credential: cert(credentials) }, 'media');
     const user = await getAuth(app).verifyIdToken(token).catch(() => null);
-    if (!user || !(user.admin === true || user.email?.toLowerCase() === 'aristeaamnta@gmail.com')) return json({ error: 'Δεν επιτρέπεται η πρόσβαση.' }, 403);
+    if (!user || !(user.admin === true || user.email_verified === true && user.email?.toLowerCase() === 'aristeaamnta@gmail.com')) return json({ error: 'Δεν επιτρέπεται η πρόσβαση.' }, 403);
     const raw = await request.text();
     if (raw.length > 6000) return json({ error: 'Μη έγκυρο αίτημα.' }, 400);
     const body = JSON.parse(raw);
-    if (!['edit', 'download'].includes(body.action) || typeof body.url !== 'string') return json({ error: 'Μη έγκυρο αίτημα.' }, 400);
+    if (!['edit', 'download', 'preview', 'archive'].includes(body.action) || typeof body.url !== 'string') return json({ error: 'Μη έγκυρο αίτημα.' }, 400);
     let location;
-    try { location = mediaLocation(body.url); } catch (error: any) { return json({ error: error.message }, 400); }
+    try { const bucketName = emulator ? emulatorServices('stage2-media').bucket.name : 'aramcreations-e1529.firebasestorage.app'; const path = ownedMediaPath(body.url, bucketName); location = path ? { bucket: bucketName, object: path, external: '' } : mediaLocation(body.url); } catch (error: any) { return json({ error: error.message }, 400); }
     if (location.bucket) {
       const file = getStorage(app).bucket(location.bucket).file(location.object);
+      if (body.action === 'archive') {
+        if (!location.object.startsWith('jewelry/') && !location.object.startsWith('privateMedia/')) return json({ error: 'Μη επιτρεπόμενο αρχείο.' }, 400);
+        await adminDatabase().db.collection('catalogMediaArchives').add({ object: location.object, bucket: location.bucket, at: new Date().toISOString(), by: user.uid, reason: 'Retained for history, duplicates and permanent backup' });
+        return json({ ok: true });
+      }
       const [metadata] = await file.getMetadata();
       const type = metadata.contentType || '';
       if (!/^(image|video)\//.test(type)) return json({ error: 'Υποστηρίζονται εικόνες, GIF και βίντεο.' }, 415);
+      if (body.action === 'preview' || emulator && body.action === 'download') {
+        if (Number(metadata.size) > 30 * 1024 * 1024) return json({ error: 'Το αρχείο είναι πολύ μεγάλο.' }, 413);
+        const [bytes] = await file.download(); return new Response(new Uint8Array(bytes), { headers: { 'Content-Type': type, 'Cache-Control': 'no-store' } });
+      }
       if (body.action === 'download') {
         const filename = mediaFilename(body.filename || location.object.split('/').at(-1) || '', type);
         const [url] = await file.getSignedUrl({ version: 'v4', action: 'read', expires: Date.now() + 300000, responseDisposition: `attachment; filename="aram-media"; filename*=UTF-8''${encodeURIComponent(filename)}` });
@@ -36,6 +48,7 @@ export default async function handler(request: Request) {
       const [bytes] = await file.download();
       return new Response(new Uint8Array(bytes), { headers: { 'Content-Type': type, 'Cache-Control': 'no-store' } });
     }
+    if (emulator) return json({ error: 'External media is disabled in isolation.' }, 503);
     const upstream = await fetch(location.external, { redirect: 'error', signal: AbortSignal.timeout(20000), headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'image/*,video/*' } });
     if (!upstream.ok) return json({ error: `Ο πάροχος αρχείου επέστρεψε HTTP ${upstream.status}.` }, 502);
     const type = upstream.headers.get('content-type') || '';

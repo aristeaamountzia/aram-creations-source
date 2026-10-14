@@ -23,7 +23,7 @@ export const App: React.FC = () => {
     try {
       const saved = localStorage.getItem('aram_boutique_cart');
       const parsed = saved ? JSON.parse(saved) : [];
-      return Array.isArray(parsed) ? Array.from(new Map(parsed.filter(entry => entry?.item?.id).map(entry => [entry.item.id, { ...entry, quantity: 1 }])).values()) : [];
+      return Array.isArray(parsed) ? Array.from(new Map(parsed.filter(entry => entry?.item?.id).map(entry => [entry.item.id, { item: { id: entry.item.id, status: 'Μη διαθέσιμο', stock: 0, price: 0 }, quantity: 1, customInscription: typeof entry.customInscription === 'string' ? entry.customInscription : undefined }])).values()) : [];
     } catch {
       return [];
     }
@@ -31,8 +31,8 @@ export const App: React.FC = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const cartIds = cartItems.map(entry => entry.item.id).sort().join(',');
   useEffect(() => {
-    const unsubscribes = cartIds.split(',').filter(Boolean).map(id => onSnapshot(doc(db, 'jewelry', id), snapshot => {
-      setCartItems(items => items.map(entry => entry.item.id === id ? { ...entry, item: snapshot.exists() ? { ...entry.item, ...snapshot.data(), id } : { ...entry.item, stock: 0, status: 'Μη διαθέσιμο' } } : entry));
+    const unsubscribes = cartIds.split(',').filter(Boolean).map(id => onSnapshot(doc(db, 'publicCatalog', id), snapshot => {
+      setCartItems(items => items.map(entry => entry.item.id === id ? { ...entry, item: snapshot.exists() ? { ...snapshot.data(), id } as JewelryItem : { ...entry.item, stock: 0, status: 'Μη διαθέσιμο' } } : entry));
     }, () => {}));
     return () => unsubscribes.forEach(unsubscribe => unsubscribe());
   }, [cartIds]);
@@ -283,3 +283,4 @@ export const App: React.FC = () => {
     </div>
   );
 };
+
