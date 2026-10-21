@@ -1019,6 +1019,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                       {selectedItem.status || 'Διαθέσιμο'}
                     </span>
                   </div>
+                  <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-amber-900">Η τιμή περιλαμβάνει υπολογισμένα μεταφορικά. Στο Vinted το τελικό ποσό μπορεί να διαφέρει ανάλογα με την αποστολή και τις χρεώσεις της πλατφόρμας.</p>
                 </div>
 
                 {/* Description */}
