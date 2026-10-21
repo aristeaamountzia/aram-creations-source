@@ -370,6 +370,8 @@ interface BackOfficeViewProps {
             const [formCost, setFormCost] = useState('');
             const [formStock, setFormStock] = useState(1);
             const [formShopOrder, setFormShopOrder] = useState(0);
+            const [formManualLikes, setFormManualLikes] = useState(0);
+            const [formManualViews, setFormManualViews] = useState(0);
             const [formWeight, setFormWeight] = useState('');
             const [formDimensions, setFormDimensions] = useState('');
             const [formStorage, setFormStorage] = useState('');
@@ -1984,7 +1986,7 @@ interface BackOfficeViewProps {
                 setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
                 
                 setFormName(''); setFormCategory('Κολιέ'); setFormCollection(''); setFormStatus('Διαθέσιμο'); setFormDate(new Date().toISOString().split('T')[0]);
-                setFormPrice(''); setFormCost(''); setFormStock(1); setFormShopOrder(0); setFormWeight(''); setFormDimensions(''); setFormStorage('');
+                setFormPrice(''); setFormCost(''); setFormStock(1); setFormShopOrder(0); setFormManualLikes(0); setFormManualViews(0); setFormWeight(''); setFormDimensions(''); setFormStorage('');
                 setFormMaterials([]); setFormColorsArr([]); setNewMaterialInput(''); setNewColorInput(''); 
                 
                 setFormPurchaseLinks([]); setNewPurchaseSite('Vinted'); setNewPurchaseUrl(''); setIsCustomPurchaseSite(false);
@@ -2034,7 +2036,7 @@ interface BackOfficeViewProps {
                 setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
                 
                 setFormName(item.name || ''); setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status || 'Διαθέσιμο'); setFormDate(item.creationDate || '');
-                setFormPrice(item.price ? item.price.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(item.shopOrder || 0);
+                setFormPrice(item.price ? item.price.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
                 setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
                 setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(item.notes || '');
                 
@@ -2624,6 +2626,10 @@ interface BackOfficeViewProps {
                         cost: parsedCost,
                         stock: parsedStock,
                         shopOrder: parsedShopOrder,
+                        shopFavorites: Math.max(0, Math.trunc(Number(formManualLikes) || 0)),
+                        likes: Math.max(0, Math.trunc(Number(formManualLikes) || 0)),
+                        views: Math.max(0, Math.trunc(Number(formManualViews) || 0)),
+                        viewCount: Math.max(0, Math.trunc(Number(formManualViews) || 0)),
                         weight: formWeight.trim(),
                         dimensions: formDimensions.trim(),
                         storage: formStorage.trim(),
@@ -3928,6 +3934,14 @@ interface BackOfficeViewProps {
                                                 <div>
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Κόστος Υλικών (€)</label>
                                                     <input type="number" step="any" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formCost} onChange={e => setFormCost(e.target.value)} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-stone-600 mb-1">Χειροκίνητα Likes</label>
+                                                    <input type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formManualLikes} onChange={e => setFormManualLikes(Math.max(0, Number(e.target.value) || 0))} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-stone-600 mb-1">Χειροκίνητες Προβολές</label>
+                                                    <input type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formManualViews} onChange={e => setFormManualViews(Math.max(0, Number(e.target.value) || 0))} />
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Απόθεμα (Τεμ.)</label>
