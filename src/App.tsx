@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SectionMode, ArtItem, JewelryItem, CartItem } from './types';
 import { Header } from './components/Header';
 import { ShopView } from './components/ShopView';
@@ -12,6 +12,7 @@ import { db } from './firebase';
 
 export const App: React.FC = () => {
   const [currentMode, setCurrentMode] = useState<SectionMode>('shop');
+  const hasInitializedHistory = useRef(false);
   const selectMode = useCallback((mode: SectionMode) => {
     const hash = mode === 'shop' ? '#shop' : mode === 'portfolio' ? '#portfolio' : '#admin';
     if (window.location.hash !== hash) window.history.pushState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
@@ -61,6 +62,8 @@ export const App: React.FC = () => {
         setCurrentMode('shop');
       }
     };
+    if (!window.history.state?.aramShop) window.history.replaceState({ ...(window.history.state || {}), aramShop: true }, '', `${window.location.pathname}${window.location.search}${window.location.hash || '#shop'}`);
+    hasInitializedHistory.current = true;
     handleHash();
     window.addEventListener('hashchange', handleHash);
     window.addEventListener('popstate', handleHash);
@@ -77,7 +80,7 @@ export const App: React.FC = () => {
       window.removeEventListener('popstate', handleHash);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectMode]);
+  }, [selectMode, currentMode]);
 
   const handleAddToCart = (item: JewelryItem, customInscription?: string) => {
     const max = Math.max(0, Number(item.stock ?? item.stockCount ?? 1));
@@ -225,7 +228,7 @@ export const App: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 text-stone-600">
               <MapPin className="w-3.5 h-3.5 text-stone-800" />
-              <span>Αθήνα, Ελλάδα</span>
+              <span>Βόλος</span>
             </div>
             <div className="flex items-center gap-2 text-stone-600 pt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
