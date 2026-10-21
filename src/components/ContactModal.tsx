@@ -95,7 +95,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               <input
                 required
                 type="text"
-                placeholder="π.χ. Αριστέα Μ."
+                placeholder="π.χ. Μαρία Παπαδοπούλου"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
