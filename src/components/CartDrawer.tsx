@@ -125,7 +125,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           </button>
         </div>
 
-        <p className="border-b border-teal-100 bg-teal-50 px-6 py-3 text-xs leading-relaxed">Για περισσότερη προστασία κατά την πληρωμή, προτείνουμε οι αγορές να γίνονται μέσω Vinted, από τον σύνδεσμο κάθε προϊόντος. Η προστασία ισχύει σύμφωνα με τους όρους της πλατφόρμας.</p>{/* Drawer Content */}
+        <p role="note" className="border-b-2 border-red-200 bg-red-50 px-6 py-3 text-xs font-bold leading-relaxed text-red-800">Σημαντικό: για περισσότερη προστασία κατά την πληρωμή, προτείνουμε οι αγορές να γίνονται μέσω Vinted, από τον σύνδεσμο κάθε προϊόντος. Η προστασία ισχύει σύμφωνα με τους όρους της πλατφόρμας.</p>{/* Drawer Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {completedOrderNumber ? (
             /* Success confirmation */

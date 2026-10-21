@@ -711,7 +711,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     {/* Like & Status buttons */}
                     <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
                       {!isAvailable && (
-                        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border rounded-lg shadow-sm ${isSold ? 'text-rose-800 bg-rose-100 border-rose-200' : 'text-amber-900 bg-amber-100 border-amber-200'}`}>
+                        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border rounded-lg shadow-sm ${isSold ? 'text-white bg-rose-600 border-rose-700 ring-2 ring-rose-200' : 'text-amber-900 bg-amber-100 border-amber-200'}`}>
                           {isSold ? 'Πουλήθηκε' : item.status || 'Μη διαθέσιμο'}
                         </span>
                       )}
@@ -853,7 +853,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             {/* Close button */}
             <button
               onClick={() => setSelectedItem(null)}
-              className="absolute top-4 right-4 z-20 p-2 rounded-full bg-stone-100 text-stone-600 hover:text-stone-900 hover:bg-stone-200 border border-stone-300 transition shadow-sm"
+              className="absolute top-4 right-4 z-30 p-2 rounded-full bg-stone-100 text-stone-600 hover:text-stone-900 hover:bg-stone-200 border border-stone-300 transition shadow-sm"
               aria-label="Κλείσιμο παραθύρου"
             >
               <X className="w-5 h-5" />
@@ -970,7 +970,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             <div className="w-full md:w-1/2 p-6 sm:p-8 flex flex-col justify-between overflow-y-auto">
               <div className="space-y-4">
                 {/* Category & Collection */}
-                <div className="flex items-center justify-between gap-2 border-b border-stone-100 pb-3">
+                <div className="flex items-center justify-between gap-2 border-b border-stone-100 pb-3 pr-12">
                   <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
                     {selectedItem.category} {selectedItem.collection && `• ${selectedItem.collection}`}
                   </span>
@@ -1019,6 +1019,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                       {selectedItem.status || 'Διαθέσιμο'}
                     </span>
                   </div>
+                  <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-amber-900">Η τιμή περιλαμβάνει υπολογισμένα μεταφορικά. Στο Vinted το τελικό ποσό μπορεί να διαφέρει ανάλογα με την αποστολή και τις χρεώσεις της πλατφόρμας.</p>
                 </div>
 
                 {/* Description */}

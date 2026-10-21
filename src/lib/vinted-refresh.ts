@@ -13,6 +13,22 @@ export function vintedRefreshPatch(current: any, row: any, pricing: any) {
   for (const [target, value] of Object.entries({ vintedFavorites: row.vintedFavorites, vintedViews: row.vintedViews })) {
     if (value !== null && value !== undefined && value !== '' && Number.isInteger(Number(value)) && Number(value) >= 0) patch[target] = Number(value);
   }
+  // Images are opt-in during refresh: locally curated images remain untouched unless
+  // the editor explicitly accepts the newly discovered Vinted gallery.
+  const remoteMedia = Array.isArray(row.mediaList) ? row.mediaList
+    .filter((media: any) => media?.url && media.type !== 'video')
+    .map((media: any) => ({ url: String(media.url), type: 'image', showInShop: true })) : [];
+  if (remoteMedia.length) {
+    const currentMedia = Array.isArray(current.mediaList) ? current.mediaList
+      .filter((media: any) => media?.url && media.showInShop !== false)
+      .map((media: any) => String(media.url)) : [];
+    const nextMedia = remoteMedia.map((media: any) => media.url);
+    if (JSON.stringify(currentMedia) !== JSON.stringify(nextMedia)) {
+      patch.mediaList = remoteMedia;
+      patch.imageUrl = remoteMedia[0].url;
+      patch.fileType = 'image';
+    }
+  }
   const reserved = Object.values(current.checkoutReservations || {}).some(q => Number(q) > 0);
   if (reserved) notes.push('Υπάρχει δέσμευση παραγγελίας· η κατάσταση και το απόθεμα προστατεύονται.');
   else if (row.availabilityKnown === true) {
@@ -29,10 +45,10 @@ export function vintedRefreshPatch(current: any, row: any, pricing: any) {
 
 export function refreshBaseline(item: any) {
   const stable = (value: any): any => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])])) : value;
-  return JSON.stringify(stable([item.price ?? null, item.status ?? null, item.stock ?? null, item.checkoutReservations ?? {}, item.lastVintedRefreshAt ?? null, item.sourceUrl ?? null, item.vintedUrl ?? null, item.purchaseLinks ?? null, item.productLinks ?? null, item.postedPlatforms ?? null, item.vintedPricing ?? null, item.vintedBasePrice ?? null, item.vintedFavorites ?? null, item.vintedViews ?? null, item.lastVintedAvailability ?? null]));
+  return JSON.stringify(stable([item.price ?? null, item.status ?? null, item.stock ?? null, item.checkoutReservations ?? {}, item.lastVintedRefreshAt ?? null, item.sourceUrl ?? null, item.vintedUrl ?? null, item.purchaseLinks ?? null, item.productLinks ?? null, item.postedPlatforms ?? null, item.vintedPricing ?? null, item.vintedBasePrice ?? null, item.vintedFavorites ?? null, item.vintedViews ?? null, item.lastVintedAvailability ?? null, item.mediaList ?? null, item.imageUrl ?? null]));
 }
 
-export type RefreshChoice = { price: boolean; availability: boolean; favorites: boolean; views: boolean; priceValue: string; statusValue: string; stockValue: string };
+export type RefreshChoice = { price: boolean; availability: boolean; favorites: boolean; views: boolean; images: boolean; priceValue: string; statusValue: string; stockValue: string };
 export function chooseRefreshPatch(item: any, proposed: any, choices: RefreshChoice) {
   const patch: Record<string, any> = {};
   if (choices.price) {
@@ -49,6 +65,11 @@ export function chooseRefreshPatch(item: any, proposed: any, choices: RefreshCho
     if (proposed.lastVintedAvailability) patch.lastVintedAvailability = proposed.lastVintedAvailability;
   }
   for (const [enabled, key] of [[choices.favorites, 'vintedFavorites'], [choices.views, 'vintedViews']] as const) if (enabled && proposed[key] !== undefined) patch[key] = proposed[key];
+  if (choices.images && Array.isArray(proposed.mediaList)) {
+    patch.mediaList = proposed.mediaList;
+    patch.imageUrl = proposed.imageUrl || proposed.mediaList[0]?.url || item.imageUrl;
+    patch.fileType = proposed.fileType || 'image';
+  }
   for (const key of Object.keys(patch)) if (JSON.stringify(item[key]) === JSON.stringify(patch[key])) delete patch[key];
   return patch;
 }
