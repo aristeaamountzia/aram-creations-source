@@ -508,7 +508,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
-        
+
         <CatalogControls label="Φίλτρα Shop" search={searchQuery} onSearch={setSearchQuery}
           placeholder="Αναζήτηση με όνομα, υλικό, χρώμα..."
           categories={visibleCategories.map(category => ({ id: category, label: category }))}
@@ -1019,7 +1019,15 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                       {selectedItem.status || 'Διαθέσιμο'}
                     </span>
                   </div>
-                  <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-amber-900">Η τιμή περιλαμβάνει υπολογισμένα μεταφορικά. Στο Vinted το τελικό ποσό μπορεί να διαφέρει ανάλογα με την αποστολή και τις χρεώσεις της πλατφόρμας.</p>
+                  {selectedItem.status === 'Πουλήθηκε' || (selectedItem.status !== 'Κρατημένο' && selectedItem.stock !== undefined && selectedItem.stock !== null && Number(selectedItem.stock) <= 0) ? (
+                    <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-rose-900">
+                      Αυτό το κομμάτι είναι μοναδικό και έχει ήδη πουληθεί. Αν θέλεις κάτι παρόμοιο, επικοινώνησε μαζί μας μέσω{' '}
+                      {/^https:\/\//i.test(shopSettings.fallbackLinks?.Instagram || '') ? <a href={shopSettings.fallbackLinks.Instagram} target="_blank" rel="noopener noreferrer" className="font-bold underline">Instagram</a> : 'Instagram'} ή{' '}
+                      <a href="mailto:aristeaamnta@gmail.com" className="font-bold underline">email</a>.
+                    </div>
+                  ) : (
+                    <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-amber-900">Η τιμή περιλαμβάνει υπολογισμένα μεταφορικά. Στο Vinted το τελικό ποσό μπορεί να διαφέρει ανάλογα με την αποστολή και τις χρεώσεις της πλατφόρμας.</p>
+                  )}
                 </div>
 
                 {/* Description */}

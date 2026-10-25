@@ -13,20 +13,23 @@ export function vintedRefreshPatch(current: any, row: any, pricing: any) {
   for (const [target, value] of Object.entries({ vintedFavorites: row.vintedFavorites, vintedViews: row.vintedViews })) {
     if (value !== null && value !== undefined && value !== '' && Number.isInteger(Number(value)) && Number(value) >= 0) patch[target] = Number(value);
   }
-  // Images are opt-in during refresh: locally curated images remain untouched unless
-  // the editor explicitly accepts the newly discovered Vinted gallery.
+  // Images are opt-in during refresh. Keep the existing curated gallery and append
+  // only photos newly found on Vinted; a later Vinted photo must never erase a
+  // locally uploaded one.
   const remoteMedia = Array.isArray(row.mediaList) ? row.mediaList
     .filter((media: any) => media?.url && media.type !== 'video')
     .map((media: any) => ({ url: String(media.url), type: 'image', showInShop: true })) : [];
   if (remoteMedia.length) {
-    const currentMedia = Array.isArray(current.mediaList) ? current.mediaList
-      .filter((media: any) => media?.url && media.showInShop !== false)
-      .map((media: any) => String(media.url)) : [];
-    const nextMedia = remoteMedia.map((media: any) => media.url);
-    if (JSON.stringify(currentMedia) !== JSON.stringify(nextMedia)) {
-      patch.mediaList = remoteMedia;
-      patch.imageUrl = remoteMedia[0].url;
-      patch.fileType = 'image';
+    const currentMedia = Array.isArray(current.mediaList) && current.mediaList.length
+      ? current.mediaList.filter((media: any) => media?.url)
+      : current.imageUrl ? [{ url: String(current.imageUrl), type: current.fileType || 'image', showInShop: true }] : [];
+    const knownUrls = new Set(currentMedia.map((media: any) => String(media.url)));
+    const newlyFoundMedia = remoteMedia.filter(media => !knownUrls.has(media.url));
+    if (newlyFoundMedia.length) {
+      patch.mediaList = [...currentMedia, ...newlyFoundMedia];
+      patch.imageUrl = current.imageUrl || patch.mediaList[0]?.url;
+      patch.fileType = current.fileType || 'image';
+      (patch as any).__vintedNewMediaUrls = newlyFoundMedia.map(media => media.url);
     }
   }
   const reserved = Object.values(current.checkoutReservations || {}).some(q => Number(q) > 0);
@@ -70,6 +73,8 @@ export function chooseRefreshPatch(item: any, proposed: any, choices: RefreshCho
     patch.imageUrl = proposed.imageUrl || proposed.mediaList[0]?.url || item.imageUrl;
     patch.fileType = proposed.fileType || 'image';
   }
+  // Preview-only metadata must never be written to Firestore.
+  delete proposed.__vintedNewMediaUrls;
   for (const key of Object.keys(patch)) if (JSON.stringify(item[key]) === JSON.stringify(patch[key])) delete patch[key];
   return patch;
 }

@@ -23,6 +23,12 @@ test('zero metrics are valid, shop favorites and descriptions remain untouched',
   const patch = vintedRefreshPatch(current, { price: 10, currency: 'USD', vintedFavorites: 0, vintedViews: 0 }, { sitePrice: 15 }).patch;
   assert.deepEqual(patch, { vintedFavorites: 0, vintedViews: 0 });
 });
+test('new Vinted photos are previewed as additions without replacing curated media', () => {
+  const local = { ...current, imageUrl: 'https://local.example/cover.jpg', mediaList: [{ url: 'https://local.example/cover.jpg', type: 'image', showInShop: true }, { url: 'https://local.example/detail.jpg', type: 'image', showInShop: true }] };
+  const { patch } = vintedRefreshPatch(local, { mediaList: [{ url: 'https://local.example/cover.jpg' }, { url: 'https://images1.vinted.net/new-photo.jpg' }] }, {});
+  assert.deepEqual(patch.__vintedNewMediaUrls, ['https://images1.vinted.net/new-photo.jpg']);
+  assert.deepEqual(patch.mediaList.map((media: any) => media.url), ['https://local.example/cover.jpg', 'https://local.example/detail.jpg', 'https://images1.vinted.net/new-photo.jpg']);
+});
 test('baseline detects new orders and price changes before applying preview', () => {
   assert.notEqual(refreshBaseline(current), refreshBaseline({ ...current, checkoutReservations: { newOrder: 1 } }));
   assert.notEqual(refreshBaseline(current), refreshBaseline({ ...current, price: 20 }));

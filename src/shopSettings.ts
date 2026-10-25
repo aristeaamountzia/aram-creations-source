@@ -1,4 +1,8 @@
+import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from './lib/design-studio';
+
 export interface ShopSettings {
+  /** Presentation-only switch. It never changes catalog, orders or integrations. */
+  visualTheme: 'atelier' | 'classic';
   fontFamily: string;
   primaryColor: string;
   bgColor: string;
@@ -19,9 +23,11 @@ export interface ShopSettings {
   fallbackLinks: Record<string, string>;
   colorPalette: Record<string, string>;
   aiAssistant: { backofficeEndpoint: string };
+  designStudio: DesignStudio;
 }
 
 export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
+  visualTheme: 'atelier',
   fontFamily: 'Jura',
   primaryColor: '#1c1917',
   bgColor: '#fafafa',
@@ -41,7 +47,8 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   categoryOrder: ['Κολιέ', 'Δαχτυλίδια', 'Σκουλαρίκια', 'Βραχιόλια', 'Καρφίτσες', 'Σετ', 'Θήκες Κινητών', 'Άλλα'],
   fallbackLinks: { Vinted: '', Wix: '', Instagram: '', Facebook: '', TikTok: '', Etsy: '' },
   colorPalette: {},
-  aiAssistant: { backofficeEndpoint: '' }
+  aiAssistant: { backofficeEndpoint: '' },
+  designStudio: DEFAULT_DESIGN_STUDIO
 };
 
 export function normalizeShopSettings(value: Partial<ShopSettings> | undefined): ShopSettings {
@@ -49,9 +56,11 @@ export function normalizeShopSettings(value: Partial<ShopSettings> | undefined):
   return {
     ...DEFAULT_SHOP_SETTINGS,
     ...data,
+    visualTheme: data.visualTheme === 'classic' ? 'classic' : 'atelier',
     categoryOrder: Array.isArray(data.categoryOrder) ? data.categoryOrder : DEFAULT_SHOP_SETTINGS.categoryOrder,
     fallbackLinks: { ...DEFAULT_SHOP_SETTINGS.fallbackLinks, ...(data.fallbackLinks || {}) },
     colorPalette: { ...DEFAULT_SHOP_SETTINGS.colorPalette, ...(data.colorPalette || {}) },
-    aiAssistant: { ...DEFAULT_SHOP_SETTINGS.aiAssistant, ...(data.aiAssistant || {}) }
+    aiAssistant: { ...DEFAULT_SHOP_SETTINGS.aiAssistant, ...(data.aiAssistant || {}) },
+    designStudio: normalizeDesignStudio(data.designStudio)
   };
 }
