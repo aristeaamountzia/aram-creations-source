@@ -9,16 +9,22 @@ import { ContactModal } from './components/ContactModal';
 import { ShieldCheck, Mail, MapPin, ExternalLink, Lock } from 'lucide-react';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from './firebase';
+import { normalizeShopSettings } from './shopSettings';
+import { designStudioCss } from './lib/design-studio';
+import { DEFAULT_DESIGN_STUDIO, DesignStudio } from './lib/design-studio';
 
 export const App: React.FC = () => {
   const [currentMode, setCurrentMode] = useState<SectionMode>('shop');
+  const [visualTheme, setVisualTheme] = useState<'atelier' | 'classic'>('atelier');
+  const [designStudio, setDesignStudio] = useState<Record<string, string>>({});
+  const [designStudioContent, setDesignStudioContent] = useState<DesignStudio>(DEFAULT_DESIGN_STUDIO);
   const hasInitializedHistory = useRef(false);
   const selectMode = useCallback((mode: SectionMode) => {
     const hash = mode === 'shop' ? '#shop' : mode === 'portfolio' ? '#portfolio' : '#admin';
     if (window.location.hash !== hash) window.history.pushState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
     setCurrentMode(mode);
   }, []);
-  
+
   // Cart state persisted in localStorage
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
@@ -30,6 +36,14 @@ export const App: React.FC = () => {
     }
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
+  // This listener is intentionally presentation-only: the existing shop settings
+  // document remains the single source of truth and no commerce data is touched.
+  useEffect(() => onSnapshot(doc(db, 'settings', 'shop'), snapshot => {
+    const settings = normalizeShopSettings(snapshot.data());
+    setVisualTheme(settings.visualTheme);
+    setDesignStudio(designStudioCss(settings.designStudio));
+    setDesignStudioContent(settings.designStudio);
+  }, () => {}), []);
   const cartIds = cartItems.map(entry => entry.item.id).sort().join(',');
   useEffect(() => {
     const unsubscribes = cartIds.split(',').filter(Boolean).map(id => onSnapshot(doc(db, 'jewelry', id), snapshot => {
@@ -117,7 +131,7 @@ export const App: React.FC = () => {
   const totalCartCount = cartItems.reduce((acc, ci) => acc + ci.quantity, 0);
 
   return (
-    <div data-section={currentMode} className="aram-site min-h-screen w-full min-w-0 flex flex-col bg-white text-[#1c1917]">
+    <div style={designStudio as React.CSSProperties} data-section={currentMode} data-visual-theme={visualTheme} className={`aram-site ${visualTheme === 'atelier' ? 'atelier-theme' : ''} min-h-screen w-full min-w-0 flex flex-col bg-white text-[#1c1917]`}>
       {/* Discreet owner banner when admin view is active */}
       {currentMode === 'admin' && (
         <div className="bg-stone-900 text-stone-200 border-b border-stone-800 px-4 py-2.5 flex flex-wrap gap-3 items-center justify-between text-xs z-50">
@@ -145,6 +159,7 @@ export const App: React.FC = () => {
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
         onContactArtist={() => handleContactArtist()}
+        design={designStudioContent}
       />
 
       {/* Main Content Body */}
@@ -186,9 +201,9 @@ export const App: React.FC = () => {
           {/* Brand Col */}
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <img 
+              <img
                 src={currentMode === 'portfolio' ? '/logo-portfolio.png' : '/logo.png'}
-                alt="Aram Creations" 
+                alt="Aram Creations"
                 className="w-8 h-8 object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;

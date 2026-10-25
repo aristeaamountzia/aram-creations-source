@@ -2,6 +2,8 @@
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import { PortfolioDesignSettings } from './PortfolioDesignSettings';
+import { DesignStudioSettings } from './DesignStudioSettings';
+import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, validatePortfolioDesign } from '../lib/portfolio-settings';
 import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
 import React, { useState, useMemo, useEffect, useRef } from "react";
@@ -90,6 +92,7 @@ interface BackOfficeViewProps {
             heroVideoUrl: '',
             portfolioHeroVideoUrl: '',
             portfolioDesign: DEFAULT_PORTFOLIO_DESIGN,
+            designStudio: DEFAULT_DESIGN_STUDIO,
             announcementEnabled: false,
             announcementText: '',
             announcementLink: '',
@@ -176,8 +179,8 @@ interface BackOfficeViewProps {
                         const canvas = document.createElement('canvas');
                         let width = img.width;
                         let height = img.height;
-                        const max_size = 1200; 
-                        
+                        const max_size = 1200;
+
                         if (width > height) {
                             if (width > max_size) {
                                 height *= max_size / width;
@@ -194,7 +197,7 @@ interface BackOfficeViewProps {
                         const ctx = canvas.getContext('2d');
                         if (!ctx) { reject(new Error('Δεν ξεκίνησε η επεξεργασία εικόνας.')); return; }
                         ctx.drawImage(img, 0, 0, width, height);
-                        
+
                         canvas.toBlob((blob) => {
                             if (!blob?.size) { reject(new Error('Δεν δημιουργήθηκε έγκυρη εικόνα.')); return; }
                             const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
@@ -287,7 +290,7 @@ interface BackOfficeViewProps {
                     });
                 }, () => setHistorySaveError('Δεν φορτώθηκε το ιστορικό από το cloud.'));
             }, [firebaseReady, currentUser]);
-            
+
             const [statsFilter, setStatsFilter] = useState('all');
             const [uploadProgress, setUploadProgress] = useState(0);
             const [uploadStatus, setUploadStatus] = useState('');
@@ -323,7 +326,7 @@ interface BackOfficeViewProps {
             const [hiddenColorOptions, setHiddenColorOptions] = useState(() => readStoredList('aram_hidden_color_options'));
             const [hiddenMaterialOptions, setHiddenMaterialOptions] = useState(() => readStoredList('aram_hidden_material_options'));
             const [draggedFieldOption, setDraggedFieldOption] = useState(null);
-            
+
             // --- SHOP SETTINGS STATE (ΠΛΗΡΕΣ) ---
             const [shopSettings, setShopSettings] = useState(DEFAULT_SHOP_SETTINGS);
             const [heroUploadStatus, setHeroUploadStatus] = useState('');
@@ -333,6 +336,11 @@ interface BackOfficeViewProps {
             const [draggedCategoryIdx, setDraggedCategoryIdx] = useState(null);
             const [smartSuggestions, setSmartSuggestions] = useState(null);
             const [selectedItemIds, setSelectedItemIds] = useState([]);
+            const [selectionAnchorId, setSelectionAnchorId] = useState(null);
+            const [lassoRect, setLassoRect] = useState(null);
+            const lassoStartRef = useRef(null);
+            const lassoBaseSelectionRef = useRef([]);
+            const productGridRef = useRef(null);
             const [isBulkOpen, setIsBulkOpen] = useState(false);
             const [bulkDraft, setBulkDraft] = useState({
                 category: '',
@@ -352,7 +360,7 @@ interface BackOfficeViewProps {
             const [viewMode, setViewMode] = useState('grid');
             const [draggedProductId, setDraggedProductId] = useState(null);
             const [dragOverProductId, setDragOverProductId] = useState(null);
-            
+
             const [isAddOpen, setIsAddOpen] = useState(false);
             const [isDetailOpen, setIsDetailOpen] = useState(false);
             const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -381,7 +389,7 @@ interface BackOfficeViewProps {
             const [formColorsArr, setFormColorsArr] = useState([]);
             const [newColorInput, setNewColorInput] = useState('');
             const [newColorHex, setNewColorHex] = useState('#c9a35e');
-            
+
             const [formPurchaseLinks, setFormPurchaseLinks] = useState([]);
             const [newPurchaseSite, setNewPurchaseSite] = useState('Vinted');
             const [newPurchaseUrl, setNewPurchaseUrl] = useState('');
@@ -392,7 +400,7 @@ interface BackOfficeViewProps {
             const [newPostedUrl, setNewPostedUrl] = useState('');
             const [newPostedVisible, setNewPostedVisible] = useState(false);
             const [isCustomPostedSite, setIsCustomPostedSite] = useState(false);
-            
+
             const [formShopMediaList, setFormShopMediaList] = useState([]);
             const [formPrivateMediaList, setFormPrivateMediaList] = useState([]);
             const [draggedShopIdx, setDraggedShopIdx] = useState(null);
@@ -633,6 +641,7 @@ interface BackOfficeViewProps {
                         if (Array.isArray(data.customFields?.hiddenColorOptions)) setHiddenColorOptions(data.customFields.hiddenColorOptions);
                         if (Array.isArray(data.customFields?.hiddenMaterialOptions)) setHiddenMaterialOptions(data.customFields.hiddenMaterialOptions);
                         setShopSettings(prev => ({
+                            visualTheme: data.visualTheme === 'classic' ? 'classic' : 'atelier',
                             fontFamily: data.fontFamily || prev.fontFamily,
                             primaryColor: data.primaryColor || prev.primaryColor,
                             bgColor: data.bgColor || prev.bgColor,
@@ -654,7 +663,8 @@ interface BackOfficeViewProps {
                             colorPalette: { ...prev.colorPalette, ...(data.colorPalette || {}) },
                             categoryOrder: data.categoryOrder || prev.categoryOrder,
                             fallbackLinks: { ...prev.fallbackLinks, ...(data.fallbackLinks || {}) },
-                            aiAssistant: { ...prev.aiAssistant, ...(data.aiAssistant || {}) }
+                            aiAssistant: { ...prev.aiAssistant, ...(data.aiAssistant || {}) },
+                            designStudio: data.designStudio || prev.designStudio || DEFAULT_DESIGN_STUDIO
                         }));
                     }
                 }, (error) => {
@@ -746,7 +756,8 @@ interface BackOfficeViewProps {
                     portfolioDesign: shopSettings.portfolioDesign || DEFAULT_PORTFOLIO_DESIGN,
                     categoryOrder: shopSettings.categoryOrder?.length ? shopSettings.categoryOrder : base.categoryOrder,
                     fallbackLinks: { ...base.fallbackLinks, ...(shopSettings.fallbackLinks || {}) },
-                    aiAssistant: { ...base.aiAssistant, ...(shopSettings.aiAssistant || {}) }
+                    aiAssistant: { ...base.aiAssistant, ...(shopSettings.aiAssistant || {}) },
+                    designStudio: shopSettings.designStudio || DEFAULT_DESIGN_STUDIO
                 });
             };
 
@@ -1057,7 +1068,7 @@ interface BackOfficeViewProps {
                 const order = shopSettings.categoryOrder || [];
                 return orderOptions(Array.from(new Set([...BASE_CATEGORIES, ...customCategories, ...order, ...embedded])).filter(cat => cat && !hiddenCategoryOptions.includes(cat)), order);
             }, [jewelryList, customCategories, hiddenCategoryOptions, shopSettings.categoryOrder]);
-            
+
             const allFilterCategories = useMemo(() => {
                 const embedded = jewelryList.map(item => item.category);
                 const order = shopSettings.categoryOrder || [];
@@ -1072,7 +1083,7 @@ interface BackOfficeViewProps {
                         return a.localeCompare(b, 'el');
                     });
             }, [jewelryList, customCategories, hiddenCategoryOptions, shopSettings.categoryOrder]);
-            
+
             const allFormStatuses = useMemo(() => {
                 const embedded = jewelryList.map(item => item.status);
                 return sortByUsage(Array.from(new Set([...BASE_STATUSES, ...customStatuses, ...embedded])).filter(status => status && !hiddenStatusOptions.includes(status)), statusUsageCounts, statusOptionOrder.length ? statusOptionOrder : BASE_STATUSES);
@@ -1092,7 +1103,7 @@ interface BackOfficeViewProps {
                 const embedded = jewelryList.map(item => item.collection);
                 return orderOptions(Array.from(new Set([...customCollections, ...embedded])).filter(collection => collection && !hiddenCollectionOptions.includes(collection)), collectionOptionOrder);
             }, [jewelryList, customCollections, hiddenCollectionOptions, collectionOptionOrder]);
-            
+
             const colorUsageCounts = useMemo(() => {
                 return jewelryList.flatMap(item => item.colors || []).reduce((acc, color) => {
                     if (color) acc[color] = (acc[color] || 0) + 1;
@@ -1984,15 +1995,15 @@ interface BackOfficeViewProps {
                 setCurrentItem(null);
                 setIsDetailOpen(false);
                 setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
-                
+
                 setFormName(''); setFormCategory('Κολιέ'); setFormCollection(''); setFormStatus('Διαθέσιμο'); setFormDate(new Date().toISOString().split('T')[0]);
                 setFormPrice(''); setFormCost(''); setFormStock(1); setFormShopOrder(0); setFormManualLikes(0); setFormManualViews(0); setFormWeight(''); setFormDimensions(''); setFormStorage('');
-                setFormMaterials([]); setFormColorsArr([]); setNewMaterialInput(''); setNewColorInput(''); 
-                
+                setFormMaterials([]); setFormColorsArr([]); setNewMaterialInput(''); setNewColorInput('');
+
                 setFormPurchaseLinks([]); setNewPurchaseSite('Vinted'); setNewPurchaseUrl(''); setIsCustomPurchaseSite(false);
                 setFormPostedPlatforms([]); setNewPostedSite('Instagram'); setNewPostedUrl(''); setNewPostedVisible(false); setIsCustomPostedSite(false);
 
-                setFormNotes(''); 
+                setFormNotes('');
                 setFormShopMediaList([]);
                 setFormPrivateMediaList([]);
                 setUploadProgress(0); setUploadStatus('');
@@ -2034,24 +2045,24 @@ interface BackOfficeViewProps {
             const handleOpenEdit = (item) => {
                 setIsEditMode(true); setCurrentItem(item);
                 setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
-                
+
                 setFormName(item.name || ''); setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status || 'Διαθέσιμο'); setFormDate(item.creationDate || '');
                 setFormPrice(item.price ? item.price.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
                 setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
                 setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(item.notes || '');
-                
+
                 const existingPurchaseLinks = item.purchaseLinks || item.productLinks || [];
                 setFormPurchaseLinks(existingPurchaseLinks);
                 setNewPurchaseSite('Vinted'); setNewPurchaseUrl(''); setIsCustomPurchaseSite(false);
-                
+
                 const existingPosted = item.postedPlatforms || (item.platforms ? item.platforms.map(p => ({ site: p, url: '', showInShop: true })) : []);
                 setFormPostedPlatforms(existingPosted);
                 setNewPostedSite('Instagram'); setNewPostedUrl(''); setNewPostedVisible(false); setIsCustomPostedSite(false);
-                
+
                 const existingMedia = item.mediaList || (item.imageUrl ? [{ url: item.imageUrl, type: item.fileType || 'image', showInShop: true }] : []);
                 const shopMedia = existingMedia.filter(m => m.showInShop !== false).map(m => ({ ...m, isNew: false }));
                 const privateMedia = existingMedia.filter(m => m.showInShop === false).map(m => ({ ...m, isNew: false }));
-                
+
                 setFormShopMediaList(shopMedia);
                 setFormPrivateMediaList(privateMedia);
 
@@ -2065,22 +2076,22 @@ interface BackOfficeViewProps {
                 setIsEditMode(false);
                 setCurrentItem(null);
                 setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
-                
+
                 setFormName(item.name ? item.name + ' (Αντίγραφο)' : '');
                 setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status || 'Διαθέσιμο'); setFormDate(item.creationDate || new Date().toISOString().split('T')[0]);
                 setFormPrice(item.price ? item.price.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(0);
                 setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
                 setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(item.notes || '');
-                
+
                 const existingPurchaseLinks = item.purchaseLinks || item.productLinks || [];
                 setFormPurchaseLinks(existingPurchaseLinks);
                 setNewPurchaseSite('Vinted'); setNewPurchaseUrl(''); setIsCustomPurchaseSite(false);
-                
+
                 const existingPosted = item.postedPlatforms || (item.platforms ? item.platforms.map(p => ({ site: p, url: '', showInShop: true })) : []);
                 setFormPostedPlatforms(existingPosted);
                 setNewPostedSite('Instagram'); setNewPostedUrl(''); setNewPostedVisible(false); setIsCustomPostedSite(false);
-                
-                setFormShopMediaList([]); 
+
+                setFormShopMediaList([]);
                 setFormPrivateMediaList([]);
                 setUploadProgress(0); setUploadStatus('');
                 setSmartSuggestions(null);
@@ -2142,7 +2153,7 @@ interface BackOfficeViewProps {
                 });
 
                 const csvString = csvRows.join('\n');
-                const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' }); 
+                const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
                 link.download = `katalogos_aram_creations_${new Date().toISOString().split('T')[0]}.csv`;
@@ -2519,10 +2530,10 @@ interface BackOfficeViewProps {
                     alert("Ελέγξτε τιμή, κόστος και απόθεμα. Επιτρέπονται μόνο μη αρνητικοί αριθμοί.");
                     return;
                 }
-                
+
                 const allFormMedia = [...formShopMediaList, ...formPrivateMediaList];
                 if (allFormMedia.length === 0) return alert("Παρακαλώ προσθέστε τουλάχιστον 1 φωτογραφία ή βίντεο!");
-                
+
                 setIsSaving(true);
                 setUploadProgress(0);
                 setUploadStatus('Προετοιμασία...');
@@ -2637,7 +2648,7 @@ interface BackOfficeViewProps {
                         colors: formColorsArr,
                         platforms: sanitizedPostedPlatforms.map(p => p.site),
                         productLinks: sanitizedPurchaseLinks,
-                        purchaseLinks: sanitizedPurchaseLinks, 
+                        purchaseLinks: sanitizedPurchaseLinks,
                         postedPlatforms: sanitizedPostedPlatforms,
                         notes: formNotes.trim(),
                         imageUrl: mainImage.url,
@@ -2760,13 +2771,13 @@ interface BackOfficeViewProps {
                 let pool = sourceList.filter(item => {
                     const term = searchQuery.toLowerCase();
                     const matchesStatsTab = getStatsSegment(item);
-                    const matchesSearch = (item.name || '').toLowerCase().includes(term) || 
+                    const matchesSearch = (item.name || '').toLowerCase().includes(term) ||
                         (item.collection && item.collection.toLowerCase().includes(term)) ||
                         (item.storage && item.storage.toLowerCase().includes(term)) ||
                         (item.materials && item.materials.some(m => m.toLowerCase().includes(term))) ||
                         (item.colors && item.colors.some(c => c.toLowerCase().includes(term))) ||
                         (item.platforms && item.platforms.some(p => p.toLowerCase().includes(term)));
-                    
+
                     const matchesCategory = selectedCategory === 'Όλα' || item.category === selectedCategory;
                     const matchesColor = selectedColor === 'Όλα' || (item.colors && item.colors.includes(selectedColor));
 
@@ -2793,8 +2804,54 @@ interface BackOfficeViewProps {
 
             const visibleItemIds = useMemo(() => filteredAndSortedJewelry.map(item => item.id), [filteredAndSortedJewelry]);
 
-            const toggleSelectedItem = (id) => {
+            const selectItem = (id, shiftKey = false) => {
+                if (shiftKey && selectionAnchorId) {
+                    const start = visibleItemIds.indexOf(selectionAnchorId);
+                    const end = visibleItemIds.indexOf(id);
+                    if (start >= 0 && end >= 0) {
+                        const range = visibleItemIds.slice(Math.min(start, end), Math.max(start, end) + 1);
+                        setSelectedItemIds(prev => Array.from(new Set([...prev, ...range])));
+                        return;
+                    }
+                }
                 setSelectedItemIds(prev => prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]);
+                setSelectionAnchorId(id);
+            };
+
+            const handleProductSelectionClick = (event, id) => {
+                if (!event.shiftKey) return;
+                const target = event.target;
+                if (target.closest('button, input, label, a')) return;
+                event.preventDefault();
+                selectItem(id, true);
+            };
+
+            const finishLassoSelection = () => {
+                lassoStartRef.current = null;
+                setLassoRect(null);
+            };
+
+            const handleLassoStart = (event) => {
+                if (event.button !== 0 || event.target !== event.currentTarget) return;
+                const bounds = event.currentTarget.getBoundingClientRect();
+                lassoStartRef.current = { x: event.clientX, y: event.clientY, bounds };
+                lassoBaseSelectionRef.current = event.shiftKey ? selectedItemIds : [];
+                if (!event.shiftKey) setSelectedItemIds([]);
+                event.currentTarget.setPointerCapture?.(event.pointerId);
+                setLassoRect({ left: event.clientX - bounds.left, top: event.clientY - bounds.top, width: 0, height: 0 });
+            };
+
+            const handleLassoMove = (event) => {
+                const start = lassoStartRef.current;
+                if (!start || !productGridRef.current) return;
+                const left = Math.min(start.x, event.clientX), top = Math.min(start.y, event.clientY);
+                const right = Math.max(start.x, event.clientX), bottom = Math.max(start.y, event.clientY);
+                setLassoRect({ left: left - start.bounds.left, top: top - start.bounds.top, width: right - left, height: bottom - top });
+                const touched = Array.from(productGridRef.current.querySelectorAll('[data-product-id]')).filter((node) => {
+                    const rect = node.getBoundingClientRect();
+                    return rect.left < right && rect.right > left && rect.top < bottom && rect.bottom > top;
+                }).map((node) => node.dataset.productId);
+                setSelectedItemIds(Array.from(new Set([...lassoBaseSelectionRef.current, ...touched])));
             };
 
             const selectVisibleItems = () => {
@@ -3333,15 +3390,15 @@ interface BackOfficeViewProps {
 
             return (
                 <div className="backoffice-view min-h-screen p-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-20 relative">
-                    
-                    <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-5 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-stone-200">
+
+                    <header className="backoffice-toolbar flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-5 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-stone-200">
                         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Κατάλογος">
                             <button type="button" role="tab" aria-selected={false} onClick={() => setActiveCollection('orders')} className="px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold">Παραγγελίες</button>
                             <button type="button" role="tab" aria-selected={activeCollection === 'jewelry'} onClick={() => { setActiveCollection('jewelry'); setSelectedCategory('Όλα'); setStatsFilter('all'); }} className={activeCollection === 'jewelry' ? 'px-3 py-2 rounded-lg bg-stone-900 text-white text-sm font-bold' : 'px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold'}>Shop</button>
                             <button type="button" role="tab" aria-selected={activeCollection === 'portfolio'} onClick={() => { setActiveCollection('portfolio'); setSelectedCategory('Όλα'); setStatsFilter('all'); }} className={activeCollection === 'portfolio' ? 'px-3 py-2 rounded-lg bg-stone-900 text-white text-sm font-bold' : 'px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold'}>Portfolio</button>
                         </div>
-                        <div className="flex flex-col gap-3 w-full lg:w-auto">
-                            <div className="flex flex-wrap items-center justify-start lg:justify-end gap-3">
+                        <div className="backoffice-actions flex flex-col gap-3 w-full lg:w-auto">
+                            <div className="backoffice-primary-actions flex flex-wrap items-center justify-start lg:justify-end gap-3">
                                 <button onClick={handleOpenAdd} className="flex items-center gap-2 px-6 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-sm font-bold transition shadow-md">
                                     <IconPlus /> Νέα Καταχώρηση
                                 </button>
@@ -3353,7 +3410,7 @@ interface BackOfficeViewProps {
                                     <button onClick={handleAdminSignOut} className="text-emerald-900 underline underline-offset-2 whitespace-nowrap">Logout</button>
                                 </div>
                             </div>
-                            <div className="flex flex-wrap items-center justify-start lg:justify-end gap-2 pt-3 border-t border-stone-100">
+                            <div className="backoffice-utility-actions flex flex-wrap items-center justify-start lg:justify-end gap-2 pt-3 border-t border-stone-100">
                                 <button onClick={handleUndo} disabled={!lastAction} className="flex items-center justify-center px-3 py-2 bg-stone-100 disabled:opacity-40 hover:bg-stone-200 text-stone-700 rounded-lg transition font-bold text-xs" title="Αναίρεση τελευταίας ενέργειας">
                                     <IconUndo /> <span className="ml-2">Undo</span>
                                 </button>
@@ -3377,25 +3434,25 @@ interface BackOfficeViewProps {
                     <div className="mb-6">
                         <div className="flex flex-col sm:flex-row gap-2 sm:justify-between sm:items-end mb-3 px-1 min-w-0">
                             <h3 className="text-xs font-black text-stone-500 uppercase tracking-wider">Στατιστικα Καταλογου</h3>
-                            <div className="flex flex-wrap bg-stone-200/70 rounded-lg p-1 max-w-full">
+                            <div className="backoffice-stats-filter flex flex-wrap bg-stone-200/70 rounded-lg p-1 max-w-full">
                                 <button onClick={() => setStatsFilter('available')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm ${statsFilter === 'available' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Διαθέσιμα</button>
                                 <button onClick={() => setStatsFilter('unavailable')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm whitespace-nowrap ${statsFilter === 'unavailable' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Μη Διαθέσιμα</button>
                                 <button onClick={() => setStatsFilter('sold')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm whitespace-nowrap ${statsFilter === 'sold' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Πωληθέντα</button>
                                 <button onClick={() => setStatsFilter('all')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm ${statsFilter === 'all' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Συνολικά</button>
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="backoffice-stats-grid grid grid-cols-3 gap-3 sm:gap-4">
                             <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex flex-col items-center justify-center text-center transition">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{statsCopy.count}</span>
-                                <span className="text-2xl font-black text-stone-950">{dashboardStats.count}</span>
+                                <span className="text-xl sm:text-2xl font-black text-stone-950">{dashboardStats.count}</span>
                             </div>
                             <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex flex-col items-center justify-center text-center transition">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{statsCopy.value}</span>
-                                <span className="text-2xl font-black text-stone-950">{dashboardStats.value.toFixed(2)}€</span>
+                                <span className="text-xl sm:text-2xl font-black text-stone-950">{dashboardStats.value.toFixed(2)}€</span>
                             </div>
                             <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex flex-col items-center justify-center text-center transition">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{statsCopy.profit}</span>
-                                <span className="text-2xl font-black text-stone-950">{dashboardStats.profit.toFixed(2)}€</span>
+                                <span className="text-xl sm:text-2xl font-black text-stone-950">{dashboardStats.profit.toFixed(2)}€</span>
                             </div>
                         </div>
                     </div>
@@ -3433,6 +3490,7 @@ interface BackOfficeViewProps {
                                 Επιλογή ορατών
                             </label>
                             <span className="text-xs text-stone-400 font-bold">{selectedItemIds.length} επιλεγμένα</span>
+                            <span className="text-[11px] text-stone-500">Shift + κλικ: συνεχόμενη επιλογή · σύρε σε κενό χώρο: επιλογή με πλαίσιο</span>
                         </div>
                         {selectedItemIds.length > 0 && (
                             <div className="flex flex-wrap gap-2">
@@ -3472,14 +3530,17 @@ interface BackOfficeViewProps {
                     ) : (
                         <>
                             {viewMode === 'grid' && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                <div ref={productGridRef} onPointerDown={handleLassoStart} onPointerMove={handleLassoMove} onPointerUp={finishLassoSelection} onPointerCancel={finishLassoSelection} className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 select-none">
+                                    {lassoRect && <div aria-hidden="true" className="pointer-events-none absolute z-20 border-2 border-emerald-600 bg-emerald-300/20" style={lassoRect} />}
                                     {filteredAndSortedJewelry.map((item) => {
                                         const isSold = isSoldItem(item);
                                         const isBulkDragged = draggedProductId && selectedItemIds.includes(draggedProductId) && selectedItemIds.includes(item.id);
                                         return (
-                                        <div 
+                                        <div
                                             key={item.id}
+                                            data-product-id={item.id}
                                             draggable
+                                            onClick={(event) => handleProductSelectionClick(event, item.id)}
                                             onDragStart={(event) => handleProductDragStart(event, item)}
                                             onDragOver={(event) => handleProductDragOver(event, item)}
                                             onDrop={(event) => handleProductDrop(event, item)}
@@ -3488,7 +3549,7 @@ interface BackOfficeViewProps {
                                         >
                                             <div className="aspect-square bg-stone-100 flex items-center justify-center overflow-hidden relative">
                                                 <label onClick={(e) => e.stopPropagation()} className="absolute top-2 left-2 z-10 bg-white/90 backdrop-blur-sm border border-stone-200 rounded-lg p-1 shadow-sm cursor-pointer">
-                                                    <input type="checkbox" className="w-4 h-4 rounded border-stone-300" checked={selectedItemIds.includes(item.id)} onChange={() => toggleSelectedItem(item.id)} />
+                                                    <input type="checkbox" className="w-4 h-4 rounded border-stone-300" checked={selectedItemIds.includes(item.id)} onChange={(event) => selectItem(item.id, event.shiftKey)} />
                                                 </label>
                                                 {item.imageUrl ? (
                                                     item.fileType === 'video' ? (
@@ -3497,7 +3558,7 @@ interface BackOfficeViewProps {
                                                         <img src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
                                                     )
                                                 ) : <IconImage />}
-                                                
+
                                                 {item.mediaList && item.mediaList.length > 1 && (
                                                     <div className="absolute top-2 right-2 bg-stone-900/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                                                         🎬 {item.mediaList.length} αρχεία
@@ -3529,7 +3590,7 @@ interface BackOfficeViewProps {
                                                 </div>
                                                 <h3 className={`font-bold text-lg leading-tight mb-1 ${isSold ? 'text-stone-500 line-through' : 'text-stone-800'}`}>{item.name}</h3>
                                                 {item.collection && <p className="text-xs text-stone-500 italic mb-2">{item.collection}</p>}
-                                                
+
                                                 <div className="flex flex-wrap gap-1 mb-4 mt-auto pt-2">
                                                     {item.colors?.slice(0, 2).map((col, i) => <span key={i} className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 uppercase font-bold">{col}</span>)}
                                                     {item.materials?.slice(0, 2).map((mat, i) => <span key={i} className="text-[10px] bg-stone-50 text-stone-600 px-1.5 py-0.5 rounded border border-stone-200">{mat}</span>)}
@@ -3561,7 +3622,9 @@ interface BackOfficeViewProps {
                                         return (
                                         <div
                                             key={item.id}
+                                            data-product-id={item.id}
                                             draggable
+                                            onClick={(event) => handleProductSelectionClick(event, item.id)}
                                             onDragStart={(event) => handleProductDragStart(event, item)}
                                             onDragOver={(event) => handleProductDragOver(event, item)}
                                             onDrop={(event) => handleProductDrop(event, item)}
@@ -3570,7 +3633,7 @@ interface BackOfficeViewProps {
                                         >
                                             <div className="hidden md:flex h-10 w-6 items-center justify-center text-stone-300 font-black select-none">::</div>
                                             <label onClick={(e) => e.stopPropagation()} className="flex items-center justify-center p-2 cursor-pointer">
-                                                <input type="checkbox" className="w-4 h-4 rounded border-stone-300" checked={selectedItemIds.includes(item.id)} onChange={() => toggleSelectedItem(item.id)} />
+                                                <input type="checkbox" className="w-4 h-4 rounded border-stone-300" checked={selectedItemIds.includes(item.id)} onChange={(event) => selectItem(item.id, event.shiftKey)} />
                                             </label>
                                             <div className="w-16 h-16 bg-stone-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center border border-stone-200 relative">
                                                 {item.imageUrl ? (
@@ -3713,7 +3776,7 @@ interface BackOfficeViewProps {
 
                     {isAddOpen && (
                         <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-2 sm:p-4 z-50">
-                            
+
                             {isSaving && (
                                 <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-[60] flex flex-col items-center justify-center p-6 rounded-2xl">
                                     <div className="w-full max-w-sm text-center">
@@ -3753,7 +3816,7 @@ interface BackOfficeViewProps {
                                         </button>
                                     ))}
                                 </div>
-                                
+
                                 {videoProgress && <div className="px-5 py-2"><VideoUploadStatus value={videoProgress} busy={videoCompressing} onCancel={() => videoAbort.current?.abort()} /></div>}
                                 <div className="overflow-y-auto p-6">
                                     <form id="jewelry-form" onSubmit={handleSaveItem} className="flex flex-col gap-8">
@@ -3840,7 +3903,7 @@ interface BackOfficeViewProps {
                                                 </div>
                                             </div>
                                         </section>
-                                        
+
                                         <section id="form-basic" className="scroll-mt-4">
                                             <h3 className="text-sm font-black text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Βασικα Στοιχεια</h3>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3860,7 +3923,7 @@ interface BackOfficeViewProps {
                                                         </div>
                                                     )}
                                                 </div>
-                                                
+
                                                 <div>
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Κατηγορία *</label>
                                                     {isCustomCategory ? (
@@ -3981,7 +4044,7 @@ interface BackOfficeViewProps {
 
                                         <section id="form-tags" className="scroll-mt-4">
                                             <h3 className="text-sm font-black text-indigo-500/70 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Χρωματα & Υλικα</h3>
-                                            
+
                                             <div className="mb-6">
                                                 <label className="block text-xs font-bold text-stone-600 mb-2">Κύρια Χρώματα</label>
                                                 <div className="flex flex-wrap gap-2 mb-2">
@@ -4024,7 +4087,7 @@ interface BackOfficeViewProps {
 
                                         <section id="form-links" className="scroll-mt-4">
                                             <h3 className="text-sm font-black text-blue-500/70 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Links & Αναρτησεις</h3>
-                                            
+
                                             <div>
                                                 <label className="block text-xs font-bold text-stone-600 mb-2">Λινκ Αγοράς (Πού μπορεί να το αγοράσει ο πελάτης)</label>
                                                 <div className="flex flex-col sm:flex-row gap-2 mb-2">
@@ -4042,7 +4105,7 @@ interface BackOfficeViewProps {
                                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Άλλη Πλατφόρμα...</option>
                                                         </select>
                                                     )}
-                                                    
+
                                                     <input type="url" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none transition" placeholder="Επικόλληση Link (https://...)" value={newPurchaseUrl} onChange={e => setNewPurchaseUrl(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddPurchaseLink(); } }} />
                                                     <button type="button" onClick={handleAddPurchaseLink} className="bg-stone-800 hover:bg-stone-700 text-white px-5 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition">Προσθήκη</button>
                                                 </div>
@@ -4060,7 +4123,7 @@ interface BackOfficeViewProps {
 
                                             <div className="mb-2">
                                                 <label className="block text-xs font-bold text-stone-600 mb-2">Πού έχει αναρτηθεί (Για δικό σου έλεγχο)</label>
-                                                
+
                                                 <div className="flex flex-col lg:flex-row gap-2 mb-2 lg:items-center">
                                                     {isCustomPostedSite ? (
                                                         <div className="flex gap-1 w-full lg:w-1/4">
@@ -4076,7 +4139,7 @@ interface BackOfficeViewProps {
                                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Άλλη Πλατφόρμα...</option>
                                                         </select>
                                                     )}
-                                                    
+
                                                     <input type="url" className="w-full lg:flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none transition" placeholder="Link ανάρτησης (προαιρετικό)..." value={newPostedUrl} onChange={e => setNewPostedUrl(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddPostedPlatform(); } }} />
 
                                                     <div className="flex gap-2 w-full lg:w-auto">
@@ -4092,7 +4155,7 @@ interface BackOfficeViewProps {
                                                     {formPostedPlatforms.length === 0 && <span className="text-xs text-stone-400 italic flex items-center">Δεν έχει σημειωθεί πού αναρτήθηκε.</span>}
                                                     {formPostedPlatforms.map((platObj, idx) => (
                                                         <span key={idx} className="bg-white border border-stone-200 text-xs px-2 py-1 rounded-md flex items-center gap-1.5 font-bold text-stone-700 shadow-sm max-w-full">
-                                                            {platObj.site} 
+                                                            {platObj.site}
                                                             {platObj.url && <a href={platObj.url} target="_blank" rel="noopener noreferrer" className="text-stone-500 hover:text-stone-800" title={platObj.url}><IconExternalLink /></a>}
                                                             {platObj.showInShop ? <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 rounded ml-1" title="Θα φαίνεται στο Shop">👀 Ορατό</span> : <span className="text-[10px] bg-stone-200 text-stone-500 px-1 rounded ml-1" title="Κρυφό από το Shop">🔒 Κρυφό</span>}
                                                             <button type="button" onClick={() => setFormPostedPlatforms(formPostedPlatforms.filter((_, i) => i !== idx))} className="text-red-500 ml-1"><IconX /></button>
@@ -4141,14 +4204,14 @@ interface BackOfficeViewProps {
                                                         )}
                                                     </div>
                                                 )}
-                                                
+
                                                 {formShopMediaList.length > 0 && (
                                                     <div className="mt-4">
                                                         <p className="text-xs text-stone-500 mb-2 italic">Σύρετε ή επιλέξτε εικόνα ή βίντεο για κεντρικό αρχείο προϊόντος. Το πρώτο αρχείο θα είναι το κεντρικό στο Shop.</p>
                                                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                                                             {formShopMediaList.map((media, idx) => (
-                                                                <div 
-                                                                    key={idx} 
+                                                                <div
+                                                                    key={idx}
                                                                     draggable
                                                                     onDragStart={(e) => handleDragStartShop(e, idx)}
                                                                     onDragOver={handleDragOver}
@@ -4160,7 +4223,7 @@ interface BackOfficeViewProps {
                                                                     ) : (
                                                                         <img src={media.url} className="w-full h-full object-cover pointer-events-none" />
                                                                     )}
-                                                                    
+
                                                                     <MediaDownload media={media} name={formName || 'aram-media'} className="absolute bottom-1 right-1 z-10" />
                                                                     {media.type !== 'video' && !isAnimatedGifMedia(media) && (
                                                                         <button type="button" onClick={(e) => { e.stopPropagation(); openImageEditor('shop', idx); }} className="absolute top-1 left-1 bg-white/90 hover:bg-white text-stone-800 rounded-full p-1 transition shadow cursor-pointer border border-stone-200" title="Επεξεργασία εικόνας">
@@ -4196,13 +4259,13 @@ interface BackOfficeViewProps {
                                                 <label className="block text-xs font-bold text-stone-600 mb-1">Προσωπικές φωτογραφίες και βίντεο που μένουν κρυφά</label>
                                                 <p className="mb-2 text-xs text-stone-500">{VIDEO_UPLOAD_HELP}</p>
                                                 <input type="file" accept="image/*,video/*" multiple disabled={mediaPreparing || isSaving} className="w-full border border-stone-300 rounded-lg px-4 py-2.5 bg-white cursor-pointer" onChange={handleFileSelectPrivate} />
-                                                
+
                                                 {formPrivateMediaList.length > 0 && (
                                                     <div className="mt-4">
                                                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                                                             {formPrivateMediaList.map((media, idx) => (
-                                                                <div 
-                                                                    key={idx} 
+                                                                <div
+                                                                    key={idx}
                                                                     draggable
                                                                     onDragStart={(e) => handleDragStartPrivate(e, idx)}
                                                                     onDragOver={handleDragOver}
@@ -4214,7 +4277,7 @@ interface BackOfficeViewProps {
                                                                     ) : (
                                                                         <img src={media.url} className="w-full h-full object-cover pointer-events-none grayscale" />
                                                                     )}
-                                                                    
+
                                                                     <div className="absolute top-1 left-1 bg-stone-800 text-white text-[9px] px-1 rounded shadow-sm">🔒 Κρυφό</div>
 
                                                                     <MediaDownload media={media} name={formName || 'aram-private-media'} className="absolute top-8 right-1 z-10" />
@@ -4396,13 +4459,13 @@ interface BackOfficeViewProps {
                     {isDetailOpen && currentItem && (
                         <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
-                                
+
                                 <div className="w-full md:w-1/2 p-3 md:p-4 bg-stone-50 border-r border-stone-100 flex flex-col justify-center relative">
                                     <div className="aspect-[4/5] md:aspect-square w-full rounded-xl overflow-hidden bg-white flex items-center justify-center relative shadow-inner border border-stone-100">
                                         {(() => {
                                             const currentMediaArray = currentItem.mediaList || (currentItem.imageUrl ? [{ url: currentItem.imageUrl, type: currentItem.fileType || 'image', showInShop: true }] : []);
                                             const activeMedia = currentMediaArray[activeDetailMediaIdx] || currentMediaArray[0];
-                                            
+
                                             if (!activeMedia) return <IconImage />;
                                             return (
                                                 <>
@@ -4440,7 +4503,7 @@ interface BackOfficeViewProps {
                                             </div>
                                         );
                                     })()}
-                                    
+
                                     <MediaDownload media={(currentItem.mediaList || [{ url: currentItem.imageUrl, type: currentItem.fileType }])[activeDetailMediaIdx] || { url: currentItem.imageUrl }} name={currentItem.name || 'aram-media'} className="absolute top-12 right-3 z-10" />
                                     {currentItem.stock > 1 && <div className="absolute bottom-6 left-6 bg-stone-900/90 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg flex items-center gap-1.5"><IconBox /> Απόθεμα: {currentItem.stock} τμχ</div>}
                                 </div>
@@ -4450,7 +4513,7 @@ interface BackOfficeViewProps {
                                         <button onClick={() => handleCloneItem(currentItem)} className="p-2 bg-stone-100 hover:bg-stone-200 rounded-full text-stone-500 transition" title="Αντιγραφή"><IconClone /></button>
                                         <button onClick={() => setIsDetailOpen(false)} className="p-2 bg-stone-100 hover:bg-stone-200 rounded-full text-stone-500 transition" title="Κλείσιμο"><IconX /></button>
                                     </div>
-                                    
+
                                     <div className="mb-6 pr-20">
                                         <div className="flex items-center gap-2 mb-2">
                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(currentItem.status)}`}>
@@ -4498,7 +4561,7 @@ interface BackOfficeViewProps {
                                                 {(!currentItem.materials || currentItem.materials.length === 0) && <span className="text-xs text-stone-400 italic">Δεν έχουν καταγραφεί υλικά.</span>}
                                             </div>
                                         </div>
-                                        
+
                                         {(currentItem.purchaseLinks?.length > 0 || currentItem.postedPlatforms?.length > 0) && (
                                             <div className="mb-4">
                                                 {currentItem.purchaseLinks?.length > 0 && (
@@ -4513,7 +4576,7 @@ interface BackOfficeViewProps {
                                                         </div>
                                                     </div>
                                                 )}
-                                                
+
                                                 {currentItem.postedPlatforms?.length > 0 && (
                                                     <div>
                                                         <h4 className="text-[10px] font-bold text-stone-400 uppercase mb-2">Που εχει αναρτηθει</h4>
@@ -4561,14 +4624,14 @@ interface BackOfficeViewProps {
                                 </div>
 
                                 <div className="flex flex-wrap border-b border-stone-200 bg-stone-50 px-4 pt-2">
-                                    <button 
-                                        onClick={() => setActiveSettingsTab('fields')} 
+                                    <button
+                                        onClick={() => setActiveSettingsTab('fields')}
                                         className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'fields' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
                                     >
                                         Προσαρμοσμένα Πεδία
                                     </button>
-                                    <button 
-                                        onClick={() => setActiveSettingsTab('shop')} 
+                                    <button
+                                        onClick={() => setActiveSettingsTab('shop')}
                                         className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'shop' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
                                     >
                                         Σχεδιασμός Shop
@@ -4577,8 +4640,12 @@ interface BackOfficeViewProps {
                                         className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'portfolio' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}>
                                         Σχεδιασμός Portfolio
                                     </button>
-                                    <button 
-                                        onClick={() => setActiveSettingsTab('assistant')} 
+                                    <button type="button" onClick={() => setActiveSettingsTab('design')}
+                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'design' ? 'border-violet-700 text-violet-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}>
+                                        Design Studio
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveSettingsTab('assistant')}
                                         className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'assistant' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
                                     >
                                         AI Back Office
@@ -4662,7 +4729,7 @@ interface BackOfficeViewProps {
                                                 {renderFieldOptionManager({ type: 'status', title: 'Σειρά επιλογών καταστάσεων', options: settingsStatusOptions, counts: statusUsageCounts, hiddenOptions: hiddenStatusOptions })}
                                                 {renderFieldOptionManager({ type: 'platform', title: 'Σειρά επιλογών πλατφορμών', options: settingsPlatformOptions, counts: platformUsageCounts, hiddenOptions: hiddenPlatformOptions })}
                                             </div>
-                                            
+
                                             <div className="hidden">
                                                 <h3 className="text-sm font-bold text-stone-500 uppercase mb-3 block">Προσαρμοσμένες Κατηγορίες</h3>
                                                 <div className="flex flex-wrap gap-2">
@@ -4790,6 +4857,21 @@ interface BackOfficeViewProps {
                                                 </div>
                                             </section>
 
+                                            <section className="rounded-xl border border-stone-200 bg-white p-4">
+                                                <h3 className="text-sm font-black text-stone-800">Οπτική ταυτότητα</h3>
+                                                <p className="mt-1 text-xs leading-relaxed text-stone-500">Αλλάζει μόνο την παρουσίαση του δημόσιου Shop και Portfolio. Προϊόντα, παραγγελίες, checkout και Back Office δεν επηρεάζονται.</p>
+                                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                                    <button type="button" onClick={() => setShopSettings(prev => ({ ...prev, visualTheme: 'atelier' }))} className={`rounded-lg border p-3 text-left transition ${shopSettings.visualTheme !== 'classic' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'}`}>
+                                                        <span className="block text-xs font-bold">Dark Atelier</span>
+                                                        <span className="mt-1 block text-[11px] opacity-75">Σκοτεινή gallery, ασπρόμαυρες εικόνες που χρωματίζονται στο hover.</span>
+                                                    </button>
+                                                    <button type="button" onClick={() => setShopSettings(prev => ({ ...prev, visualTheme: 'classic' }))} className={`rounded-lg border p-3 text-left transition ${shopSettings.visualTheme === 'classic' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'}`}>
+                                                        <span className="block text-xs font-bold">Classic</span>
+                                                        <span className="mt-1 block text-[11px] opacity-75">Η τωρινή, φωτεινή παρουσίαση.</span>
+                                                    </button>
+                                                </div>
+                                            </section>
+
                                             <section>
                                                 <h3 className="text-sm font-black text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Χρωματα Σελιδας (Shop)</h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -4822,7 +4904,7 @@ interface BackOfficeViewProps {
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     <div>
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Γραμματοσειρά Shop</label>
-                                                        <select 
+                                                        <select
                                                             className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none"
                                                             value={shopSettings.fontFamily}
                                                             onChange={e => setShopSettings({...shopSettings, fontFamily: e.target.value})}
@@ -4836,7 +4918,7 @@ interface BackOfficeViewProps {
                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Στρογγυλάδες (Φωτογραφίες & Κουμπιά)</label>
-                                                        <select 
+                                                        <select
                                                             className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none"
                                                             value={shopSettings.borderRadius}
                                                             onChange={e => setShopSettings({...shopSettings, borderRadius: e.target.value})}
@@ -4879,8 +4961,8 @@ interface BackOfficeViewProps {
                                                     <div className="flex gap-4">
                                                         <div className="flex-1">
                                                             <label className="block text-xs font-bold text-stone-600 mb-1">Κεντρικός Τίτλος</label>
-                                                            <input 
-                                                                type="text" 
+                                                            <input
+                                                                type="text"
                                                                 className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none"
                                                                 value={shopSettings.heroTitle}
                                                                 onChange={e => setShopSettings({...shopSettings, heroTitle: e.target.value})}
@@ -4888,7 +4970,7 @@ interface BackOfficeViewProps {
                                                         </div>
                                                         <div className="w-48">
                                                             <label className="block text-xs font-bold text-stone-600 mb-1">Μέγεθος Τίτλου</label>
-                                                            <select 
+                                                            <select
                                                                 className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none"
                                                                 value={shopSettings.heroTitleSize}
                                                                 onChange={e => setShopSettings({...shopSettings, heroTitleSize: e.target.value})}
@@ -4902,7 +4984,7 @@ interface BackOfficeViewProps {
                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Υπότιτλος</label>
-                                                        <textarea 
+                                                        <textarea
                                                             className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none h-20 resize-none"
                                                             value={shopSettings.heroSubtitle}
                                                             onChange={e => setShopSettings({...shopSettings, heroSubtitle: e.target.value})}
@@ -4923,7 +5005,7 @@ interface BackOfficeViewProps {
                                                 <p className="text-[10px] text-stone-500 mb-3">Σύρετε τις κατηγορίες για να αλλάξετε τη σειρά τους στο μενού του Shop. (Η επιλογή "Όλη η Συλλογή" είναι πάντα πρώτη).</p>
                                                 <div className="flex flex-col gap-2">
                                                     {shopSettings.categoryOrder.map((cat, idx) => (
-                                                        <div 
+                                                        <div
                                                             key={cat}
                                                             draggable
                                                             onDragStart={(e) => { setDraggedCategoryIdx(idx); e.dataTransfer.effectAllowed = "move"; }}
@@ -4954,13 +5036,13 @@ interface BackOfficeViewProps {
                                                     {Object.keys(shopSettings.fallbackLinks).map(platform => (
                                                         <div key={platform} className="flex flex-col sm:flex-row sm:items-center gap-2">
                                                             <label className="text-xs font-bold text-stone-600 sm:w-24">{platform}</label>
-                                                            <input 
-                                                                type="url" 
+                                                            <input
+                                                                type="url"
                                                                 placeholder={`Link για ${platform}...`}
                                                                 className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none"
                                                                 value={shopSettings.fallbackLinks[platform]}
                                                                 onChange={e => setShopSettings({
-                                                                    ...shopSettings, 
+                                                                    ...shopSettings,
                                                                     fallbackLinks: { ...shopSettings.fallbackLinks, [platform]: e.target.value }
                                                                 })}
                                                             />
@@ -5003,6 +5085,22 @@ interface BackOfficeViewProps {
                                                         onContactArtist={() => {}} showContact={false} showStats={false} />
                                                 </div>
                                             </section>
+                                        </div>
+                                    )}
+                                    {activeSettingsTab === 'design' && (
+                                        <div className="space-y-5">
+                                            <section className="rounded-xl border border-violet-200 bg-violet-50/50 p-4">
+                                                <h3 className="text-sm font-black text-violet-950">Κείμενα δημόσιων σελίδων</h3>
+                                                <p className="mt-1 text-xs text-violet-800">Εδώ αλλάζεις τα βασικά κείμενα που βλέπει ο επισκέπτης. Η αποθήκευση εφαρμόζεται στο Shop και Portfolio χωρίς να πειραχτούν προϊόντα ή έργα.</p>
+                                                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                                                    <label className="text-xs font-bold text-stone-700">Τίτλος Shop<input value={shopSettings.heroTitle} onChange={e => setShopSettings(prev => ({ ...prev, heroTitle: e.target.value }))} className="mt-1 w-full rounded-lg border border-stone-200 bg-white p-2 text-sm font-normal" /></label>
+                                                    <label className="text-xs font-bold text-stone-700">Τίτλος Portfolio<input value={shopSettings.portfolioDesign?.title || ''} onChange={e => setShopSettings(prev => ({ ...prev, portfolioDesign: { ...normalizePortfolioDesign(prev.portfolioDesign), title: e.target.value } }))} className="mt-1 w-full rounded-lg border border-stone-200 bg-white p-2 text-sm font-normal" /></label>
+                                                    <label className="text-xs font-bold text-stone-700">Περιγραφή Shop<textarea value={shopSettings.heroSubtitle} onChange={e => setShopSettings(prev => ({ ...prev, heroSubtitle: e.target.value }))} className="mt-1 min-h-20 w-full rounded-lg border border-stone-200 bg-white p-2 text-sm font-normal" /></label>
+                                                    <label className="text-xs font-bold text-stone-700">Περιγραφή Portfolio<textarea value={shopSettings.portfolioDesign?.subtitle || ''} onChange={e => setShopSettings(prev => ({ ...prev, portfolioDesign: { ...normalizePortfolioDesign(prev.portfolioDesign), subtitle: e.target.value } }))} className="mt-1 min-h-20 w-full rounded-lg border border-stone-200 bg-white p-2 text-sm font-normal" /></label>
+                                                    <label className="text-xs font-bold text-stone-700">Κουμπί επικοινωνίας Portfolio<input value={shopSettings.portfolioDesign?.contactLabel || ''} onChange={e => setShopSettings(prev => ({ ...prev, portfolioDesign: { ...normalizePortfolioDesign(prev.portfolioDesign), contactLabel: e.target.value } }))} className="mt-1 w-full rounded-lg border border-stone-200 bg-white p-2 text-sm font-normal" /></label>
+                                                </div>
+                                            </section>
+                                            <DesignStudioSettings value={shopSettings.designStudio} onChange={value => setShopSettings(prev => ({ ...prev, designStudio: value }))} />
                                         </div>
                                     )}
                                     {activeSettingsTab === 'assistant' && (
@@ -5061,7 +5159,7 @@ interface BackOfficeViewProps {
                                 </div>
                                 <div className="p-5 border-t border-stone-100 bg-stone-50 flex justify-end gap-3">
                                     <button disabled={mediaPreparing || isSavingSettings} onClick={() => setIsSettingsOpen(false)} className="px-6 py-2.5 bg-white border border-stone-200 text-stone-700 rounded-lg text-sm font-bold hover:bg-stone-100 transition disabled:opacity-40">Κλείσιμο</button>
-                                    {(activeSettingsTab === 'shop' || activeSettingsTab === 'portfolio' || activeSettingsTab === 'assistant') && (
+                                    {(activeSettingsTab === 'shop' || activeSettingsTab === 'portfolio' || activeSettingsTab === 'design' || activeSettingsTab === 'assistant') && (
                                         <button onClick={handleSaveSettings} disabled={isSavingSettings || mediaPreparing} className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition shadow-md flex items-center gap-2">
                                             {isSavingSettings ? 'Αποθήκευση...' : 'Αποθήκευση Ρυθμίσεων'}
                                         </button>

@@ -30,7 +30,7 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
   useEffect(() => {
     if (reducedMotion) videoRef.current?.pause();
   }, [reducedMotion]);
-  return <section className={`portfolio-hero ${hasVideo && showStats ? 'catalog-hero--video' : ''} relative overflow-hidden border-b border-[#e5def3] bg-white px-4 py-16 text-center sm:px-6 sm:py-20`}>
+  return <section className={`portfolio-hero ${hasVideo && showStats ? 'portfolio-hero--video' : ''} relative overflow-hidden border-b border-[#e5def3] bg-white px-4 py-16 text-center sm:px-6 sm:py-20`}>
     {hasVideo && <>
       {videoLink(source) ? (!reducedMotion && <div className="hero-embed absolute inset-0" aria-hidden="true"><VideoPlayer url={source} title="Βίντεο αρχικής Portfolio" autoPlay background /></div>) : <video key={source} ref={videoRef} src={source} autoPlay={!reducedMotion} muted loop playsInline preload="metadata"
         aria-hidden="true" className="absolute inset-0 h-full w-full object-cover"

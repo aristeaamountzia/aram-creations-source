@@ -222,6 +222,12 @@
   align-items: center;
   justify-content: center;
 }
+.portfolio-hero--video {
+  min-height: clamp(28rem, 62svh, 36rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .image-lightbox-stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 64px 72px 90px; touch-action: pan-y pinch-zoom; }
 .image-lightbox-stage img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; }
@@ -245,3 +251,178 @@
 .image-lightbox-caption .lightbox-external-link { pointer-events:auto; display:inline-block; margin-top:6px; text-decoration:underline; font-size:12px; }
 .hero-embed { overflow:hidden; }
 .hero-embed iframe { position:absolute; top:50%; left:50%; width:max(100%, 177.78vh); height:max(100%, 56.25vw); transform:translate(-50%,-50%); }
+
+/*
+ * Atelier is deliberately a warm editorial skin, not a black-and-white
+ * inversion.  The image treatment recalls the Wix gallery while the reading,
+ * shopping and administration surfaces remain calm and legible.
+ */
+.atelier-theme {
+  --atelier-ink: #302c27;
+  --atelier-paper: #f5f1e9;
+  --atelier-surface: #fffdfa;
+  --atelier-muted: #716a61;
+  --atelier-line: #ddd5c9;
+  --atelier-charcoal: #201d1a;
+  background: var(--atelier-paper) !important;
+  color: var(--atelier-ink) !important;
+}
+.atelier-theme .site-header,
+.atelier-theme .site-header[data-section="portfolio"] {
+  background: rgba(32, 29, 26, .96);
+  border-color: var(--atelier-line);
+  color: #fffdf9;
+  backdrop-filter: blur(18px);
+}
+.atelier-theme .brand-caption,
+.atelier-theme .site-header[data-section="portfolio"] .header-action { color: #c8c0b5; }
+.atelier-theme .header-action,
+.atelier-theme .section-entrance,
+.atelier-theme .entrance-portfolio {
+  background: transparent;
+  border-color: var(--atelier-line);
+  color: #fffdf9;
+  border-radius: 0;
+}
+.atelier-theme .header-action:hover,
+.atelier-theme .section-entrance:hover,
+.atelier-theme .entrance-portfolio:hover { background: rgba(255,255,255,.12); }
+.atelier-theme .entrance-shop[aria-pressed="true"],
+.atelier-theme .entrance-portfolio[aria-pressed="true"] { background: #f7f3ec; border-color: #f7f3ec; color: var(--atelier-charcoal); }
+.atelier-theme .portfolio-view { background: var(--atelier-paper) !important; color: var(--atelier-ink) !important; }
+.atelier-theme .shop-hero,
+.atelier-theme .portfolio-hero { border-color: var(--atelier-line) !important; background: #ede7dd !important; }
+.atelier-theme .portfolio-hero h1 { color: var(--atelier-ink) !important; font-family: var(--font-serif); font-weight: 500; letter-spacing: .025em; }
+.atelier-theme .portfolio-hero p { color: var(--atelier-muted) !important; }
+.atelier-theme .shop-hero h1 { font-family: var(--font-serif); font-weight: 500; letter-spacing: .025em; }
+.atelier-theme .catalog-filter-panel,
+.atelier-theme .catalog-category-note { background: var(--atelier-surface); border-color: var(--atelier-line); color: var(--atelier-ink); }
+.atelier-theme .catalog-search input,
+.atelier-theme .catalog-sort { background: var(--atelier-surface); border-color: var(--atelier-line); color: var(--atelier-ink); }
+.atelier-theme .catalog-search input::placeholder,
+.atelier-theme .catalog-search > svg,
+.atelier-theme .catalog-sort > span { color: var(--atelier-muted); }
+.atelier-theme .catalog-sort select { color: var(--atelier-ink); }
+.atelier-theme .catalog-categories { border-color: var(--atelier-line); }
+.atelier-theme .catalog-categories button,
+.atelier-theme .catalog-filter-actions > button { background: transparent; border-color: var(--atelier-line); color: var(--atelier-ink); border-radius: 2px; }
+.atelier-theme .catalog-controls button[aria-pressed="true"] { background: var(--atelier-charcoal); border-color: var(--atelier-charcoal); color: #fffdf9; }
+.atelier-theme .catalog-card { background: var(--atelier-surface) !important; border-color: var(--atelier-line) !important; border-radius: 2px !important; color: var(--atelier-ink); box-shadow: 0 1px 0 rgba(48,44,39,.04); }
+.atelier-theme .catalog-card:hover { border-color: #bdb3a5 !important; box-shadow: 0 10px 25px rgba(48,44,39,.08); }
+.atelier-theme .catalog-card h3 { color: var(--atelier-ink) !important; }
+.atelier-theme .catalog-card img { transition: filter 650ms ease, transform 700ms ease !important; }
+.atelier-theme .catalog-card .text-stone-400,
+.atelier-theme .catalog-card .text-stone-500 { color: var(--atelier-muted) !important; }
+.atelier-theme .catalog-card .border-t { border-color: var(--atelier-line) !important; }
+.atelier-theme .catalog-card .bg-white\/95,
+.atelier-theme .catalog-card .bg-white\/90 { background: rgba(255,253,250,.94) !important; border-color: var(--atelier-line) !important; color: var(--atelier-ink) !important; }
+.atelier-theme .catalog-card .bg-stone-900,
+.atelier-theme .portfolio-hero button { background: var(--atelier-charcoal) !important; color: #fffdf9 !important; border-radius: 2px; }
+.atelier-theme .site-footer { background: var(--atelier-charcoal) !important; border-color: rgba(255,255,255,.16) !important; color: #c8c0b5; }
+.atelier-theme .site-footer :is(h4, .text-stone-900, .text-stone-800) { color: #fffdf9 !important; }
+.atelier-theme .site-footer .bg-white,
+.atelier-theme .site-footer .bg-teal-50 { background: transparent !important; border-color: rgba(255,255,255,.28) !important; color: #fffdf9 !important; border-radius: 2px; }
+.atelier-theme .image-lightbox { background: rgba(5, 5, 5, .985); }
+.atelier-theme .image-lightbox > button { border-radius: 2px; background: #292522; border-color: rgba(255,255,255,.3); color: #fffdf9; }
+.atelier-theme .image-lightbox > button:hover { background: #292929; }
+
+/* The administration surface is a workspace, not part of the public gallery.
+   Keeping it light makes dense data, controls and status information faster to scan. */
+.atelier-theme[data-section="admin"] {
+  background: #f4f2ee !important;
+  color: #292524 !important;
+}
+.atelier-theme[data-section="admin"] main { background: #f4f2ee; }
+.atelier-theme[data-section="admin"] .site-header,
+.atelier-theme[data-section="admin"] .site-header[data-section="portfolio"] {
+  background: rgba(255, 253, 249, .96);
+  border-color: #ded9d1;
+  color: #292524;
+}
+.atelier-theme[data-section="admin"] .brand-caption,
+.atelier-theme[data-section="admin"] .site-header[data-section="portfolio"] .header-action { color: #706961; }
+.atelier-theme[data-section="admin"] .header-action,
+.atelier-theme[data-section="admin"] .section-entrance,
+.atelier-theme[data-section="admin"] .entrance-portfolio {
+  background: #fffdfa;
+  border-color: #ded9d1;
+  color: #292524;
+  border-radius: 9px;
+}
+.atelier-theme[data-section="admin"] .header-action:hover,
+.atelier-theme[data-section="admin"] .section-entrance:hover,
+.atelier-theme[data-section="admin"] .entrance-portfolio:hover { background: #f2eee7; }
+.atelier-theme[data-section="admin"] .entrance-shop[aria-pressed="true"],
+.atelier-theme[data-section="admin"] .entrance-portfolio[aria-pressed="true"] { background: #292524; border-color: #292524; color: #fff; }
+.atelier-theme[data-section="admin"] .backoffice-view { color: #292524; }
+.atelier-theme[data-section="admin"] .site-footer { background: #fffdfa !important; border-color: #ded9d1 !important; color: #706961; }
+.atelier-theme[data-section="admin"] .site-footer :is(h4, .text-stone-900, .text-stone-800) { color: #292524 !important; }
+.atelier-theme[data-section="admin"] .site-footer .bg-white,
+.atelier-theme[data-section="admin"] .site-footer .bg-teal-50 { background: #fffdfa !important; border-color: #ded9d1 !important; color: #292524 !important; border-radius: 9px; }
+
+/* Portfolio refinements: art is color-first on touch devices; grayscale belongs to desktop hover. */
+.atelier-theme .portfolio-hero--video { background: #171411 !important; }
+.atelier-theme .portfolio-hero--video > div.absolute.inset-0.bg-black\/55 { background: rgba(0, 0, 0, .64) !important; }
+/* Grayscale is an intentional desktop discovery effect, never a readability rule. */
+@media (hover: hover) and (pointer: fine) {
+  .atelier-theme .catalog-card img { filter: grayscale(1); }
+  .atelier-theme .catalog-card:hover img,
+  .atelier-theme .catalog-card:focus-within img { filter: grayscale(0); }
+}
+@media (max-width: 640px) {
+  .portfolio-hero--video { min-height: 27rem; }
+  .atelier-theme .portfolio-hero--video { padding-top: 3rem; padding-bottom: 3rem; }
+  .atelier-theme .portfolio-view .catalog-card { border-radius: 10px !important; }
+  .atelier-theme[data-section="admin"] .backoffice-view { padding: 16px; }
+  .atelier-theme[data-section="admin"] .backoffice-toolbar { padding: 16px; gap: 16px; border-radius: 14px; }
+  .atelier-theme[data-section="admin"] .backoffice-primary-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .atelier-theme[data-section="admin"] .backoffice-primary-actions > button:first-child,
+  .atelier-theme[data-section="admin"] .backoffice-primary-actions > div { grid-column: 1 / -1; justify-content: center; }
+  .atelier-theme[data-section="admin"] .backoffice-primary-actions > button { justify-content: center; }
+  .atelier-theme[data-section="admin"] .backoffice-utility-actions { padding-top: 12px; }
+  .atelier-theme[data-section="admin"] .backoffice-stats-filter { width: 100%; }
+  .atelier-theme[data-section="admin"] .backoffice-stats-filter button { flex: 1 1 auto; padding-left: 8px; padding-right: 8px; }
+  .atelier-theme[data-section="admin"] .backoffice-stats-grid > div { min-height: 88px; padding: 12px 6px; }
+  .atelier-theme[data-section="admin"] .backoffice-stats-grid span:first-child { font-size: 8px; letter-spacing: .04em; }
+}
+@media (max-width: 430px) {
+  .header-brand .brand-name { display: none; }
+  .header-row { gap: 6px; }
+  .section-entrance { padding-left: 8px; padding-right: 8px; }
+}
+
+/* Design Studio: presentation tokens only. They intentionally do not affect
+   catalog data, commerce state, authentication or management behaviour. */
+.aram-site { background: var(--ds-page-background, #f5f1e9); color: var(--ds-ink, #302c27); font-family: var(--ds-font-family, Jura, sans-serif); font-size: var(--ds-base-size, 16px); }
+.aram-site .site-header { min-height: var(--ds-header-height, 76px); background: var(--ds-header-background, #201d1a) !important; color: var(--ds-header-ink, #fffdfa) !important; }
+.aram-site .site-header .brand-name, .aram-site .site-header .header-action, .aram-site .site-header .section-entrance { color: var(--ds-header-ink, #fffdfa) !important; }
+.aram-site .site-header .brand-caption { color: var(--ds-header-muted, #c8c0b5) !important; }
+.aram-site .site-header .section-entrance,
+.aram-site .site-header .header-action { background: transparent !important; border-color: color-mix(in srgb, var(--ds-header-ink, #fffdfa) 40%, transparent) !important; color: var(--ds-header-ink, #fffdfa) !important; }
+.aram-site .site-header .section-entrance:hover,
+.aram-site .site-header .header-action:hover { background: color-mix(in srgb, var(--ds-header-ink, #fffdfa) 12%, transparent) !important; }
+.aram-site .site-header .header-brand img { filter: grayscale(1) brightness(3.5); }
+.aram-site .header-row { gap: var(--ds-header-gap, 24px); }
+.aram-site .entrance-shop[aria-pressed="true"], .aram-site .entrance-portfolio[aria-pressed="true"] { background: var(--ds-nav-active-background, #f7f3ec) !important; border-color: var(--ds-nav-active-background, #f7f3ec) !important; color: var(--ds-nav-active-ink, #201d1a) !important; }
+.aram-site .catalog-card { border-radius: var(--ds-card-radius, 12px) !important; }
+.aram-site[data-section="admin"] .catalog-card { background: var(--ds-admin-card-background, #fff) !important; border-color: var(--ds-admin-card-border, #e7e5e4) !important; color: var(--ds-admin-card-ink, #1c1917) !important; }
+.aram-site[data-section="admin"] .catalog-card h3 { color: var(--ds-admin-card-ink, #1c1917) !important; }
+.aram-site[data-section="admin"] .catalog-card .text-stone-400, .aram-site[data-section="admin"] .catalog-card .text-stone-500 { color: var(--ds-admin-meta-ink, #78716c) !important; }
+.aram-site[data-section="admin"] .catalog-card .bg-emerald-50 { background: var(--ds-admin-status-background, #dcfce7) !important; color: var(--ds-admin-status-ink, #047857) !important; }
+.aram-site[data-section="admin"] .catalog-card .bg-stone-50 { background: var(--ds-admin-tag-background, #f8fafc) !important; color: var(--ds-admin-tag-ink, #57534e) !important; }
+.aram-site[data-section="admin"] .catalog-card .cursor-grab { background: var(--ds-drag-background, #fff); color: var(--ds-drag-ink, #57534e); }
+.aram-site .portfolio-hero { min-height: var(--ds-hero-min-height, 500px); padding-top: var(--ds-hero-top-padding, 64px) !important; padding-bottom: var(--ds-hero-bottom-padding, 64px) !important; }
+.aram-site .portfolio-hero > .relative { max-width: var(--ds-hero-content-width, 896px) !important; }
+.aram-site .portfolio-hero--video > div.absolute.inset-0.bg-black\/55 { background: rgb(0 0 0 / var(--ds-hero-overlay, .55)) !important; }
+.aram-site .portfolio-hero h1 { font-size: var(--ds-hero-title-size, 42px) !important; color: var(--ds-hero-title-ink, #fff) !important; }
+.aram-site .portfolio-hero p { color: var(--ds-hero-body-ink, #fff) !important; }
+.aram-site .portfolio-view .catalog-card { background: var(--ds-portfolio-card-background, #fffdfa) !important; border-color: var(--ds-portfolio-card-border, #ddd5c9) !important; }
+.aram-site .portfolio-view .catalog-card > div.p-5 { padding: var(--ds-portfolio-card-padding, 20px) !important; }
+.aram-site .portfolio-view .catalog-card h3 { color: var(--ds-portfolio-card-title-ink, #302c27) !important; }
+.aram-site .portfolio-view .catalog-card :is(p, .text-\[\#675f79\]) { color: var(--ds-portfolio-card-body-ink, #716a61) !important; }
+.aram-site .portfolio-view .catalog-card .border-t span:last-child { color: var(--ds-portfolio-link-ink, #514663) !important; }
+.aram-site .portfolio-view button.bg-\[\#6253ae\], .aram-site .portfolio-view button[class*="bg-[#6253ae]"] { background: var(--ds-button-background, #6253ae) !important; color: var(--ds-button-ink, #fff) !important; border-radius: var(--ds-button-radius, 10px) !important; padding-left: var(--ds-button-padding-x, 20px) !important; padding-right: var(--ds-button-padding-x, 20px) !important; padding-top: var(--ds-button-padding-y, 10px) !important; padding-bottom: var(--ds-button-padding-y, 10px) !important; }
+.aram-site .portfolio-view .rounded-full { border-radius: var(--ds-badge-radius, 999px) !important; }
+.aram-site .portfolio-view .catalog-card .bg-white\/95 { background: var(--ds-badge-background, #f5f1e9) !important; color: var(--ds-badge-ink, #514663) !important; border-color: var(--ds-badge-border, #ddd5c9) !important; }
+.aram-site .portfolio-view .fixed .max-w-4xl { background: var(--ds-modal-background, #fffdfa) !important; color: var(--ds-modal-ink, #302c27) !important; border-color: var(--ds-modal-border, #ddd5c9) !important; border-radius: var(--ds-modal-radius, 18px) !important; }
+.aram-site .portfolio-view .fixed .max-w-4xl :is(p, .text-\[\#675f79\]) { color: var(--ds-modal-muted, #716a61) !important; }
