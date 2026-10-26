@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node -e \"const fs=require('fs');const {execSync}=require('child_process');const needsInstall=!fs.existsSync('node_modules')||!fs.existsSync('node_modules/.bin')||!fs.existsSync('node_modules/tsx');if(needsInstall){console.log('Installing dependencies (this may take a minute)...');execSync('npm install --legacy-peer-deps --no-audit --no-fund',{stdio:'inherit'})}\" && npx tsx server.ts",
+    "dev": "npx tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=server-dist/server.cjs && node scripts/build-netlify-functions.mjs",
     "build:functions": "node scripts/build-netlify-functions.mjs",
     "start": "node server-dist/server.cjs",
