@@ -4,7 +4,20 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { app } from "./api-server";
 
-const PORT = Number(process.env.PORT || 3000);
+function readCliOption(name: string): string | undefined {
+  const option = `--${name}`;
+  const equalsPrefix = `${option}=`;
+  const index = process.argv.findIndex((argument) => argument === option || argument.startsWith(equalsPrefix));
+  if (index === -1) return undefined;
+
+  const argument = process.argv[index];
+  return argument.startsWith(equalsPrefix) ? argument.slice(equalsPrefix.length) : process.argv[index + 1];
+}
+
+// Editor V passes its own port and host as CLI arguments. Respect them so the
+// Express wrapper and Vite middleware are served at the address it expects.
+const PORT = Number(readCliOption("port") || process.env.PORT || 3000);
+const HOST = readCliOption("host") || process.env.HOST || "0.0.0.0";
 
 async function start() {
   if (process.env.NODE_ENV !== "production") {
@@ -21,8 +34,8 @@ async function start() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[Aram Creations] Server running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`[Aram Creations] Server running on http://${HOST}:${PORT}`);
   });
 }
 
