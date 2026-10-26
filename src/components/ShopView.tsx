@@ -471,14 +471,31 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const activeMedia = selectedMediaList[activeMediaIndex] || selectedMediaList[0];
   const zoomImages = selectedMediaList.map((media, index) => ({ ...media, mediaIndex: index })).filter(media => media.type !== 'video');
 
+  const sectionClass = shopSettings.heroVideoUrl ? 'catalog-hero--video' : '';
+  const buttonClass = availableOnly
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300';
+  const buttonClass2 = showFavoritesOnly
+                  ? 'bg-rose-50 text-rose-700 border-rose-300'
+                  : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300';
+  const catalogGridGapClass = shopSettings.catalogDensity === 'compact' ? 'gap-3 sm:gap-4' : shopSettings.catalogDensity === 'spacious' ? 'gap-8 sm:gap-10' : 'gap-6 sm:gap-8';
+  const detailFavoriteClass = selectedItem && favoriteIds.includes(selectedItem.id) ? 'text-rose-600' : 'hover:text-stone-800';
+  const detailStatusClass = selectedItem && !isAvailableForSale(selectedItem)
+    ? selectedItem.status === 'Πουλήθηκε' || (selectedItem.status !== 'Κρατημένο' && selectedItem.stock !== undefined && selectedItem.stock !== null && Number(selectedItem.stock) <= 0)
+      ? 'bg-rose-100 text-rose-800'
+      : 'bg-amber-100 text-amber-900'
+    : 'bg-emerald-100 text-emerald-800';
+  const detailAddButtonClass = selectedItem && !isAvailableForSale(selectedItem)
+    ? 'bg-stone-200 text-stone-500 cursor-not-allowed'
+    : 'bg-stone-900 hover:bg-stone-800 text-white';
   return (
     <div className="catalog-view shop-view min-h-screen" style={{ backgroundColor: shopSettings.bgColor, color: shopSettings.textColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
       {/* Authentic Artisan Hero Banner */}
-      <section className={`shop-hero ${shopSettings.heroVideoUrl ? 'catalog-hero--video' : ''} relative overflow-hidden py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center`} style={{ backgroundColor: shopSettings.heroBgColor, color: shopSettings.heroTitleColor }}>
+      <section className={`shop-hero ${sectionClass} relative overflow-hidden py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center`} style={{ backgroundColor: shopSettings.heroBgColor, color: shopSettings.heroTitleColor }}>
         {shopSettings.heroVideoUrl && <video className="absolute inset-0 h-full w-full object-cover" src={shopSettings.heroVideoUrl} autoPlay muted loop playsInline aria-hidden="true" />}
         {shopSettings.heroVideoUrl && <div className="absolute inset-0 bg-black/50" aria-hidden="true" />}
         <div className="relative w-full max-w-4xl mx-auto space-y-4">
-          <h1 className={`${shopSettings.heroTitleSize} font-bold tracking-tight break-words`} style={{ color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroTitleColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
+          <h1 className={`hero-title font-bold tracking-tight break-words ${shopSettings.heroTitleSize}`} style={{ color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroTitleColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
             {shopSettings.heroTitle}
           </h1>
           <p className="text-sm sm:text-base max-w-2xl mx-auto leading-relaxed opacity-90" style={{ color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroSubtitleColor }}>
@@ -517,11 +534,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             <button
               onClick={() => setAvailableOnly(!availableOnly)}
               aria-pressed={availableOnly}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                availableOnly
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                  : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300'
-              }`}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${buttonClass}`}
             >
               Μόνο Διαθέσιμα
             </button>
@@ -529,14 +542,10 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
               aria-pressed={showFavoritesOnly}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${
-                showFavoritesOnly
-                  ? 'bg-rose-50 text-rose-700 border-rose-300'
-                  : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300'
-              }`}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${buttonClass2}`}
             >
               <Heart className={`w-3.5 h-3.5 ${showFavoritesOnly ? 'fill-rose-500 text-rose-500' : 'text-stone-500'}`} />
-              <span>Αγαπημένα ({favoriteIds.length})</span>
+              <span className="ve-span">Αγαπημένα ({favoriteIds.length})</span>
             </button>
 
             {/* Sort Select */}
@@ -547,18 +556,18 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="min-w-0 max-w-full bg-transparent font-bold text-stone-800 focus:outline-none cursor-pointer text-xs"
               >
-                <option value="featured">Προτεινόμενα</option>
-                <option value="popular">Πιο Δημοφιλή (Likes)</option>
-                <option value="views">Περισσότερες Προβολές</option>
-                <option value="price-asc">Τιμή (Χαμηλή → Υψηλή)</option>
-                <option value="price-desc">Τιμή (Υψηλή → Χαμηλή)</option>
+                <option className="ve-option" value="featured">Προτεινόμενα</option>
+                <option className="ve-option" value="popular">Πιο Δημοφιλή (Likes)</option>
+                <option className="ve-option" value="views">Περισσότερες Προβολές</option>
+                <option className="ve-option" value="price-asc">Τιμή (Χαμηλή → Υψηλή)</option>
+                <option className="ve-option" value="price-desc">Τιμή (Υψηλή → Χαμηλή)</option>
               </select>
             </div>
           </>} />
 
         {/* Catalog Results Header */}
         <div className="flex items-center justify-between text-xs font-bold text-stone-500 px-1">
-          <span>{isCatalogLoading ? 'Φόρτωση καταλόγου…' : `${filteredItems.length} δημιουργίες βρέθηκαν`}</span>
+          <span className="ve-span">{isCatalogLoading ? 'Φόρτωση καταλόγου…' : `${filteredItems.length} δημιουργίες βρέθηκαν`}</span>
           {(selectedCategory !== 'Όλα' || searchQuery || availableOnly || showFavoritesOnly) && (
             <button
               onClick={() => {
@@ -606,7 +615,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             </button>
           </div>
         ) : (
-          <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 ${shopSettings.catalogDensity === 'compact' ? 'gap-3 sm:gap-4' : shopSettings.catalogDensity === 'spacious' ? 'gap-8 sm:gap-10' : 'gap-6 sm:gap-8'}`}>
+          <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 ${catalogGridGapClass}`}>
             {filteredItems.map((item) => {
               const isFav = favoriteIds.includes(item.id);
               const isAvailable = isAvailableForSale(item);
@@ -624,6 +633,16 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
               const likesCount = getItemLikes(item);
               const viewsCount = getItemViews(item);
 
+              const divClass = !isAvailable ? 'opacity-85' : '';
+              const spanClass = isSold ? 'text-white bg-rose-600 border-rose-700 ring-2 ring-rose-200' : 'text-amber-900 bg-amber-100 border-amber-200';
+              const buttonClass4 = isFav
+                              ? 'bg-rose-50 border-rose-200 text-rose-600'
+                              : 'bg-white/90 border-stone-200 text-stone-700 hover:text-rose-600 hover:bg-white';
+              const buttonClass5 = !isAvailable
+                              ? 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed'
+                              : isAdded
+                              ? 'bg-emerald-600 text-white font-bold'
+                              : 'bg-stone-900 hover:bg-stone-800 text-white';
               return (
                 <div
                   key={item.id}
@@ -637,9 +656,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   role="group"
                   tabIndex={0}
                   aria-label={`${item.name || item.title || 'Κόσμημα'}. Πατήστε Enter για λεπτομέρειες.`}
-                  className={`catalog-card group bg-white border border-stone-200/90 rounded-2xl overflow-hidden hover:border-stone-400 hover:shadow-sm transition-all duration-300 flex flex-col justify-between cursor-pointer ${
-                    !isAvailable ? 'opacity-85' : ''
-                  }`}
+                  className={`catalog-card group bg-white border border-stone-200/90 rounded-2xl overflow-hidden hover:border-stone-400 hover:shadow-sm transition-all duration-300 flex flex-col justify-between cursor-pointer ${divClass}`}
                   style={{ borderRadius: shopSettings.borderRadius }}
                 >
                   {/* Media Container with multi-media support */}
@@ -668,7 +685,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                       {hasVideo && (
                         <span className="px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1 shadow-sm">
                           <Play className="w-2.5 h-2.5 fill-white" />
-                          <span>Βίντεο</span>
+                          <span className="ve-span">Βίντεο</span>
                         </span>
                       )}
                       {hasMultipleMedia && (
@@ -684,7 +701,9 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                         className="absolute bottom-3 right-3 max-w-[80%] overflow-x-auto flex items-center gap-1 z-10 bg-black/50 backdrop-blur-sm px-1.5 py-1 rounded-full opacity-90 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {mediaList.map((_, dotIdx) => (
+                        {mediaList.map((_, dotIdx) => {
+                          const buttonClass3 = currentCardMediaIdx === dotIdx ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/80';
+                          return (
                           <button
                             key={dotIdx}
                             type="button"
@@ -694,12 +713,11 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                                 [item.id]: dotIdx
                               }))
                             }
-                            className={`w-1.5 h-1.5 shrink-0 rounded-full transition-all ${
-                              currentCardMediaIdx === dotIdx ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/80'
-                            }`}
+                            className={`w-1.5 h-1.5 shrink-0 rounded-full transition-all ${buttonClass3}`}
                             aria-label={`Φωτογραφία ${dotIdx + 1}`}
                           />
-                        ))}
+                        );
+                        })}
                       </div>
                     )}
 
@@ -711,7 +729,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     {/* Like & Status buttons */}
                     <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
                       {!isAvailable && (
-                        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border rounded-lg shadow-sm ${isSold ? 'text-white bg-rose-600 border-rose-700 ring-2 ring-rose-200' : 'text-amber-900 bg-amber-100 border-amber-200'}`}>
+                        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border rounded-lg shadow-sm ${spanClass}`}>
                           {isSold ? 'Πουλήθηκε' : item.status || 'Μη διαθέσιμο'}
                         </span>
                       )}
@@ -720,11 +738,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                           onClick={(e) => toggleFavorite(item.id, e)}
                           aria-label={isFav ? `Αφαίρεση ${item.name || item.title} από τα αγαπημένα` : `Προσθήκη ${item.name || item.title} στα αγαπημένα`}
                           aria-pressed={isFav}
-                          className={`p-2 rounded-xl backdrop-blur-md transition-transform active:scale-95 shadow-sm flex items-center gap-1 border ${
-                            isFav
-                              ? 'bg-rose-50 border-rose-200 text-rose-600'
-                              : 'bg-white/90 border-stone-200 text-stone-700 hover:text-rose-600 hover:bg-white'
-                          }`}
+                          className={`p-2 rounded-xl backdrop-blur-md transition-transform active:scale-95 shadow-sm flex items-center gap-1 border ${buttonClass4}`}
                           title={isFav ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
                         >
                           <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
@@ -735,7 +749,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
                   {/* Card Content Info */}
                   <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
-                    <div>
+                    <div className="ve-div">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         {item.collection && (
                           <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
@@ -744,7 +758,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                         )}
                         <div className="flex items-center gap-1 text-[11px] font-bold text-stone-400 ml-auto">
                           <Eye className="w-3 h-3" />
-                          <span>{viewsCount}</span>
+                          <span className="ve-span">{viewsCount}</span>
                         </div>
                       </div>
 
@@ -761,7 +775,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
                     {/* Footer: Price & Actions */}
                     <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
-                      <div>
+                      <div className="ve-div">
                         <span className="text-[10px] text-stone-400 uppercase font-bold block">Τιμή</span>
                         <span className="text-lg font-bold text-stone-900" style={{ fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
                           {item.price ? `${item.price}€` : '-'}
@@ -778,7 +792,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                             className="px-2.5 py-2 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold hover:bg-teal-100 transition flex items-center gap-1"
                             title="Αγορά μέσω Vinted"
                           >
-                            <span>Vinted</span>
+                            <span className="ve-span">Vinted</span>
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
@@ -786,23 +800,17 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                         <button
                           disabled={!isAvailable}
                           onClick={(e) => handleAdd(item, e)}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
-                            !isAvailable
-                              ? 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed'
-                              : isAdded
-                              ? 'bg-emerald-600 text-white font-bold'
-                              : 'bg-stone-900 hover:bg-stone-800 text-white'
-                          }`}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${buttonClass5}`}
                         >
                           {isAdded ? (
                             <>
                               <Check className="w-3.5 h-3.5" />
-                              <span>Μπήκε!</span>
+                              <span className="ve-span">Μπήκε!</span>
                             </>
                           ) : (
                             <>
                               <ShoppingBag className="w-3.5 h-3.5" />
-                              <span>{!isAvailable ? (isSold ? 'Πουλήθηκε' : item.status || 'Μη διαθέσιμο') : 'Καλάθι'}</span>
+                              <span className="ve-span">{!isAvailable ? (isSold ? 'Πουλήθηκε' : item.status || 'Μη διαθέσιμο') : 'Καλάθι'}</span>
                             </>
                           )}
                         </button>
@@ -936,18 +944,18 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
               {/* Bottom Thumbnail Strip */}
               {selectedMediaList.length > 1 && (
                 <div className="flex gap-2.5 mt-3.5 overflow-x-auto pb-1 horizontal-scrollbar">
-                  {selectedMediaList.map((media, idx) => (
+                  {selectedMediaList.map((media, idx) => {
+                    const buttonClass6 = activeMediaIndex === idx
+                          ? 'border-stone-900 scale-105 shadow-sm'
+                          : 'border-stone-300 opacity-60 hover:opacity-100';
+                    return (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => setActiveMediaIndex(idx)}
                       aria-label={`Εμφάνιση ${media.type === 'video' ? 'βίντεο' : 'εικόνας'} ${idx + 1}`}
                       aria-pressed={activeMediaIndex === idx}
-                      className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
-                        activeMediaIndex === idx
-                          ? 'border-stone-900 scale-105 shadow-sm'
-                          : 'border-stone-300 opacity-60 hover:opacity-100'
-                      }`}
+                      className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${buttonClass6}`}
                     >
                       {media.type === 'video' ? (
                         <div className="w-full h-full bg-stone-900 text-white flex items-center justify-center">
@@ -961,7 +969,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                         />
                       )}
                     </button>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </div>
@@ -979,15 +988,13 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   <div className="flex items-center gap-3 text-xs font-bold text-stone-500">
                     <span className="flex items-center gap-1">
                       <Eye className="w-3.5 h-3.5" />
-                      <span>{getItemViews(selectedItem)} προβολές</span>
+                      <span className="ve-span">{getItemViews(selectedItem)} προβολές</span>
                     </span>
                     <button
                       onClick={(e) => toggleFavorite(selectedItem.id, e)}
                       aria-label={favoriteIds.includes(selectedItem.id) ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
                       aria-pressed={favoriteIds.includes(selectedItem.id)}
-                      className={`flex items-center gap-1 transition ${
-                        favoriteIds.includes(selectedItem.id) ? 'text-rose-600' : 'hover:text-stone-800'
-                      }`}
+                      className={`flex items-center gap-1 transition ${detailFavoriteClass}`}
                       title="Αγαπημένο"
                     >
                       <Heart
@@ -995,13 +1002,13 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                           favoriteIds.includes(selectedItem.id) ? 'fill-rose-500 text-rose-500' : ''
                         }`}
                       />
-                      <span>{getItemLikes(selectedItem)}</span>
+                      <span className="ve-span">{getItemLikes(selectedItem)}</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Title & Price */}
-                <div>
+                <div className="ve-div">
                   <h2 className="text-2xl sm:text-3xl font-bold text-stone-900 leading-snug" style={{ fontFamily: 'Jura, sans-serif' }}>
                     {selectedItem.name || selectedItem.title}
                   </h2>
@@ -1009,13 +1016,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     <span className="text-2xl sm:text-3xl font-bold text-stone-900">
                       {selectedItem.price ? `${selectedItem.price}€` : '-'}
                     </span>
-                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                      !isAvailableForSale(selectedItem)
-                        ? selectedItem.status === 'Πουλήθηκε' || (selectedItem.status !== 'Κρατημένο' && selectedItem.stock !== undefined && selectedItem.stock !== null && Number(selectedItem.stock) <= 0)
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-amber-100 text-amber-900'
-                        : 'bg-emerald-100 text-emerald-800'
-                    }`}>
+                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${detailStatusClass}`}>
                       {selectedItem.status || 'Διαθέσιμο'}
                     </span>
                   </div>
@@ -1058,7 +1059,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
                 {/* Colors */}
                 {selectedItem.colors && selectedItem.colors.length > 0 && (
-                  <div>
+                  <div className="ve-div">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block mb-1.5">
                       Χρώματα
                     </span>
@@ -1080,13 +1081,13 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 {(selectedItem.dimensions || selectedItem.weight) && (
                   <div className="flex gap-6 text-xs text-stone-600 pt-2">
                     {selectedItem.dimensions && (
-                      <div>
+                      <div className="ve-div">
                         <span className="block text-[10px] uppercase font-bold text-stone-400">Διαστάσεις</span>
                         <span className="font-medium">{selectedItem.dimensions}</span>
                       </div>
                     )}
                     {selectedItem.weight && (
-                      <div>
+                      <div className="ve-div">
                         <span className="block text-[10px] uppercase font-bold text-stone-400">Βάρος</span>
                         <span className="font-medium">{selectedItem.weight}</span>
                       </div>
@@ -1103,14 +1104,10 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     handleAdd(selectedItem);
                     setSelectedItem(null);
                   }}
-                  className={`w-full py-3.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md ${
-                    !isAvailableForSale(selectedItem)
-                      ? 'bg-stone-200 text-stone-500 cursor-not-allowed'
-                      : 'bg-stone-900 hover:bg-stone-800 text-white'
-                  }`}
+                  className={`w-full py-3.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md ${detailAddButtonClass}`}
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  <span>
+                  <span className="ve-span">
                     {!isAvailableForSale(selectedItem)
                       ? selectedItem.status === 'Πουλήθηκε' || (selectedItem.status !== 'Κρατημένο' && selectedItem.stock !== undefined && selectedItem.stock !== null && Number(selectedItem.stock) <= 0) ? 'Πουλήθηκε' : selectedItem.status || 'Μη διαθέσιμο'
                       : 'Προσθήκη στην Τσάντα Αγορών'}
@@ -1126,7 +1123,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     rel="noopener noreferrer"
                     className="w-full py-3 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-900 font-bold text-xs flex items-center justify-center gap-2 transition"
                   >
-                    <span>Αγορά μέσω {link.site || 'Vinted'}</span>
+                    <span className="ve-span">Αγορά μέσω {link.site || 'Vinted'}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 ))}

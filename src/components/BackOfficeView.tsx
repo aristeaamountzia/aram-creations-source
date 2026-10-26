@@ -46,26 +46,41 @@ import {
 import { ART_ITEMS } from "../data";
 import { PortfolioManager } from './PortfolioManager';
 
+const FORM_SECTION_LINKS = [
+    { id: 'form-basic', label: 'Βασικά' },
+    { id: 'form-pricing', label: 'Τιμές' },
+    { id: 'form-tags', label: 'Χρώματα / Υλικά' },
+    { id: 'form-links', label: 'Links' },
+    { id: 'form-shop-media', label: 'Εικόνες Shop' },
+    { id: 'form-private-media', label: 'Αρχείο' },
+    { id: 'form-ai', label: 'AI' },
+];
+
+const CATALOG_DENSITY_OPTIONS = [
+    { value: 'comfortable', label: 'Άνετη' },
+    { value: 'compact', label: 'Πυκνή' },
+];
+
 interface BackOfficeViewProps {
   onExit?: () => void;
 }
 
-        const IconPlus = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>;
-        const IconSettings = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>;
-        const IconTrash = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>;
-        const IconEdit = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>;
-        const IconEye = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>;
-        const IconX = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>;
-        const IconImage = () => <svg className="w-8 h-8 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>;
-        const IconGrid = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>;
-        const IconList = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>;
-        const IconBox = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>;
-        const IconDownload = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>;
-        const IconClone = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>;
-        const IconBolt = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>;
-        const IconExternalLink = () => <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>;
-        const IconGripVertical = () => <svg className="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M8 5v.01M8 12v.01M8 19v.01"></path></svg>;
-        const IconUndo = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>;
+        const IconPlus = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>;
+        const IconSettings = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>;
+        const IconTrash = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>;
+        const IconEdit = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>;
+        const IconEye = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>;
+        const IconX = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>;
+        const IconImage = () => <svg className="w-8 h-8 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>;
+        const IconGrid = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>;
+        const IconList = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>;
+        const IconBox = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>;
+        const IconDownload = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>;
+        const IconClone = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>;
+        const IconBolt = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>;
+        const IconExternalLink = () => <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>;
+        const IconGripVertical = () => <svg className="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M8 5v.01M8 12v.01M8 19v.01"></path></svg>;
+        const IconUndo = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path className="ve-path" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>;
 
         const BASE_CATEGORIES = ['Κολιέ', 'Δαχτυλίδια', 'Σκουλαρίκια', 'Βραχιόλια', 'Καρφίτσες', 'Σετ', 'Θήκες Κινητών'];
         const BASE_STATUSES = ['Διαθέσιμο', 'Κρατημένο', 'Πουλήθηκε', 'Μη διαθέσιμο', 'Δωρίστηκε', 'Προσωπική Συλλογή', 'Υπό Κατασκευή'];
@@ -3282,22 +3297,22 @@ interface BackOfficeViewProps {
 
             const renderFieldOptionManager = ({ type, title, options, counts, hiddenOptions, tone = 'stone' }) => {
                 const isIndigo = tone === 'indigo';
-                const panelClass = isIndigo ? 'border border-indigo-100 bg-indigo-50/40 rounded-xl p-4' : 'border border-stone-200 bg-stone-50 rounded-xl p-4';
-                const titleClass = isIndigo ? 'text-sm font-black text-indigo-700 uppercase' : 'text-sm font-black text-stone-700 uppercase';
-                const buttonClass = isIndigo ? 'px-3 py-1.5 bg-white border border-indigo-200 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition' : 'px-3 py-1.5 bg-white border border-stone-200 text-stone-700 rounded-lg text-xs font-bold hover:bg-stone-100 transition';
-                const countClass = isIndigo ? 'text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full' : 'text-[10px] font-black text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full';
-                const itemClass = isIndigo ? 'flex items-center gap-2 bg-white border border-indigo-100 rounded-lg px-3 py-2 cursor-grab active:cursor-grabbing' : 'flex items-center gap-2 bg-white border border-stone-200 rounded-lg px-3 py-2 cursor-grab active:cursor-grabbing';
-                const restoreClass = isIndigo ? 'text-[11px] px-2 py-1 bg-white border border-indigo-100 rounded text-indigo-700' : 'text-[11px] px-2 py-1 bg-white border border-stone-200 rounded text-stone-700';
 
+                const divClass12 = isIndigo ? 'border-indigo-100 bg-indigo-50/40' : 'border-stone-200 bg-stone-50';
+                const h3Class3 = isIndigo ? 'text-indigo-700' : 'text-stone-700';
+                const buttonClass = isIndigo ? 'border-indigo-200 text-indigo-700 hover:bg-indigo-100' : 'border-stone-200 text-stone-700 hover:bg-stone-100';
                 return (
-                    <div className={panelClass}>
+                    <div className={`border rounded-xl p-4 ${divClass12}`}>
                         <div className="flex items-center justify-between gap-3 mb-3">
-                            <h3 className={titleClass}>{title}</h3>
-                            <button onClick={() => handleSortFieldOptionsByUsage(type)} className={buttonClass}>Συχνότερα πρώτα</button>
+                            <h3 className={`text-sm font-black uppercase ${h3Class3}`}>{title}</h3>
+                            <button onClick={() => handleSortFieldOptionsByUsage(type)} className={`px-3 py-1.5 bg-white border rounded-lg text-xs font-bold transition ${buttonClass}`}>Συχνότερα πρώτα</button>
                         </div>
                         <div className="flex flex-col gap-2">
                             {options.length === 0 && <span className="text-sm text-stone-400 italic px-1 py-2">Καμία καταχώρηση.</span>}
-                            {options.map(option => (
+                            {options.map(option => {
+                              const divClass13 = isIndigo ? 'border-indigo-100' : 'border-stone-200';
+                              const spanClass4 = isIndigo ? 'text-indigo-500 bg-indigo-50' : 'text-stone-500 bg-stone-100';
+                              return (
                                 <div
                                     key={option}
                                     draggable
@@ -3305,20 +3320,24 @@ interface BackOfficeViewProps {
                                     onDragOver={(e) => e.preventDefault()}
                                     onDrop={(e) => handleFieldOptionDrop(e, type, option)}
                                     onDragEnd={() => setDraggedFieldOption(null)}
-                                    className={itemClass}
+                                    className={`flex items-center gap-2 bg-white border rounded-lg px-3 py-2 cursor-grab active:cursor-grabbing ${divClass13}`}
                                 >
                                     <IconGripVertical />
                                     <span className="flex-1 text-sm font-bold text-stone-700">{option}</span>
-                                    <span className={countClass}>{counts[option] || 0}</span>
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${spanClass4}`}>{counts[option] || 0}</span>
                                     <button onClick={() => handleHideFieldOption(type, option)} className="text-red-500 hover:text-red-700" title="Αφαίρεση από προτάσεις"><IconTrash /></button>
                                 </div>
-                            ))}
+                            );
+                            })}
                         </div>
                         {hiddenOptions.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-2">
-                                {hiddenOptions.map(option => (
-                                    <button key={option} onClick={() => handleRestoreFieldOption(type, option)} className={restoreClass}>Επαναφορά {option}</button>
-                                ))}
+                                {hiddenOptions.map(option => {
+                                  const buttonClass18 = isIndigo ? 'border-indigo-100 text-indigo-700' : 'border-stone-200 text-stone-700';
+                                  return (
+                                    <button key={option} onClick={() => handleRestoreFieldOption(type, option)} className={`text-[11px] px-2 py-1 bg-white border rounded ${buttonClass18}`}>Επαναφορά {option}</button>
+                                );
+                                })}
                             </div>
                         )}
                     </div>
@@ -3361,7 +3380,7 @@ interface BackOfficeViewProps {
                 return (
                     <div className="min-h-screen flex items-center justify-center p-4 bg-stone-100">
                         <form onSubmit={handleAdminLogin} className="w-full max-w-sm bg-white border border-stone-200 rounded-2xl shadow-xl p-6 space-y-4">
-                            <div>
+                            <div className="ve-div">
                                 <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-400">Aram Creations</p>
                                 <h1 className="text-2xl font-black text-stone-900 mt-1">Secure Back Office</h1>
                                 <p className="text-sm text-stone-500 mt-2">Συνδεσου με τον Firebase admin λογαριασμο σου.</p>
@@ -3388,14 +3407,33 @@ interface BackOfficeViewProps {
                 return <PortfolioManager onBack={() => setActiveCollection('jewelry')} />;
             }
 
+            const buttonClass2 = statsFilter === 'available' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none';
+            const buttonClass3 = statsFilter === 'unavailable' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none';
+            const buttonClass4 = statsFilter === 'sold' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none';
+            const buttonClass5 = statsFilter === 'all' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none';
+            const buttonClass6 = viewMode === 'grid' ? 'bg-stone-200 text-stone-800' : 'bg-white text-stone-400 hover:text-stone-600';
+            const buttonClass7 = viewMode === 'list' ? 'bg-stone-200 text-stone-800' : 'bg-white text-stone-400 hover:text-stone-600';
+            const buttonClass12 = activeSettingsTab === 'fields' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700';
+            const buttonClass13 = activeSettingsTab === 'shop' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700';
+            const buttonClass14 = activeSettingsTab === 'portfolio' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700';
+            const buttonClass15 = activeSettingsTab === 'design' ? 'border-violet-700 text-violet-800' : 'border-transparent text-stone-500 hover:text-stone-700';
+            const buttonClass16 = activeSettingsTab === 'assistant' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700';
+            const refreshResultClass = vintedRefreshResult?.error ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
+            const aiEndpointBadgeClass = getBackofficeAiEndpoint() ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+            const detailStatusBadgeClass = currentItem ? getStatusColor(currentItem.status) : '';
+            const atelierThemeButtonClass = shopSettings.visualTheme !== 'classic' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50';
+            const classicThemeButtonClass = shopSettings.visualTheme === 'classic' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50';
+            const divClass11 = vintedImportError ? 'bg-rose-50 border-rose-100 text-rose-700' : 'bg-emerald-50 border-emerald-100 text-emerald-800';
+            const buttonClass19 = activeCollection === 'jewelry' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-700';
+            const buttonClass20 = activeCollection === 'portfolio' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-700';
             return (
                 <div className="backoffice-view min-h-screen p-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-20 relative">
 
                     <header className="backoffice-toolbar flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-5 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-stone-200">
                         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Κατάλογος">
                             <button type="button" role="tab" aria-selected={false} onClick={() => setActiveCollection('orders')} className="px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold">Παραγγελίες</button>
-                            <button type="button" role="tab" aria-selected={activeCollection === 'jewelry'} onClick={() => { setActiveCollection('jewelry'); setSelectedCategory('Όλα'); setStatsFilter('all'); }} className={activeCollection === 'jewelry' ? 'px-3 py-2 rounded-lg bg-stone-900 text-white text-sm font-bold' : 'px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold'}>Shop</button>
-                            <button type="button" role="tab" aria-selected={activeCollection === 'portfolio'} onClick={() => { setActiveCollection('portfolio'); setSelectedCategory('Όλα'); setStatsFilter('all'); }} className={activeCollection === 'portfolio' ? 'px-3 py-2 rounded-lg bg-stone-900 text-white text-sm font-bold' : 'px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold'}>Portfolio</button>
+                            <button type="button" role="tab" aria-selected={activeCollection === 'jewelry'} onClick={() => { setActiveCollection('jewelry'); setSelectedCategory('Όλα'); setStatsFilter('all'); }} className={`px-3 py-2 rounded-lg text-sm font-bold ${buttonClass19}`}>Shop</button>
+                            <button type="button" role="tab" aria-selected={activeCollection === 'portfolio'} onClick={() => { setActiveCollection('portfolio'); setSelectedCategory('Όλα'); setStatsFilter('all'); }} className={`px-3 py-2 rounded-lg text-sm font-bold ${buttonClass20}`}>Portfolio</button>
                         </div>
                         <div className="backoffice-actions flex flex-col gap-3 w-full lg:w-auto">
                             <div className="backoffice-primary-actions flex flex-wrap items-center justify-start lg:justify-end gap-3">
@@ -3435,10 +3473,10 @@ interface BackOfficeViewProps {
                         <div className="flex flex-col sm:flex-row gap-2 sm:justify-between sm:items-end mb-3 px-1 min-w-0">
                             <h3 className="text-xs font-black text-stone-500 uppercase tracking-wider">Στατιστικα Καταλογου</h3>
                             <div className="backoffice-stats-filter flex flex-wrap bg-stone-200/70 rounded-lg p-1 max-w-full">
-                                <button onClick={() => setStatsFilter('available')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm ${statsFilter === 'available' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Διαθέσιμα</button>
-                                <button onClick={() => setStatsFilter('unavailable')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm whitespace-nowrap ${statsFilter === 'unavailable' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Μη Διαθέσιμα</button>
-                                <button onClick={() => setStatsFilter('sold')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm whitespace-nowrap ${statsFilter === 'sold' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Πωληθέντα</button>
-                                <button onClick={() => setStatsFilter('all')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm ${statsFilter === 'all' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Συνολικά</button>
+                                <button onClick={() => setStatsFilter('available')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm ${buttonClass2}`}>Διαθέσιμα</button>
+                                <button onClick={() => setStatsFilter('unavailable')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm whitespace-nowrap ${buttonClass3}`}>Μη Διαθέσιμα</button>
+                                <button onClick={() => setStatsFilter('sold')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm whitespace-nowrap ${buttonClass4}`}>Πωληθέντα</button>
+                                <button onClick={() => setStatsFilter('all')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm ${buttonClass5}`}>Συνολικά</button>
                             </div>
                         </div>
                         <div className="backoffice-stats-grid grid grid-cols-3 gap-3 sm:gap-4">
@@ -3464,21 +3502,21 @@ interface BackOfficeViewProps {
                         selectedCategory={selectedCategory} onCategory={setSelectedCategory}
                         actions={<>
                         <select className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 focus:outline-none focus:border-stone-400 text-sm" value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)}>
-                            <option value="Όλα">Όλα τα Χρώματα</option>
-                            {allFilterColors.map(col => <option key={col} value={col}>{col}</option>)}
+                            <option className="ve-option" value="Όλα">Όλα τα Χρώματα</option>
+                            {allFilterColors.map(col => <option className="ve-option" key={col} value={col}>{col}</option>)}
                         </select>
                         <select className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 focus:outline-none focus:border-stone-400 text-sm" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                            <option value="entry_new">Νεότερα</option>
-                            <option value="entry_old">Παλαιότερα</option>
-                            <option value="shop_order">Σειρά Shop</option>
-                            <option value="date_made_new">Ημ. Κατασκευής (Νεότερα)</option>
-                            <option value="date_made_old">Ημ. Κατασκευής (Pαλαιότερα)</option>
-                            <option value="name_asc">Όνομα (Α-Ω)</option>
-                            <option value="name_desc">Όνομα (Ω-Α)</option>
+                            <option className="ve-option" value="entry_new">Νεότερα</option>
+                            <option className="ve-option" value="entry_old">Παλαιότερα</option>
+                            <option className="ve-option" value="shop_order">Σειρά Shop</option>
+                            <option className="ve-option" value="date_made_new">Ημ. Κατασκευής (Νεότερα)</option>
+                            <option className="ve-option" value="date_made_old">Ημ. Κατασκευής (Pαλαιότερα)</option>
+                            <option className="ve-option" value="name_asc">Όνομα (Α-Ω)</option>
+                            <option className="ve-option" value="name_desc">Όνομα (Ω-Α)</option>
                         </select>
                         <div className="flex border border-stone-200 rounded-lg overflow-hidden md:ml-auto">
-                            <button onClick={() => setViewMode('grid')} className={`p-2 transition ${viewMode === 'grid' ? 'bg-stone-200 text-stone-800' : 'bg-white text-stone-400 hover:text-stone-600'}`}><IconGrid /></button>
-                            <button onClick={() => setViewMode('list')} className={`p-2 transition ${viewMode === 'list' ? 'bg-stone-200 text-stone-800' : 'bg-white text-stone-400 hover:text-stone-600'}`}><IconList /></button>
+                            <button onClick={() => setViewMode('grid')} className={`p-2 transition ${buttonClass6}`}><IconGrid /></button>
+                            <button onClick={() => setViewMode('list')} className={`p-2 transition ${buttonClass7}`}><IconList /></button>
                         </div>
                         </>} />
                     </div>
@@ -3512,7 +3550,7 @@ interface BackOfficeViewProps {
                         )}
                     </div>
                     {vintedRefreshResult && (
-                        <div role={vintedRefreshResult.error ? 'alert' : 'status'} className={`mb-5 rounded-lg border px-4 py-3 text-xs font-bold ${vintedRefreshResult.error ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
+                        <div role={vintedRefreshResult.error ? 'alert' : 'status'} className={`mb-5 rounded-lg border px-4 py-3 text-xs font-bold ${refreshResultClass}`}>
                             {vintedRefreshResult.message}
                         </div>
                     )}
@@ -3535,6 +3573,15 @@ interface BackOfficeViewProps {
                                     {filteredAndSortedJewelry.map((item) => {
                                         const isSold = isSoldItem(item);
                                         const isBulkDragged = draggedProductId && selectedItemIds.includes(draggedProductId) && selectedItemIds.includes(item.id);
+                                        const divClass = selectedItemIds.includes(item.id) ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200';
+                                        const divClass2 = dragOverProductId === item.id ? 'ring-2 ring-amber-400 border-amber-300 shadow-lg' : '';
+                                        const divClass3 = draggedProductId === item.id || isBulkDragged ? 'opacity-60 scale-[0.99]' : '';
+                                        const divClass4 = isSold ? 'opacity-80' : '';
+                                        const videoClass = isSold ? 'grayscale' : '';
+                                        const imgClass = isSold ? 'grayscale' : '';
+                                        const spanClass = getStatusColor(item.status);
+                                        const h3Class = isSold ? 'text-stone-500 line-through' : 'text-stone-800';
+                                        const spanClass2 = isSold ? 'text-stone-400' : 'text-stone-900';
                                         return (
                                         <div
                                             key={item.id}
@@ -3545,7 +3592,7 @@ interface BackOfficeViewProps {
                                             onDragOver={(event) => handleProductDragOver(event, item)}
                                             onDrop={(event) => handleProductDrop(event, item)}
                                             onDragEnd={handleProductDragEnd}
-                                            className={`bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition relative cursor-grab active:cursor-grabbing ${selectedItemIds.includes(item.id) ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200'} ${dragOverProductId === item.id ? 'ring-2 ring-amber-400 border-amber-300 shadow-lg' : ''} ${draggedProductId === item.id || isBulkDragged ? 'opacity-60 scale-[0.99]' : ''} ${isSold ? 'opacity-80' : ''}`}
+                                            className={`bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition relative cursor-grab active:cursor-grabbing ${divClass} ${divClass2} ${divClass3} ${divClass4}`}
                                         >
                                             <div className="aspect-square bg-stone-100 flex items-center justify-center overflow-hidden relative">
                                                 <label onClick={(e) => e.stopPropagation()} className="absolute top-2 left-2 z-10 bg-white/90 backdrop-blur-sm border border-stone-200 rounded-lg p-1 shadow-sm cursor-pointer">
@@ -3553,9 +3600,9 @@ interface BackOfficeViewProps {
                                                 </label>
                                                 {item.imageUrl ? (
                                                     item.fileType === 'video' ? (
-                                                        <video src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} muted loop autoPlay playsInline />
+                                                        <video src={item.imageUrl} className={`w-full h-full object-cover ${videoClass}`} muted loop autoPlay playsInline />
                                                     ) : (
-                                                        <img src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
+                                                        <img src={item.imageUrl} className={`w-full h-full object-cover ${imgClass}`} alt={item.name} />
                                                     )
                                                 ) : <IconImage />}
 
@@ -3584,11 +3631,11 @@ interface BackOfficeViewProps {
                                             <div className="p-4 flex-1 flex flex-col">
                                                 <div className="flex justify-between items-start mb-1">
                                                     <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">{item.category}</span>
-                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(item.status)}`}>
+                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${spanClass}`}>
                                                         {item.status}
                                                     </span>
                                                 </div>
-                                                <h3 className={`font-bold text-lg leading-tight mb-1 ${isSold ? 'text-stone-500 line-through' : 'text-stone-800'}`}>{item.name}</h3>
+                                                <h3 className={`font-bold text-lg leading-tight mb-1 ${h3Class}`}>{item.name}</h3>
                                                 {item.collection && <p className="text-xs text-stone-500 italic mb-2">{item.collection}</p>}
 
                                                 <div className="flex flex-wrap gap-1 mb-4 mt-auto pt-2">
@@ -3597,7 +3644,7 @@ interface BackOfficeViewProps {
                                                 </div>
 
                                                 <div className="flex justify-between items-center pt-3 border-t border-stone-100">
-                                                    <span className={`font-bold ${isSold ? 'text-stone-400' : 'text-stone-900'}`}>{item.price ? `${item.price}€` : '-'}</span>
+                                                    <span className={`font-bold ${spanClass2}`}>{item.price ? `${item.price}€` : '-'}</span>
                                                     <div className="flex gap-1.5">
                                                         {!isSold && (
                                                             <button onClick={(e) => handleQuickSold(e, item)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition" title="Γρήγορη Πώληση"><IconBolt /></button>
@@ -3619,6 +3666,15 @@ interface BackOfficeViewProps {
                                     {filteredAndSortedJewelry.map((item) => {
                                         const isSold = isSoldItem(item);
                                         const isBulkDragged = draggedProductId && selectedItemIds.includes(draggedProductId) && selectedItemIds.includes(item.id);
+                                        const divClass5 = selectedItemIds.includes(item.id) ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200';
+                                        const divClass6 = dragOverProductId === item.id ? 'ring-2 ring-amber-400 border-amber-300 shadow-lg' : '';
+                                        const divClass7 = draggedProductId === item.id || isBulkDragged ? 'opacity-60 scale-[0.99]' : '';
+                                        const divClass8 = isSold ? 'opacity-80' : '';
+                                        const videoClass2 = isSold ? 'grayscale' : '';
+                                        const imgClass2 = isSold ? 'grayscale' : '';
+                                        const h3Class2 = isSold ? 'text-stone-500 line-through' : 'text-stone-800';
+                                        const spanClass3 = getStatusColor(item.status);
+                                        const divClass9 = isSold ? 'text-stone-400' : 'text-stone-900';
                                         return (
                                         <div
                                             key={item.id}
@@ -3629,7 +3685,7 @@ interface BackOfficeViewProps {
                                             onDragOver={(event) => handleProductDragOver(event, item)}
                                             onDrop={(event) => handleProductDrop(event, item)}
                                             onDragEnd={handleProductDragEnd}
-                                            className={`flex flex-col md:flex-row items-start md:items-center p-3 bg-white border rounded-xl shadow-sm gap-4 transition hover:bg-stone-50 cursor-grab active:cursor-grabbing ${selectedItemIds.includes(item.id) ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200'} ${dragOverProductId === item.id ? 'ring-2 ring-amber-400 border-amber-300 shadow-lg' : ''} ${draggedProductId === item.id || isBulkDragged ? 'opacity-60 scale-[0.99]' : ''} ${isSold ? 'opacity-80' : ''}`}
+                                            className={`flex flex-col md:flex-row items-start md:items-center p-3 bg-white border rounded-xl shadow-sm gap-4 transition hover:bg-stone-50 cursor-grab active:cursor-grabbing ${divClass5} ${divClass6} ${divClass7} ${divClass8}`}
                                         >
                                             <div className="hidden md:flex h-10 w-6 items-center justify-center text-stone-300 font-black select-none">::</div>
                                             <label onClick={(e) => e.stopPropagation()} className="flex items-center justify-center p-2 cursor-pointer">
@@ -3638,17 +3694,17 @@ interface BackOfficeViewProps {
                                             <div className="w-16 h-16 bg-stone-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center border border-stone-200 relative">
                                                 {item.imageUrl ? (
                                                     item.fileType === 'video' ? (
-                                                        <video src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} muted />
+                                                        <video src={item.imageUrl} className={`w-full h-full object-cover ${videoClass2}`} muted />
                                                     ) : (
-                                                        <img src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
+                                                        <img src={item.imageUrl} className={`w-full h-full object-cover ${imgClass2}`} alt={item.name} />
                                                     )
                                                 ) : <IconImage />}
                                                 {item.stock > 1 && !isSold && <div className="absolute bottom-0 right-0 bg-stone-900 text-white text-[9px] px-1 font-bold rounded-tl">{item.stock}x</div>}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h3 className={`font-bold truncate ${isSold ? 'text-stone-500 line-through' : 'text-stone-800'}`}>{item.name}</h3>
+                                                <h3 className={`font-bold truncate ${h3Class2}`}>{item.name}</h3>
                                                 <div className="flex items-center gap-2 mt-1">
-                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(item.status)}`}>{item.status}</span>
+                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider ${spanClass3}`}>{item.status}</span>
                                                     <span className="text-xs font-bold text-stone-500 uppercase">{item.category}</span>
                                                 </div>
                                             </div>
@@ -3657,7 +3713,7 @@ interface BackOfficeViewProps {
                                                 {item.materials?.slice(0, 1).map((mat, i) => <span key={i} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-1 rounded border border-stone-200">{mat}</span>)}
                                                 {item.storage && <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-200">📦 {item.storage}</span>}
                                             </div>
-                                            <div className={`font-bold md:w-20 md:text-right ${isSold ? 'text-stone-400' : 'text-stone-900'}`}>
+                                            <div className={`font-bold md:w-20 md:text-right ${divClass9}`}>
                                                 {item.price ? `${item.price}€` : '-'}
                                             </div>
                                             <div className="flex gap-1 mt-3 md:mt-0 w-full md:w-auto justify-end border-t border-stone-100 md:border-none pt-3 md:pt-0">
@@ -3682,46 +3738,46 @@ interface BackOfficeViewProps {
                         <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
                                 <div className="p-5 border-b border-stone-100 bg-stone-50 flex items-center justify-between">
-                                    <div>
+                                    <div className="ve-div">
                                         <h2 className="text-lg font-black text-stone-800">Μαζική επεξεργασία</h2>
                                         <p className="text-xs font-bold text-stone-400">{selectedItems.length} προϊόντα επιλεγμένα</p>
                                     </div>
                                     <button onClick={() => setIsBulkOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1 rounded-lg border border-stone-200"><IconX /></button>
                                 </div>
                                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
+                                    <div className="ve-div">
                                         <label className="block text-xs font-bold text-stone-600 mb-1">Μετακίνηση κατηγορίας</label>
                                         <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.category} onChange={e => setBulkDraft({...bulkDraft, category: e.target.value})}>
-                                            <option value="">Καμία αλλαγή</option>
-                                            {allFormCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                            <option className="ve-option" value="">Καμία αλλαγή</option>
+                                            {allFormCategories.map(cat => <option className="ve-option" key={cat} value={cat}>{cat}</option>)}
                                         </select>
                                     </div>
-                                    <div>
+                                    <div className="ve-div">
                                         <label className="block text-xs font-bold text-stone-600 mb-1">Συλλογή</label>
                                         <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.collection} onChange={e => setBulkDraft({...bulkDraft, collection: e.target.value})}>
-                                            <option value="">Καμία αλλαγή</option>
-                                            {allCollections.map(col => <option key={col} value={col}>{col}</option>)}
+                                            <option className="ve-option" value="">Καμία αλλαγή</option>
+                                            {allCollections.map(col => <option className="ve-option" key={col} value={col}>{col}</option>)}
                                         </select>
                                     </div>
                                     <div className="md:col-span-2 border border-amber-100 bg-amber-50/60 rounded-xl p-4">
                                         <label className="block text-xs font-bold text-amber-800 mb-1">Σειρά εμφάνισης στο Shop</label>
                                         <select className="w-full border border-amber-200 rounded-lg px-4 py-2.5 bg-white outline-none" value={bulkDraft.shopPlacement} onChange={e => setBulkDraft({...bulkDraft, shopPlacement: e.target.value})}>
-                                            <option value="">Καμία αλλαγή</option>
-                                            <option value="top">Μετακίνηση στην αρχή του Shop</option>
-                                            <option value="up">Μετακίνηση μία θέση πάνω</option>
-                                            <option value="down">Μετακίνηση μία θέση κάτω</option>
-                                            <option value="bottom">Μετακίνηση στο τέλος του Shop</option>
+                                            <option className="ve-option" value="">Καμία αλλαγή</option>
+                                            <option className="ve-option" value="top">Μετακίνηση στην αρχή του Shop</option>
+                                            <option className="ve-option" value="up">Μετακίνηση μία θέση πάνω</option>
+                                            <option className="ve-option" value="down">Μετακίνηση μία θέση κάτω</option>
+                                            <option className="ve-option" value="bottom">Μετακίνηση στο τέλος του Shop</option>
                                         </select>
                                         <p className="mt-2 text-[11px] font-medium text-amber-700">Μετακινεί μαζί τα επιλεγμένα προϊόντα κρατώντας την ίδια σειρά μεταξύ τους.</p>
                                     </div>
-                                    <div>
+                                    <div className="ve-div">
                                         <label className="block text-xs font-bold text-stone-600 mb-1">Κατάσταση</label>
                                         <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.status} onChange={e => setBulkDraft({...bulkDraft, status: e.target.value})}>
-                                            <option value="">Καμία αλλαγή</option>
-                                            {allFormStatuses.map(stat => <option key={stat} value={stat}>{stat}</option>)}
+                                            <option className="ve-option" value="">Καμία αλλαγή</option>
+                                            {allFormStatuses.map(stat => <option className="ve-option" key={stat} value={stat}>{stat}</option>)}
                                         </select>
                                     </div>
-                                    <div>
+                                    <div className="ve-div">
                                         <label className="block text-xs font-bold text-stone-600 mb-1">Τιμή</label>
                                         <input type="number" min="0" step="any" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.price} onChange={e => setBulkDraft({...bulkDraft, price: e.target.value})} placeholder="Καμία αλλαγή" />
                                     </div>
@@ -3735,8 +3791,9 @@ interface BackOfficeViewProps {
                                         <div className="flex flex-wrap gap-2 p-3 bg-indigo-50/40 border border-indigo-100 rounded-xl max-h-32 overflow-auto">
                                             {allAvailableColors.map(col => {
                                                 const isSelected = bulkColors.includes(col);
+                                                const buttonClass8 = isSelected ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-indigo-100 text-indigo-700 hover:bg-indigo-100';
                                                 return (
-                                                    <button key={col} type="button" onClick={() => toggleBulkTag('colors', col)} className={`text-[11px] px-2.5 py-1 rounded-md border font-bold transition ${isSelected ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-indigo-100 text-indigo-700 hover:bg-indigo-100'}`}>
+                                                    <button key={col} type="button" onClick={() => toggleBulkTag('colors', col)} className={`text-[11px] px-2.5 py-1 rounded-md border font-bold transition ${buttonClass8}`}>
                                                         {isSelected ? '✓ ' : '+ '}{col}
                                                     </button>
                                                 );
@@ -3753,15 +3810,16 @@ interface BackOfficeViewProps {
                                         <div className="flex flex-wrap gap-2 p-3 bg-stone-50 border border-stone-100 rounded-xl max-h-32 overflow-auto">
                                             {allAvailableMaterials.map(mat => {
                                                 const isSelected = bulkMaterials.includes(mat);
+                                                const buttonClass9 = isSelected ? 'bg-stone-900 border-stone-900 text-white shadow-sm' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100';
                                                 return (
-                                                    <button key={mat} type="button" onClick={() => toggleBulkTag('materials', mat)} className={`text-[11px] px-2.5 py-1 rounded-md border font-bold transition ${isSelected ? 'bg-stone-900 border-stone-900 text-white shadow-sm' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'}`}>
+                                                    <button key={mat} type="button" onClick={() => toggleBulkTag('materials', mat)} className={`text-[11px] px-2.5 py-1 rounded-md border font-bold transition ${buttonClass9}`}>
                                                         {isSelected ? '✓ ' : '+ '}{mat}
                                                     </button>
                                                 );
                                             })}
                                         </div>
                                     </div>
-                                    <div>
+                                    <div className="ve-div">
                                         <label className="block text-xs font-bold text-stone-600 mb-1">Σχόλια / σημειώσεις</label>
                                         <textarea className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none h-20 resize-none" value={bulkDraft.notes} onChange={e => setBulkDraft({...bulkDraft, notes: e.target.value})} placeholder="Καμία αλλαγή"></textarea>
                                     </div>
@@ -3793,7 +3851,7 @@ interface BackOfficeViewProps {
 
                             <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl relative">
                                 <div className="p-5 border-b border-stone-100 flex justify-between items-center bg-stone-50 rounded-t-2xl">
-                                    <div>
+                                    <div className="ve-div">
                                         <h2 className="text-xl font-bold text-stone-800">
                                             {isEditMode ? 'Επεξεργασία προϊόντος' : 'Νέα καταχώρηση'}
                                         </h2>
@@ -3802,15 +3860,7 @@ interface BackOfficeViewProps {
                                     <button type="button" disabled={mediaPreparing || isSaving} onClick={() => setIsAddOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1 rounded-lg border border-stone-200"><IconX /></button>
                                 </div>
                                 <div className="px-5 py-3 border-b border-stone-100 bg-white flex gap-2 overflow-x-auto">
-                                    {[
-                                        ['form-basic', 'Βασικά'],
-                                        ['form-pricing', 'Τιμές'],
-                                        ['form-tags', 'Χρώματα / Υλικά'],
-                                        ['form-links', 'Links'],
-                                        ['form-shop-media', 'Εικόνες Shop'],
-                                        ['form-private-media', 'Αρχείο'],
-                                        ['form-ai', 'AI']
-                                    ].map(([id, label]) => (
+                                    {FORM_SECTION_LINKS.map(({ id, label }) => (
                                         <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="px-3.5 py-2 text-xs font-black bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg whitespace-nowrap transition border border-stone-200/70">
                                             {label}
                                         </button>
@@ -3824,11 +3874,11 @@ interface BackOfficeViewProps {
                                             <div className="flex flex-col lg:flex-row lg:items-start gap-4">
                                                 <div className="flex-1">
                                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-violet-100 pb-3 mb-4">
-                                                        <div>
+                                                        <div className="ve-div">
                                                             <h3 className="text-sm font-black text-violet-700 uppercase tracking-wider">AI Studio Back-office</h3>
                                                             <p className="text-xs text-violet-700/70 font-medium">Δημιουργεί τίτλους, περιγραφές, χρώματα, υλικά, tags και captions από τα στοιχεία της φόρμας.</p>
                                                         </div>
-                                                        <span className={`text-[10px] font-black px-2 py-1 rounded-full ${getBackofficeAiEndpoint() ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                        <span className={`text-[10px] font-black px-2 py-1 rounded-full ${aiEndpointBadgeClass}`}>
                                                             {getBackofficeAiEndpoint() ? 'Endpoint ορισμένο' : 'Λείπει endpoint'}
                                                         </span>
                                                     </div>
@@ -3892,10 +3942,10 @@ interface BackOfficeViewProps {
                                                         <p className="text-xs text-stone-400 italic leading-relaxed">Οι προτάσεις θα εμφανιστούν εδώ πριν εφαρμοστούν στη φόρμα.</p>
                                                     ) : (
                                                         <div className="space-y-2 text-xs">
-                                                            {aiProductDraft.title && <div><span className="font-black text-stone-500">Τίτλος:</span> <span className="text-stone-800">{aiProductDraft.title}</span></div>}
-                                                            {aiProductDraft.category && <div><span className="font-black text-stone-500">Κατηγορία:</span> <span className="text-stone-800">{aiProductDraft.category}</span></div>}
-                                                            {aiProductDraft.colors.length > 0 && <div><span className="font-black text-stone-500">Χρώματα:</span> <span className="text-stone-800">{aiProductDraft.colors.join(', ')}</span></div>}
-                                                            {aiProductDraft.materials.length > 0 && <div><span className="font-black text-stone-500">Υλικά:</span> <span className="text-stone-800">{aiProductDraft.materials.join(', ')}</span></div>}
+                                                            {aiProductDraft.title && <div className="ve-div"><span className="font-black text-stone-500">Τίτλος:</span> <span className="text-stone-800">{aiProductDraft.title}</span></div>}
+                                                            {aiProductDraft.category && <div className="ve-div"><span className="font-black text-stone-500">Κατηγορία:</span> <span className="text-stone-800">{aiProductDraft.category}</span></div>}
+                                                            {aiProductDraft.colors.length > 0 && <div className="ve-div"><span className="font-black text-stone-500">Χρώματα:</span> <span className="text-stone-800">{aiProductDraft.colors.join(', ')}</span></div>}
+                                                            {aiProductDraft.materials.length > 0 && <div className="ve-div"><span className="font-black text-stone-500">Υλικά:</span> <span className="text-stone-800">{aiProductDraft.materials.join(', ')}</span></div>}
                                                             {aiProductDraft.description && <p className="border-t border-violet-50 pt-2 leading-relaxed text-stone-700">{aiProductDraft.description}</p>}
                                                             {aiProductDraft.instagramCaption && <p className="border-t border-violet-50 pt-2 leading-relaxed text-stone-500">{aiProductDraft.instagramCaption}</p>}
                                                         </div>
@@ -3924,7 +3974,7 @@ interface BackOfficeViewProps {
                                                     )}
                                                 </div>
 
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Κατηγορία *</label>
                                                     {isCustomCategory ? (
                                                         <div className="flex gap-2">
@@ -3936,14 +3986,14 @@ interface BackOfficeViewProps {
                                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomCategory(true); setFormCategory(''); }
                                                             else { setFormCategory(e.target.value); }
                                                         }}>
-                                                            <option value="" disabled>Επιλέξτε...</option>
-                                                            {allFormCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                                            <option className="ve-option" value="" disabled>Επιλέξτε...</option>
+                                                            {allFormCategories.map(cat => <option className="ve-option" key={cat} value={cat}>{cat}</option>)}
                                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Προσθήκη Νέας...</option>
                                                         </select>
                                                     )}
                                                 </div>
 
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Ονομασία Συλλογής</label>
                                                     {isCustomCollection ? (
                                                         <div className="flex gap-2">
@@ -3955,14 +4005,14 @@ interface BackOfficeViewProps {
                                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomCollection(true); setFormCollection(''); }
                                                             else { setFormCollection(e.target.value); }
                                                         }}>
-                                                            <option value="">(Χωρίς Συλλογή)</option>
-                                                            {allCollections.map(col => <option key={col} value={col}>{col}</option>)}
+                                                            <option className="ve-option" value="">(Χωρίς Συλλογή)</option>
+                                                            {allCollections.map(col => <option className="ve-option" key={col} value={col}>{col}</option>)}
                                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Προσθήκη Νέας...</option>
                                                         </select>
                                                     )}
                                                 </div>
 
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Κατάσταση *</label>
                                                     {isCustomStatus ? (
                                                         <div className="flex gap-2">
@@ -3974,13 +4024,13 @@ interface BackOfficeViewProps {
                                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomStatus(true); setFormStatus(''); }
                                                             else { setFormStatus(e.target.value); }
                                                         }}>
-                                                            {allFormStatuses.map(stat => <option key={stat} value={stat}>{stat}</option>)}
+                                                            {allFormStatuses.map(stat => <option className="ve-option" key={stat} value={stat}>{stat}</option>)}
                                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Προσθήκη Νέας...</option>
                                                         </select>
                                                     )}
                                                 </div>
 
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Ημερομηνία Κατασκευής</label>
                                                     <input type="date" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formDate} onChange={e => setFormDate(e.target.value)} />
                                                 </div>
@@ -3990,23 +4040,23 @@ interface BackOfficeViewProps {
                                         <section id="form-pricing" className="scroll-mt-4">
                                             <h3 className="text-sm font-black text-emerald-600/70 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Οικονομικα & Αποθεμα</h3>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Τιμή Πώλησης (€)</label>
                                                     <input type="number" step="any" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formPrice} onChange={e => setFormPrice(e.target.value)} />
                                                 </div>
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Κόστος Υλικών (€)</label>
                                                     <input type="number" step="any" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formCost} onChange={e => setFormCost(e.target.value)} />
                                                 </div>
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Χειροκίνητα Likes</label>
                                                     <input type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formManualLikes} onChange={e => setFormManualLikes(Math.max(0, Number(e.target.value) || 0))} />
                                                 </div>
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Χειροκίνητες Προβολές</label>
                                                     <input type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formManualViews} onChange={e => setFormManualViews(Math.max(0, Number(e.target.value) || 0))} />
                                                 </div>
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Απόθεμα (Τεμ.)</label>
                                                     <input type="number" min="0" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formStock} onChange={e => setFormStock(e.target.value)} />
                                                 </div>
@@ -4016,15 +4066,15 @@ interface BackOfficeViewProps {
                                         <section id="form-storage" className="scroll-mt-4">
                                             <h3 className="text-sm font-black text-amber-600/70 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Διαστασεις & Αποθηκευση</h3>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Βάρος</label>
                                                     <input type="text" placeholder="π.χ. 15g" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formWeight} onChange={e => setFormWeight(e.target.value)} />
                                                 </div>
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Διαστάσεις</label>
                                                     <input type="text" placeholder="π.χ. 4x3 cm" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formDimensions} onChange={e => setFormDimensions(e.target.value)} />
                                                 </div>
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Κωδ. Αποθήκευσης</label>
                                                     {isCustomStorage ? (
                                                         <div className="flex gap-2">
@@ -4033,9 +4083,9 @@ interface BackOfficeViewProps {
                                                         </div>
                                                     ) : (
                                                         <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formStorage} onChange={e => { if (e.target.value === 'NEW_CUSTOM') { setIsCustomStorage(true); setFormStorage(''); } else setFormStorage(e.target.value); }}>
-                                                            <option value="">Χωρίς αποθήκευση</option>
-                                                            {allStorages.map(storage => <option key={storage} value={storage}>{storage}</option>)}
-                                                            <option value="NEW_CUSTOM">+ Νέος κωδικός...</option>
+                                                            <option className="ve-option" value="">Χωρίς αποθήκευση</option>
+                                                            {allStorages.map(storage => <option className="ve-option" key={storage} value={storage}>{storage}</option>)}
+                                                            <option className="ve-option" value="NEW_CUSTOM">+ Νέος κωδικός...</option>
                                                         </select>
                                                     )}
                                                 </div>
@@ -4088,7 +4138,7 @@ interface BackOfficeViewProps {
                                         <section id="form-links" className="scroll-mt-4">
                                             <h3 className="text-sm font-black text-blue-500/70 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Links & Αναρτησεις</h3>
 
-                                            <div>
+                                            <div className="ve-div">
                                                 <label className="block text-xs font-bold text-stone-600 mb-2">Λινκ Αγοράς (Πού μπορεί να το αγοράσει ο πελάτης)</label>
                                                 <div className="flex flex-col sm:flex-row gap-2 mb-2">
                                                     {isCustomPurchaseSite ? (
@@ -4101,7 +4151,7 @@ interface BackOfficeViewProps {
                                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomPurchaseSite(true); setNewPurchaseSite(''); }
                                                             else { setNewPurchaseSite(e.target.value); }
                                                         }}>
-                                                            {allAvailablePlatforms.map(plat => <option key={plat} value={plat}>{plat}</option>)}
+                                                            {allAvailablePlatforms.map(plat => <option className="ve-option" key={plat} value={plat}>{plat}</option>)}
                                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Άλλη Πλατφόρμα...</option>
                                                         </select>
                                                     )}
@@ -4135,7 +4185,7 @@ interface BackOfficeViewProps {
                                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomPostedSite(true); setNewPostedSite(''); }
                                                             else { setNewPostedSite(e.target.value); }
                                                         }}>
-                                                            {allAvailablePlatforms.map(plat => <option key={plat} value={plat}>{plat}</option>)}
+                                                            {allAvailablePlatforms.map(plat => <option className="ve-option" key={plat} value={plat}>{plat}</option>)}
                                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Άλλη Πλατφόρμα...</option>
                                                         </select>
                                                     )}
@@ -4176,7 +4226,7 @@ interface BackOfficeViewProps {
                                                 {smartSuggestions && (
                                                     <div className="mt-3 border border-emerald-100 bg-emerald-50/60 rounded-xl p-3 flex flex-wrap gap-2 items-center">
                                                         <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                                            <div>
+                                                            <div className="ve-div">
                                                                 <span className="text-xs font-black uppercase tracking-wider text-emerald-700 mr-1">Smart suggestions</span>
                                                                 <p className="text-[11px] text-emerald-700/70 font-medium">{smartSuggestions.source}</p>
                                                             </div>
@@ -4209,14 +4259,16 @@ interface BackOfficeViewProps {
                                                     <div className="mt-4">
                                                         <p className="text-xs text-stone-500 mb-2 italic">Σύρετε ή επιλέξτε εικόνα ή βίντεο για κεντρικό αρχείο προϊόντος. Το πρώτο αρχείο θα είναι το κεντρικό στο Shop.</p>
                                                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                                                            {formShopMediaList.map((media, idx) => (
+                                                            {formShopMediaList.map((media, idx) => {
+                                                              const divClass10 = idx === 0 ? 'border-emerald-500 shadow-md' : 'border-stone-200';
+                                                              return (
                                                                 <div
                                                                     key={idx}
                                                                     draggable
                                                                     onDragStart={(e) => handleDragStartShop(e, idx)}
                                                                     onDragOver={handleDragOver}
                                                                     onDrop={(e) => handleDropShop(e, idx)}
-                                                                    className={`relative aspect-square border-2 ${idx === 0 ? 'border-emerald-500 shadow-md' : 'border-stone-200'} bg-stone-100 rounded-xl overflow-hidden group cursor-grab active:cursor-grabbing hover:opacity-90 transition`}
+                                                                    className={`relative aspect-square border-2 ${divClass10} bg-stone-100 rounded-xl overflow-hidden group cursor-grab active:cursor-grabbing hover:opacity-90 transition`}
                                                                 >
                                                                     {media.type === 'video' ? (
                                                                         <video src={media.url} className="w-full h-full object-cover pointer-events-none" muted />
@@ -4246,7 +4298,8 @@ interface BackOfficeViewProps {
                                                                         <span className="absolute bottom-1 left-1 text-[8px] bg-emerald-600 text-white font-bold px-1.5 py-0.5 rounded shadow">Κεντρική Shop</span>
                                                                     )}
                                                                 </div>
-                                                            ))}
+                                                            );
+                                                            })}
                                                         </div>
                                                     </div>
                                                 )}
@@ -4303,7 +4356,7 @@ interface BackOfficeViewProps {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div>
+                                            <div className="ve-div">
                                                 <label className="block text-xs font-bold text-stone-600 mb-1">Περιγραφή / σημειώσεις προϊόντος</label>
                                                 <textarea className="w-full border border-stone-200 rounded-lg px-4 py-3 h-24 bg-white focus:bg-white outline-none resize-none" value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Περιγραφή που μπορείς να επεξεργαστείς πριν εμφανιστεί στο shop..."></textarea>
                                             </div>
@@ -4325,7 +4378,7 @@ interface BackOfficeViewProps {
                         <div className="fixed inset-0 bg-stone-950/75 backdrop-blur-sm flex items-center justify-center p-3 md:p-4 z-[80]">
                             <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[94vh] flex flex-col">
                                 <div className="p-4 border-b border-stone-100 flex items-center justify-between gap-3">
-                                    <div>
+                                    <div className="ve-div">
                                         <h2 className="text-lg font-black text-stone-900">Editor εικόνας</h2>{imageEditorError && <p role="alert" className="mt-2 text-sm text-rose-700">{imageEditorError}</p>}
                                         <p className="text-xs font-bold text-stone-500">Ρύθμισε τη φωτογραφία πριν αποθηκευτεί στο προϊόν.</p>
                                     </div>
@@ -4378,58 +4431,61 @@ interface BackOfficeViewProps {
                                             </button>
                                         </div>
 
-                                        <div>
+                                        <div className="ve-div">
                                             <span className="block text-xs font-black uppercase tracking-wider text-stone-500 mb-2">Κάδρο crop</span>
                                             <div className="grid grid-cols-3 gap-2">
-                                                {Object.entries(IMAGE_EDITOR_ASPECTS).map(([key, aspect]) => (
+                                                {Object.entries(IMAGE_EDITOR_ASPECTS).map(([key, aspect]) => {
+                                                  const buttonClass10 = imageEditorSettings.cropAspect === key ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50';
+                                                  return (
                                                     <button
                                                         key={key}
                                                         type="button"
                                                         onClick={() => setImageEditorSettings(prev => clampImageEditorPan({ ...prev, cropAspect: key, panX: 0, panY: 0 }))}
-                                                        className={`px-3 py-2 rounded-lg text-xs font-black border transition ${imageEditorSettings.cropAspect === key ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'}`}
+                                                        className={`px-3 py-2 rounded-lg text-xs font-black border transition ${buttonClass10}`}
                                                     >
                                                         {aspect.label}
                                                     </button>
-                                                ))}
+                                                );
+                                                })}
                                             </div>
                                         </div>
 
                                         <label className="block">
                                             <span className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-stone-500 mb-2">
-                                                <span>Zoom</span>
-                                                <span>{imageEditorSettings.zoom.toFixed(1)}x</span>
+                                                <span className="ve-span">Zoom</span>
+                                                <span className="ve-span">{imageEditorSettings.zoom.toFixed(1)}x</span>
                                             </span>
                                             <input type="range" min="1" max="4" step="0.05" value={imageEditorSettings.zoom} onChange={e => setImageEditorSettings(prev => clampImageEditorPan({ ...prev, zoom: Number(e.target.value) }))} className="w-full accent-stone-900" />
                                         </label>
 
                                         <label className="block">
                                             <span className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-stone-500 mb-2">
-                                                <span>Θέση αριστερά / δεξιά</span>
-                                                <span>{Math.round(clampImageEditorPan(imageEditorSettings).panX || 0)}%</span>
+                                                <span className="ve-span">Θέση αριστερά / δεξιά</span>
+                                                <span className="ve-span">{Math.round(clampImageEditorPan(imageEditorSettings).panX || 0)}%</span>
                                             </span>
                                             <input type="range" min={-getImageEditorPanBounds().x} max={getImageEditorPanBounds().x} step="1" value={clampImageEditorPan(imageEditorSettings).panX || 0} onChange={e => setImageEditorSettings(prev => clampImageEditorPan({ ...prev, panX: Number(e.target.value) }))} className="w-full accent-stone-900" />
                                         </label>
 
                                         <label className="block">
                                             <span className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-stone-500 mb-2">
-                                                <span>Θέση πάνω / κάτω</span>
-                                                <span>{Math.round(clampImageEditorPan(imageEditorSettings).panY || 0)}%</span>
+                                                <span className="ve-span">Θέση πάνω / κάτω</span>
+                                                <span className="ve-span">{Math.round(clampImageEditorPan(imageEditorSettings).panY || 0)}%</span>
                                             </span>
                                             <input type="range" min={-getImageEditorPanBounds().y} max={getImageEditorPanBounds().y} step="1" value={clampImageEditorPan(imageEditorSettings).panY || 0} onChange={e => setImageEditorSettings(prev => clampImageEditorPan({ ...prev, panY: Number(e.target.value) }))} className="w-full accent-stone-900" />
                                         </label>
 
                                         <label className="block">
                                             <span className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-stone-500 mb-2">
-                                                <span>Φωτεινότητα</span>
-                                                <span>{imageEditorSettings.brightness}%</span>
+                                                <span className="ve-span">Φωτεινότητα</span>
+                                                <span className="ve-span">{imageEditorSettings.brightness}%</span>
                                             </span>
                                             <input type="range" min="60" max="150" step="1" value={imageEditorSettings.brightness} onChange={e => setImageEditorSettings(prev => ({ ...prev, brightness: Number(e.target.value) }))} className="w-full accent-stone-900" />
                                         </label>
 
                                         <label className="block">
                                             <span className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-stone-500 mb-2">
-                                                <span>Contrast</span>
-                                                <span>{imageEditorSettings.contrast}%</span>
+                                                <span className="ve-span">Contrast</span>
+                                                <span className="ve-span">{imageEditorSettings.contrast}%</span>
                                             </span>
                                             <input type="range" min="60" max="160" step="1" value={imageEditorSettings.contrast} onChange={e => setImageEditorSettings(prev => ({ ...prev, contrast: Number(e.target.value) }))} className="w-full accent-stone-900" />
                                         </label>
@@ -4490,8 +4546,10 @@ interface BackOfficeViewProps {
                                         if (currentMediaArray.length <= 1) return null;
                                         return (
                                             <div className="flex gap-2 mt-3 overflow-x-auto p-1 max-w-full justify-center">
-                                                {currentMediaArray.map((m, idx) => (
-                                                    <button key={idx} onClick={() => setActiveDetailMediaIdx(idx)} className={`w-12 h-12 rounded-md overflow-hidden flex-shrink-0 border-2 transition relative ${activeDetailMediaIdx === idx ? 'border-amber-400 scale-105 shadow-md' : 'border-stone-200 opacity-70 hover:opacity-100'}`}>
+                                                {currentMediaArray.map((m, idx) => {
+                                                  const buttonClass11 = activeDetailMediaIdx === idx ? 'border-amber-400 scale-105 shadow-md' : 'border-stone-200 opacity-70 hover:opacity-100';
+                                                  return (
+                                                    <button key={idx} onClick={() => setActiveDetailMediaIdx(idx)} className={`w-12 h-12 rounded-md overflow-hidden flex-shrink-0 border-2 transition relative ${buttonClass11}`}>
                                                         {m.type === 'video' ? (
                                                             <div className="w-full h-full bg-stone-800 flex items-center justify-center text-[10px]">📹</div>
                                                         ) : (
@@ -4499,7 +4557,8 @@ interface BackOfficeViewProps {
                                                         )}
                                                         {m.showInShop === false && <span className="absolute top-0 right-0 bg-stone-900/90 text-white text-[8px] p-0.5 rounded-bl">🔒</span>}
                                                     </button>
-                                                ))}
+                                                );
+                                                })}
                                             </div>
                                         );
                                     })()}
@@ -4516,7 +4575,7 @@ interface BackOfficeViewProps {
 
                                     <div className="mb-6 pr-20">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(currentItem.status)}`}>
+                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${detailStatusBadgeClass}`}>
                                                 {currentItem.status}
                                             </span>
                                             <p className="text-[10px] uppercase font-bold text-stone-400 tracking-wider">{currentItem.category} {currentItem.collection && `| ${currentItem.collection}`}</p>
@@ -4525,11 +4584,11 @@ interface BackOfficeViewProps {
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                                        <div>
+                                        <div className="ve-div">
                                             <p className="text-[10px] uppercase font-bold text-stone-500 mb-1">Τιμη Πωλησης</p>
                                             <p className="text-xl font-black text-emerald-800">{currentItem.price ? `${currentItem.price}€` : '-'}</p>
                                         </div>
-                                        <div>
+                                        <div className="ve-div">
                                             <p className="text-[10px] uppercase font-bold text-stone-500 mb-1">Εκτιμωμενο Κερδος</p>
                                             <p className="text-xl font-black text-emerald-600">
                                                 {(currentItem.price && currentItem.cost) ? `${(currentItem.price - currentItem.cost).toFixed(2)}€` : '-'}
@@ -4547,14 +4606,14 @@ interface BackOfficeViewProps {
 
                                     <div className="space-y-4 mb-6">
                                         {currentItem.colors && currentItem.colors.length > 0 && (
-                                            <div>
+                                            <div className="ve-div">
                                                 <h4 className="text-[10px] font-bold text-stone-400 uppercase mb-2">Χρωματα</h4>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {currentItem.colors.map((col, i) => <span key={col} className="bg-indigo-50 border border-indigo-100 text-xs px-3 py-1.5 rounded font-bold text-indigo-700 uppercase">{col}</span>)}
                                                 </div>
                                             </div>
                                         )}
-                                        <div>
+                                        <div className="ve-div">
                                             <h4 className="text-[10px] font-bold text-stone-400 uppercase mb-2">Υλικα</h4>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {currentItem.materials?.map((mat, i) => <span key={i} className="bg-stone-100 border border-stone-200 text-xs px-3 py-1.5 rounded font-medium text-stone-700">{mat}</span>)}
@@ -4578,7 +4637,7 @@ interface BackOfficeViewProps {
                                                 )}
 
                                                 {currentItem.postedPlatforms?.length > 0 && (
-                                                    <div>
+                                                    <div className="ve-div">
                                                         <h4 className="text-[10px] font-bold text-stone-400 uppercase mb-2">Που εχει αναρτηθει</h4>
                                                         <div className="flex flex-wrap gap-1.5">
                                                             {currentItem.postedPlatforms.map((plat, i) => (
@@ -4626,27 +4685,27 @@ interface BackOfficeViewProps {
                                 <div className="flex flex-wrap border-b border-stone-200 bg-stone-50 px-4 pt-2">
                                     <button
                                         onClick={() => setActiveSettingsTab('fields')}
-                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'fields' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
+                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${buttonClass12}`}
                                     >
                                         Προσαρμοσμένα Πεδία
                                     </button>
                                     <button
                                         onClick={() => setActiveSettingsTab('shop')}
-                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'shop' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
+                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${buttonClass13}`}
                                     >
                                         Σχεδιασμός Shop
                                     </button>
                                     <button type="button" onClick={() => setActiveSettingsTab('portfolio')}
-                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'portfolio' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}>
+                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${buttonClass14}`}>
                                         Σχεδιασμός Portfolio
                                     </button>
                                     <button type="button" onClick={() => setActiveSettingsTab('design')}
-                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'design' ? 'border-violet-700 text-violet-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}>
+                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${buttonClass15}`}>
                                         Design Studio
                                     </button>
                                     <button
                                         onClick={() => setActiveSettingsTab('assistant')}
-                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'assistant' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
+                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${buttonClass16}`}
                                     >
                                         AI Back Office
                                     </button>
@@ -4788,7 +4847,7 @@ interface BackOfficeViewProps {
                                             <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                                                 <div className="border border-stone-200 rounded-xl p-4 bg-white">
                                                     <div className="flex items-center justify-between gap-4 mb-3">
-                                                        <div>
+                                                        <div className="ve-div">
                                                             <h3 className="text-sm font-black text-stone-800">Ανακοίνωση κορυφής</h3>
                                                             <p className="text-xs text-stone-500 mt-1">Για νέα συλλογή, προσφορά ή σημαντικό μήνυμα.</p>
                                                         </div>
@@ -4806,12 +4865,12 @@ interface BackOfficeViewProps {
                                                     <h3 className="text-sm font-black text-stone-800 mb-1">Πυκνότητα καταλόγου</h3>
                                                     <p className="text-xs text-stone-500 mb-3">Ρυθμίζει τον αέρα ανάμεσα στα προϊόντα, χωρίς να αλλάζει τις εικόνες ή τα δεδομένα τους.</p>
                                                     <div className="grid grid-cols-2 gap-2">
-                                                        {[
-                                                            ['comfortable', 'Άνετη'],
-                                                            ['compact', 'Πυκνή']
-                                                        ].map(([value, label]) => (
-                                                            <button key={value} type="button" onClick={() => setShopSettings({...shopSettings, catalogDensity: value})} className={`px-3 py-2.5 border rounded-lg text-sm font-bold transition ${shopSettings.catalogDensity === value ? 'bg-stone-900 border-stone-900 text-white' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-white'}`}>{label}</button>
-                                                        ))}
+                                                        {CATALOG_DENSITY_OPTIONS.map(({ value, label }) => {
+                                                          const buttonClass17 = shopSettings.catalogDensity === value ? 'bg-stone-900 border-stone-900 text-white' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-white';
+                                                          return (
+                                                            <button key={value} type="button" onClick={() => setShopSettings({...shopSettings, catalogDensity: value})} className={`px-3 py-2.5 border rounded-lg text-sm font-bold transition ${buttonClass17}`}>{label}</button>
+                                                        );
+                                                        })}
                                                     </div>
                                                 </div>
                                             </section>
@@ -4861,35 +4920,35 @@ interface BackOfficeViewProps {
                                                 <h3 className="text-sm font-black text-stone-800">Οπτική ταυτότητα</h3>
                                                 <p className="mt-1 text-xs leading-relaxed text-stone-500">Αλλάζει μόνο την παρουσίαση του δημόσιου Shop και Portfolio. Προϊόντα, παραγγελίες, checkout και Back Office δεν επηρεάζονται.</p>
                                                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                                    <button type="button" onClick={() => setShopSettings(prev => ({ ...prev, visualTheme: 'atelier' }))} className={`rounded-lg border p-3 text-left transition ${shopSettings.visualTheme !== 'classic' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'}`}>
+                                                    <button type="button" onClick={() => setShopSettings(prev => ({ ...prev, visualTheme: 'atelier' }))} className={`rounded-lg border p-3 text-left transition ${atelierThemeButtonClass}`}>
                                                         <span className="block text-xs font-bold">Dark Atelier</span>
                                                         <span className="mt-1 block text-[11px] opacity-75">Σκοτεινή gallery, ασπρόμαυρες εικόνες που χρωματίζονται στο hover.</span>
                                                     </button>
-                                                    <button type="button" onClick={() => setShopSettings(prev => ({ ...prev, visualTheme: 'classic' }))} className={`rounded-lg border p-3 text-left transition ${shopSettings.visualTheme === 'classic' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'}`}>
+                                                    <button type="button" onClick={() => setShopSettings(prev => ({ ...prev, visualTheme: 'classic' }))} className={`rounded-lg border p-3 text-left transition ${classicThemeButtonClass}`}>
                                                         <span className="block text-xs font-bold">Classic</span>
                                                         <span className="mt-1 block text-[11px] opacity-75">Η τωρινή, φωτεινή παρουσίαση.</span>
                                                     </button>
                                                 </div>
                                             </section>
 
-                                            <section>
+                                            <section className="ve-section">
                                                 <h3 className="text-sm font-black text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Χρωματα Σελιδας (Shop)</h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div>
+                                                    <div className="ve-div">
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Φόντο Σελίδας</label>
                                                         <div className="flex gap-2">
                                                             <input type="color" className="h-10 w-12 rounded cursor-pointer border-0 p-0" value={shopSettings.bgColor} onChange={e => setShopSettings({...shopSettings, bgColor: e.target.value})} />
                                                             <input type="text" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 outline-none uppercase font-mono text-sm" value={shopSettings.bgColor} onChange={e => setShopSettings({...shopSettings, bgColor: e.target.value})} />
                                                         </div>
                                                     </div>
-                                                    <div>
+                                                    <div className="ve-div">
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Βασικό Κείμενο <span className="font-normal">(αντίθεση με το φόντο)</span></label>
                                                         <div className="flex gap-2">
                                                             <input type="color" className="h-10 w-12 rounded cursor-pointer border-0 p-0" value={shopSettings.textColor} onChange={e => setShopSettings({...shopSettings, textColor: e.target.value})} />
                                                             <input type="text" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 outline-none uppercase font-mono text-sm" value={shopSettings.textColor} onChange={e => setShopSettings({...shopSettings, textColor: e.target.value})} />
                                                         </div>
                                                     </div>
-                                                    <div>
+                                                    <div className="ve-div">
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Βασικό Χρώμα <span className="font-normal">(Κουμπιά & Highlights)</span></label>
                                                         <div className="flex gap-2">
                                                             <input type="color" className="h-10 w-12 rounded cursor-pointer border-0 p-0" value={shopSettings.primaryColor} onChange={e => setShopSettings({...shopSettings, primaryColor: e.target.value})} />
@@ -4899,57 +4958,57 @@ interface BackOfficeViewProps {
                                                 </div>
                                             </section>
 
-                                            <section>
+                                            <section className="ve-section">
                                                 <h3 className="text-sm font-black text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Εμφανιση & Γραμματοσειρα</h3>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div>
+                                                    <div className="ve-div">
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Γραμματοσειρά Shop</label>
                                                         <select
                                                             className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none"
                                                             value={shopSettings.fontFamily}
                                                             onChange={e => setShopSettings({...shopSettings, fontFamily: e.target.value})}
                                                         >
-                                                            <option value="Jura">Jura (Μοντέρνα, Τετραγωνισμένη)</option>
-                                                            <option value="Montserrat">Montserrat (Καθαρή, Κλασική)</option>
-                                                            <option value="Roboto">Roboto (Απλή, Ευανάγνωστη)</option>
-                                                            <option value="Playfair">Playfair Display (Κομψή, Serif)</option>
-                                                            <option value="Cinzel">Cinzel (Αρχαιοελληνική, Serif)</option>
+                                                            <option className="ve-option" value="Jura">Jura (Μοντέρνα, Τετραγωνισμένη)</option>
+                                                            <option className="ve-option" value="Montserrat">Montserrat (Καθαρή, Κλασική)</option>
+                                                            <option className="ve-option" value="Roboto">Roboto (Απλή, Ευανάγνωστη)</option>
+                                                            <option className="ve-option" value="Playfair">Playfair Display (Κομψή, Serif)</option>
+                                                            <option className="ve-option" value="Cinzel">Cinzel (Αρχαιοελληνική, Serif)</option>
                                                         </select>
                                                     </div>
-                                                    <div>
+                                                    <div className="ve-div">
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Στρογγυλάδες (Φωτογραφίες & Κουμπιά)</label>
                                                         <select
                                                             className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none"
                                                             value={shopSettings.borderRadius}
                                                             onChange={e => setShopSettings({...shopSettings, borderRadius: e.target.value})}
                                                         >
-                                                            <option value="0px">Τετράγωνα (Αυστηρό, 0px)</option>
-                                                            <option value="0.5rem">Ελαφρώς Στρογγυλεμένα (8px)</option>
-                                                            <option value="0.75rem">Στρογγυλεμένα (Κανονικό, 12px)</option>
-                                                            <option value="1.5rem">Πολύ Στρογγυλά (Οβάλ, 24px)</option>
+                                                            <option className="ve-option" value="0px">Τετράγωνα (Αυστηρό, 0px)</option>
+                                                            <option className="ve-option" value="0.5rem">Ελαφρώς Στρογγυλεμένα (8px)</option>
+                                                            <option className="ve-option" value="0.75rem">Στρογγυλεμένα (Κανονικό, 12px)</option>
+                                                            <option className="ve-option" value="1.5rem">Πολύ Στρογγυλά (Οβάλ, 24px)</option>
                                                         </select>
                                                     </div>
                                                 </div>
                                             </section>
 
-                                            <section>
+                                            <section className="ve-section">
                                                 <h3 className="text-sm font-black text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Χρωματα & Κειμενα Αρχικης (Hero)</h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                                    <div>
+                                                    <div className="ve-div">
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Φόντο Κεντρικού Πλαισίου</label>
                                                         <div className="flex gap-2">
                                                             <input type="color" className="h-10 w-12 rounded cursor-pointer border-0 p-0" value={shopSettings.heroBgColor} onChange={e => setShopSettings({...shopSettings, heroBgColor: e.target.value})} />
                                                             <input type="text" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 outline-none uppercase font-mono text-sm" value={shopSettings.heroBgColor} onChange={e => setShopSettings({...shopSettings, heroBgColor: e.target.value})} />
                                                         </div>
                                                     </div>
-                                                    <div>
+                                                    <div className="ve-div">
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Χρώμα Τίτλου</label>
                                                         <div className="flex gap-2">
                                                             <input type="color" className="h-10 w-12 rounded cursor-pointer border-0 p-0" value={shopSettings.heroTitleColor} onChange={e => setShopSettings({...shopSettings, heroTitleColor: e.target.value})} />
                                                             <input type="text" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 outline-none uppercase font-mono text-sm" value={shopSettings.heroTitleColor} onChange={e => setShopSettings({...shopSettings, heroTitleColor: e.target.value})} />
                                                         </div>
                                                     </div>
-                                                    <div>
+                                                    <div className="ve-div">
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Χρώμα Υπότιτλου</label>
                                                         <div className="flex gap-2">
                                                             <input type="color" className="h-10 w-12 rounded cursor-pointer border-0 p-0" value={shopSettings.heroSubtitleColor} onChange={e => setShopSettings({...shopSettings, heroSubtitleColor: e.target.value})} />
@@ -4975,14 +5034,14 @@ interface BackOfficeViewProps {
                                                                 value={shopSettings.heroTitleSize}
                                                                 onChange={e => setShopSettings({...shopSettings, heroTitleSize: e.target.value})}
                                                             >
-                                                                <option value="text-2xl md:text-3xl">Μικρό</option>
-                                                                <option value="text-3xl md:text-4xl">Κανονικό</option>
-                                                                <option value="text-4xl md:text-5xl">Μεγάλο</option>
-                                                                <option value="text-5xl md:text-6xl">Πολύ Μεγάλο</option>
+                                                                <option className="ve-option" value="text-2xl md:text-3xl">Μικρό</option>
+                                                                <option className="ve-option" value="text-3xl md:text-4xl">Κανονικό</option>
+                                                                <option className="ve-option" value="text-4xl md:text-5xl">Μεγάλο</option>
+                                                                <option className="ve-option" value="text-5xl md:text-6xl">Πολύ Μεγάλο</option>
                                                             </select>
                                                         </div>
                                                     </div>
-                                                    <div>
+                                                    <div className="ve-div">
                                                         <label className="block text-xs font-bold text-stone-600 mb-1">Υπότιτλος</label>
                                                         <textarea
                                                             className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none h-20 resize-none"
@@ -5000,7 +5059,7 @@ interface BackOfficeViewProps {
                                                 </div>
                                             </section>
 
-                                            <section>
+                                            <section className="ve-section">
                                                 <h3 className="text-sm font-black text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Σειρα Κατηγοριων στο Μενού</h3>
                                                 <p className="text-[10px] text-stone-500 mb-3">Σύρετε τις κατηγορίες για να αλλάξετε τη σειρά τους στο μενού του Shop. (Η επιλογή "Όλη η Συλλογή" είναι πάντα πρώτη).</p>
                                                 <div className="flex flex-col gap-2">
@@ -5029,7 +5088,7 @@ interface BackOfficeViewProps {
                                                 </div>
                                             </section>
 
-                                            <section>
+                                            <section className="ve-section">
                                                 <h3 className="text-sm font-black text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Βασικα Links (Fallbacks)</h3>
                                                 <p className="text-[10px] text-stone-500 mb-3">Αν μια δημιουργία δεν έχει δικό της link, ο πελάτης θα κατευθύνεται εδώ.</p>
                                                 <div className="space-y-3">
@@ -5078,7 +5137,7 @@ interface BackOfficeViewProps {
                                                     }} className="rounded-lg border border-stone-200 px-3 py-2 text-xs">Αφαίρεση βίντεο</button>
                                                 </div>}
                                             </section>
-                                            <section>
+                                            <section className="ve-section">
                                                 <h3 className="mb-3 text-xs font-bold text-stone-500">Προεπισκόπηση αρχικής Portfolio</h3>
                                                 <div className="overflow-hidden rounded-xl border border-stone-200">
                                                     <PortfolioHero design={normalizePortfolioDesign(shopSettings.portfolioDesign)} videoUrl={shopSettings.portfolioHeroVideoUrl} itemCount={0} categoryCount={0} videoCount={0}
@@ -5118,7 +5177,7 @@ interface BackOfficeViewProps {
                                                     </div>
                                                 </div>
 
-                                                <div>
+                                                <div className="ve-div">
                                                     <label className="block text-xs font-bold text-stone-700 mb-1">Back-office AI endpoint</label>
                                                     <input
                                                         type="url"
@@ -5174,7 +5233,7 @@ interface BackOfficeViewProps {
                         <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-3 md:p-4 z-50">
                             <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
                                 <div className="p-5 border-b border-stone-100 bg-teal-50 flex items-start justify-between gap-4">
-                                    <div>
+                                    <div className="ve-div">
                                         <h2 className="text-xl font-black text-stone-900">Vinted Import</h2>
                                         <p className="text-xs md:text-sm font-bold text-stone-500 mt-1">Φέρε, έλεγξε και επεξεργάσου τα στοιχεία πριν τα αποθηκεύσεις στον κατάλογο.</p>
                                     </div>
@@ -5183,7 +5242,7 @@ interface BackOfficeViewProps {
 
                                 <div className="p-5 overflow-y-auto space-y-5">
                                     <section className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
-                                        <div>
+                                        <div className="ve-div">
                                             <label className="block text-xs font-black uppercase tracking-wider text-stone-600 mb-2">Vinted links</label>
                                             <textarea
                                                 value={vintedLinksText}
@@ -5202,7 +5261,7 @@ interface BackOfficeViewProps {
                                                     onChange={(e) => setCopyVintedImages(e.target.checked)}
                                                     className="mt-0.5 accent-teal-700"
                                                 />
-                                                <span>Αντιγραφή εικόνων στο Firebase Storage πριν το import</span>
+                                                <span className="ve-span">Αντιγραφή εικόνων στο Firebase Storage πριν το import</span>
                                                     </label>
                                                     <p className="text-[11px] text-stone-500 leading-relaxed">Άφησέ το ενεργό για να μένουν οι εικόνες δικές σου και να φαίνονται σωστά στο Back Office και στο Shop.</p>
                                                     <p className="text-[10px] text-amber-800 leading-relaxed">Προσοχή: οι χρεώσεις Vinted είναι ενδεικτικές και αφορούν το εκτιμώμενο συνολικό κόστος αγοραστή· επιβεβαίωσε την τιμή πριν την αποθήκευση.</p>
@@ -5220,8 +5279,8 @@ interface BackOfficeViewProps {
                                                             </label>
                                                             <label className="text-[10px] font-bold text-stone-600">Στρογγυλοποίηση
                                                                 <select value={vintedPricingSettings.rounding} onChange={e => setVintedPricingSettings(prev => { const next = { ...prev, rounding: e.target.value }; localStorage.setItem('aram_vinted_fee_settings', JSON.stringify(next)); return next; })} className="mt-1 w-full rounded border border-stone-200 px-2 py-1.5 text-xs">
-                                                                    <option value="up_050">Προς τα πάνω €0,50</option>
-                                                                    <option value="none">Χωρίς στρογγυλοποίηση</option>
+                                                                    <option className="ve-option" value="up_050">Προς τα πάνω €0,50</option>
+                                                                    <option className="ve-option" value="none">Χωρίς στρογγυλοποίηση</option>
                                                                 </select>
                                                             </label>
                                                         </div>
@@ -5257,12 +5316,12 @@ interface BackOfficeViewProps {
                                     </section>
 
                                     {(vintedImportStatus || vintedImportError) && (
-                                        <div className={`rounded-xl border px-4 py-3 text-sm font-bold ${vintedImportError ? 'bg-rose-50 border-rose-100 text-rose-700' : 'bg-emerald-50 border-emerald-100 text-emerald-800'}`}>
+                                        <div className={`rounded-xl border px-4 py-3 text-sm font-bold ${divClass11}`}>
                                             {vintedImportError || vintedImportStatus}
                                         </div>
                                     )}
 
-                                    <section>
+                                    <section className="ve-section">
                                         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                                             <h3 className="text-xs font-black uppercase tracking-wider text-stone-500">Preview προϊόντων</h3>
                                             <span className="text-xs font-black text-stone-500">{vintedImportItems.length} προϊόντα</span>
@@ -5357,13 +5416,13 @@ interface BackOfficeViewProps {
                                                                         <label className="block">
                                                                             <span className="block text-[11px] font-black uppercase tracking-wider text-stone-500 mb-1">Κατηγορία</span>
                                                                             <select value={item.category || 'Άλλα'} onChange={e => updateVintedPreviewItem(index, { category: e.target.value })} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 outline-none focus:bg-white">
-                                                                                {[...new Set([...BASE_CATEGORIES, item.category].filter(Boolean))].map(category => <option key={category} value={category}>{category}</option>)}
+                                                                                {[...new Set([...BASE_CATEGORIES, item.category].filter(Boolean))].map(category => <option className="ve-option" key={category} value={category}>{category}</option>)}
                                                                             </select>
                                                                         </label>
                                                                         <label className="block">
                                                                             <span className="block text-[11px] font-black uppercase tracking-wider text-stone-500 mb-1">Κατάσταση</span>
                                                                             <select value={item.status || 'Διαθέσιμο'} onChange={e => updateVintedPreviewItem(index, { status: e.target.value, stock: e.target.value === 'Πουλήθηκε' ? 0 : Math.max(1, Number(item.stock) || 1) })} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 outline-none focus:bg-white">
-                                                                                {[...new Set([...BASE_STATUSES, item.status].filter(Boolean))].map(status => <option key={status} value={status}>{status}</option>)}
+                                                                                {[...new Set([...BASE_STATUSES, item.status].filter(Boolean))].map(status => <option className="ve-option" key={status} value={status}>{status}</option>)}
                                                                             </select>
                                                                         </label>
                                                                         <label className="block md:col-span-2">
@@ -5427,7 +5486,7 @@ interface BackOfficeViewProps {
                         <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden">
                                 <div className="p-5 border-b border-stone-100 bg-amber-50 flex items-center justify-between">
-                                    <div>
+                                    <div className="ve-div">
                                         <h2 className="text-lg font-black text-stone-800">Ιστορικό εκδόσεων</h2>
                                         <p className="text-xs font-bold text-stone-500">Τελευταίες {versionHistory.length} αλλαγές. Οι νέες καταγραφές αποθηκεύονται ιδιωτικά στο cloud· το παλαιότερο τοπικό ιστορικό παραμένει σε αυτόν τον browser.</p>
                                     </div>
@@ -5441,7 +5500,7 @@ interface BackOfficeViewProps {
                                     )}
                                     {versionHistory.map((entry, idx) => (
                                         <div key={`${entry.timestamp}-${entry.id}-${idx}`} className="border border-stone-200 rounded-xl p-4 bg-white flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                                            <div>
+                                            <div className="ve-div">
                                                 <div className="flex flex-wrap items-center gap-2 mb-1">
                                                     <span className="text-[10px] font-black uppercase tracking-wider bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">{entry.type}</span>
                                                     <span className="text-xs text-stone-400">{new Date(entry.timestamp).toLocaleString('el-GR')}</span>

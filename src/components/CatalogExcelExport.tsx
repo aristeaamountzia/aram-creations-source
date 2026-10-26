@@ -43,6 +43,6 @@ export function CatalogExcelExport() {
     </div>
     {busy && <span role="status" className="text-xs text-stone-500">Περιλαμβάνονται όλες οι καταχωρήσεις Shop και Portfolio.</span>}
     {error && <span role="alert" className="max-w-xs text-xs text-rose-700">{error}</span>}
-    {result && <div role="status" className="max-w-xs text-xs text-stone-600"><a href={result.url} download={result.filename} className="font-bold underline text-teal-800">Λήψη Excel</a> · {result.total} καταχωρήσεις, {result.embedded} μικρογραφίες.{result.missing.length > 0 && <details className="mt-1 text-amber-800"><summary>{result.missing.length} μικρογραφίες δεν φορτώθηκαν — τα στοιχεία διατηρήθηκαν</summary><ul className="mt-1 max-h-32 overflow-auto list-disc pl-4">{result.missing.map((name, index) => <li key={index}>{name}</li>)}</ul></details>}</div>}
+    {result && <div role="status" className="max-w-xs text-xs text-stone-600"><a href={result.url} download={result.filename} className="font-bold underline text-teal-800">Λήψη Excel</a> · {result.total} καταχωρήσεις, {result.embedded} μικρογραφίες.{result.missing.length > 0 && <details className="mt-1 text-amber-800"><summary className="ve-summary">{result.missing.length} μικρογραφίες δεν φορτώθηκαν — τα στοιχεία διατηρήθηκαν</summary><ul className="mt-1 max-h-32 overflow-auto list-disc pl-4">{result.missing.map((name, index) => <li className="ve-li" key={index}>{name}</li>)}</ul></details>}</div>}
   </div>;
 }

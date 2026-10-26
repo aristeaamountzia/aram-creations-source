@@ -13,8 +13,10 @@ export function VideoPlayer({ url, title, autoPlay = false, background = false, 
       embed.searchParams.set('mute', background ? '1' : '0');
       if (background) { embed.searchParams.set('controls', '0'); embed.searchParams.set('loop', '1'); embed.searchParams.set('playlist', link.id); embed.searchParams.set('disablekb', '1'); }
     } else if (link.provider === 'vimeo' && background) { embed.searchParams.set('background', '1'); embed.searchParams.set('muted', '1'); embed.searchParams.set('loop', '1'); }
-    return <iframe key={embed.href} src={embed.href} title={title} referrerPolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen tabIndex={background ? -1 : undefined} aria-hidden={background || undefined} className={`h-full w-full border-0 ${background ? 'pointer-events-none' : ''}`} />;
+    const iframeClass = background ? 'pointer-events-none' : '';
+    return <iframe key={embed.href} src={embed.href} title={title} referrerPolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen tabIndex={background ? -1 : undefined} aria-hidden={background || undefined} className={`h-full w-full border-0 ${iframeClass}`} />;
   }
   if (failed && !background) return <div role="alert" className="flex h-full items-center justify-center p-6 text-center text-sm text-white bg-stone-900">Το αρχείο βίντεο δεν είναι διαθέσιμο. Έλεγξε τον σύνδεσμο στην επεξεργασία του έργου.</div>;
-  return <video key={url} src={url} controls={!background} autoPlay={autoPlay} muted={background} loop={background} playsInline preload="metadata" onError={() => {setFailed(true); onError?.();}} aria-hidden={background || undefined} className={`h-full w-full ${background ? 'object-cover' : 'object-contain'}`} />;
+  const videoClass = background ? 'object-cover' : 'object-contain';
+  return <video key={url} src={url} controls={!background} autoPlay={autoPlay} muted={background} loop={background} playsInline preload="metadata" onError={() => {setFailed(true); onError?.();}} aria-hidden={background || undefined} className={`h-full w-full ${videoClass}`} />;
 }
