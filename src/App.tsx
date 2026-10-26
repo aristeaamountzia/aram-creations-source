@@ -130,8 +130,9 @@ export const App: React.FC = () => {
 
   const totalCartCount = cartItems.reduce((acc, ci) => acc + ci.quantity, 0);
 
+  const divClass = visualTheme === 'atelier' ? 'atelier-theme' : '';
   return (
-    <div style={designStudio as React.CSSProperties} data-section={currentMode} data-visual-theme={visualTheme} className={`aram-site ${visualTheme === 'atelier' ? 'atelier-theme' : ''} min-h-screen w-full min-w-0 flex flex-col bg-white text-[#1c1917]`}>
+    <div style={designStudio as React.CSSProperties} data-section={currentMode} data-visual-theme={visualTheme} className={`aram-site ${divClass} min-h-screen w-full min-w-0 flex flex-col bg-white text-[#1c1917]`}>
       {/* Discreet owner banner when admin view is active */}
       {currentMode === 'admin' && (
         <div className="bg-stone-900 text-stone-200 border-b border-stone-800 px-4 py-2.5 flex flex-wrap gap-3 items-center justify-between text-xs z-50">
@@ -147,7 +148,7 @@ export const App: React.FC = () => {
             }}
             className="px-3 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-100 transition flex items-center gap-1.5 border border-stone-600 font-bold text-xs"
           >
-            <span>← Επιστροφή στο Κατάστημα</span>
+            <span className="ve-span">← Επιστροφή στο Κατάστημα</span>
           </button>
         </div>
       )}
@@ -222,12 +223,12 @@ export const App: React.FC = () => {
           {/* Quick links - Clean & Customer-focused */}
           <div className="space-y-2 text-xs">
             <h4 className="font-bold uppercase tracking-wider text-stone-900 mb-3">Πλοήγηση</h4>
-            <div>
+            <div className="ve-div">
               <button onClick={() => selectMode('shop')} className="hover:text-stone-900 transition font-medium">
                 Shop (Κοσμήματα)
               </button>
             </div>
-            <div>
+            <div className="ve-div">
               <button onClick={() => selectMode('portfolio')} className="hover:text-stone-900 transition font-medium">
                 Portfolio Έργων (Wix Archive)
               </button>
@@ -239,15 +240,15 @@ export const App: React.FC = () => {
             <h4 className="font-bold uppercase tracking-wider text-stone-900 mb-3">Επικοινωνία</h4>
             <div className="flex items-center gap-2 text-stone-600">
               <Mail className="w-3.5 h-3.5 text-stone-800" />
-              <span>aristeaamnta@gmail.com</span>
+              <span className="ve-span">aristeaamnta@gmail.com</span>
             </div>
             <div className="flex items-center gap-2 text-stone-600">
               <MapPin className="w-3.5 h-3.5 text-stone-800" />
-              <span>Βόλος</span>
+              <span className="ve-span">Βόλος</span>
             </div>
             <div className="flex items-center gap-2 text-stone-600 pt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>BoxNow, ACS & IRIS Payments</span>
+              <span className="ve-span">BoxNow, ACS & IRIS Payments</span>
             </div>
           </div>
 
@@ -261,7 +262,7 @@ export const App: React.FC = () => {
                 rel="noopener noreferrer"
                 className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold hover:bg-teal-100 transition"
               >
-                <span>Vinted Boutique</span>
+                <span className="ve-span">Vinted Boutique</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
 
@@ -271,7 +272,7 @@ export const App: React.FC = () => {
                 rel="noopener noreferrer"
                 className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-white border border-stone-200 text-stone-800 text-xs font-bold hover:bg-stone-100 transition"
               >
-                <span>Instagram Profile</span>
+                <span className="ve-span">Instagram Profile</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -279,13 +280,13 @@ export const App: React.FC = () => {
         </div>
 
         <div className="max-w-7xl mx-auto pt-8 mt-8 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between text-[11px] text-stone-500 gap-4">
-          <div>
+          <div className="ve-div">
             © {new Date().getFullYear()} Aram Creations. Με επιφύλαξη παντός δικαιώματος.
           </div>
           <div className="flex items-center gap-3">
-            <span>Χειροποίητα Ελληνικά Κοσμήματα</span>
-            <span>•</span>
-            <span>Artisan Crafts</span>
+            <span className="ve-span">Χειροποίητα Ελληνικά Κοσμήματα</span>
+            <span className="ve-span">•</span>
+            <span className="ve-span">Artisan Crafts</span>
             <span className="opacity-30">•</span>
             {/* Discreet atelier owner access */}
             <button

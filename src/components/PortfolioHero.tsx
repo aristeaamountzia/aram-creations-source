@@ -30,7 +30,10 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
   useEffect(() => {
     if (reducedMotion) videoRef.current?.pause();
   }, [reducedMotion]);
-  return <section className={`portfolio-hero ${hasVideo && showStats ? 'portfolio-hero--video' : ''} relative overflow-hidden border-b border-[#e5def3] bg-white px-4 py-16 text-center sm:px-6 sm:py-20`}>
+  const sectionClass = hasVideo && showStats ? 'portfolio-hero--video' : '';
+  const h1Class = hasVideo ? 'text-white' : 'text-[#252134]';
+  const pClass = hasVideo ? 'text-white' : 'text-[#675f79]';
+  return <section className={`portfolio-hero ${sectionClass} relative overflow-hidden border-b border-[#e5def3] bg-white px-4 py-16 text-center sm:px-6 sm:py-20`}>
     {hasVideo && <>
       {videoLink(source) ? (!reducedMotion && <div className="hero-embed absolute inset-0" aria-hidden="true"><VideoPlayer url={source} title="Βίντεο αρχικής Portfolio" autoPlay background /></div>) : <video key={source} ref={videoRef} src={source} autoPlay={!reducedMotion} muted loop playsInline preload="metadata"
         aria-hidden="true" className="absolute inset-0 h-full w-full object-cover"
@@ -38,17 +41,20 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
       <div className="absolute inset-0 bg-black/55" aria-hidden="true" />
     </>}
     <div className="relative mx-auto w-full max-w-4xl">
-      <h1 className={`mt-4 text-3xl font-bold tracking-tight md:text-4xl ${hasVideo ? 'text-white' : 'text-[#252134]'}`}>{design.title}</h1>
-      <p className={`mx-auto mt-4 max-w-2xl text-sm leading-relaxed sm:text-base ${hasVideo ? 'text-white' : 'text-[#675f79]'}`}>
+      <h1 className={`mt-4 text-3xl font-bold tracking-tight md:text-4xl ${h1Class}`}>{design.title}</h1>
+      <p className={`mx-auto mt-4 max-w-2xl text-sm leading-relaxed sm:text-base ${pClass}`}>
         {design.subtitle}
       </p>
       {showStats && <div className="mt-5 flex flex-wrap justify-center gap-2.5 text-[11px] font-bold">
-        {[`${itemCount} έργα`, `${categoryCount} κατηγορίες`, `${videoCount} έργα με βίντεο`].map(label => <span key={label}
-          className={`rounded-full border px-3.5 py-1 ${hasVideo ? 'border-white/30 bg-white/10 text-white' : 'border-[#e5def3] bg-[#f7f5fd] text-[#675f79]'}`}>{label}</span>)}
+        {[`${itemCount} έργα`, `${categoryCount} κατηγορίες`, `${videoCount} έργα με βίντεο`].map(label => {
+          const spanClass = hasVideo ? 'border-white/30 bg-white/10 text-white' : 'border-[#e5def3] bg-[#f7f5fd] text-[#675f79]';
+          return <span key={label}
+          className={`rounded-full border px-3.5 py-1 ${spanClass}`}>{label}</span>;
+        })}
       </div>}
       {showContact && <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <button type="button" onClick={onContactArtist} className="flex items-center gap-2 rounded-lg bg-[#6253ae] px-5 py-2.5 text-xs font-bold text-white transition hover:bg-[#544695] sm:text-sm">
-          <Mail className="h-4 w-4" /><span>{design.contactLabel}</span>
+          <Mail className="h-4 w-4" /><span className="ve-span">{design.contactLabel}</span>
         </button>
       </div>}
     </div>

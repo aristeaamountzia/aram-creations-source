@@ -56,7 +56,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         className="bg-white border border-stone-200 max-w-lg w-full rounded-3xl p-6 sm:p-8 shadow-2xl text-stone-900"
       >
         <div className="flex items-center justify-between pb-4 border-b border-stone-200">
-          <div>
+          <div className="ve-div">
             <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
               Aram Creations • Atelier Inquiries
             </div>
@@ -88,7 +88,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div>
+            <div className="ve-div">
               <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                 Ονοματεπώνυμο *
               </label>
@@ -102,7 +102,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               />
             </div>
 
-            <div>
+            <div className="ve-div">
               <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                 Email Επικοινωνίας *
               </label>
@@ -116,7 +116,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               />
             </div>
 
-            <div>
+            <div className="ve-div">
               <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                 Αντικείμενο Ενδιαφέροντος
               </label>
@@ -128,7 +128,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               />
             </div>
 
-            <div>
+            <div className="ve-div">
               <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                 Μήνυμα / Περιγραφή Ανάθεσης
               </label>
@@ -147,7 +147,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 className="w-full py-3 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-sm"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>Αποστολή Μηνύματος</span>
+                <span className="ve-span">Αποστολή Μηνύματος</span>
               </button>
             </div>
           </form>

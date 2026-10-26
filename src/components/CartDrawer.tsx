@@ -89,6 +89,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     onClose();
   };
 
+  const buttonClass = paymentMethod === 'iris'
+                        ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
+                        : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300';
+  const buttonClass2 = paymentMethod === 'bank'
+                        ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
+                        : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300';
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex justify-end">
       <div 
@@ -106,7 +112,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <ChevronLeft className="w-5 h-5" />
               </button>
             )}
-            <div>
+            <div className="ve-div">
               <h2 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
                 {completedOrderNumber
                   ? 'Επιβεβαίωση Παραγγελίας'
@@ -155,7 +161,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           ) : isCheckoutStep ? (
             /* Checkout Form */
             <form id="order-form" onSubmit={handleSubmitOrder} className="space-y-4">
-              <div>
+              <div className="ve-div">
                 <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                   Ονοματεπώνυμο *
                 </label>
@@ -170,7 +176,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="ve-div">
                   <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                     Τηλέφωνο *
                   </label>
@@ -183,7 +189,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
                   />
                 </div>
-                <div>
+                <div className="ve-div">
                   <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                     Email *
                   </label>
@@ -198,7 +204,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </div>
               </div>
 
-              <div>
+              <div className="ve-div">
                 <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                   Διεύθυνση & Αριθμός *
                 </label>
@@ -213,7 +219,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="ve-div">
                   <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                     Πόλη / Περιοχή *
                   </label>
@@ -226,7 +232,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
                   />
                 </div>
-                <div>
+                <div className="ve-div">
                   <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                     Τ.Κ.
                   </label>
@@ -241,31 +247,23 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
 
               {/* Payment selection */}
-              <div>
+              <div className="ve-div">
                 <label className="block text-xs uppercase tracking-wider text-stone-500 mb-2 font-bold flex items-center gap-1.5">
                   <CreditCard className="w-3.5 h-3.5 text-stone-800" />
-                  <span>Τρόπος Πληρωμής</span>
+                  <span className="ve-span">Τρόπος Πληρωμής</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('iris')}
-                    className={`p-2.5 rounded-xl border text-xs text-center transition ${
-                      paymentMethod === 'iris'
-                        ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
-                        : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-                    }`}
+                    className={`p-2.5 rounded-xl border text-xs text-center transition ${buttonClass}`}
                   >
                     IRIS Payments
                   </button>
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('bank')}
-                    className={`p-2.5 rounded-xl border text-xs text-center transition ${
-                      paymentMethod === 'bank'
-                        ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
-                        : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-                    }`}
+                    className={`p-2.5 rounded-xl border text-xs text-center transition ${buttonClass2}`}
                   >
                     Κατάθεση
                   </button>
@@ -273,7 +271,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </div>
               </div>
 
-              <div>
+              <div className="ve-div">
                 <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                   Σημειώσεις / Οδηγίες Παράδοσης
                 </label>
@@ -286,7 +284,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-900 outline-none focus:border-stone-900"
                 />
               </div>
-              <label className="hidden" aria-hidden="true">Website<input value={website} onChange={e => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" /></label>
+              <label className="hidden" aria-hidden="true">Website<input className="ve-input" value={website} onChange={e => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" /></label>
               <p className="text-xs text-stone-500">Τα στοιχεία σας αποθηκεύονται για την εξυπηρέτηση της παραγγελίας. Η πληρωμή επιβεβαιώνεται από το εργαστήριο.</p>
             </form>
           ) : items.length === 0 ? (
@@ -344,25 +342,25 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="pt-4 border-t border-stone-200">
                 <label className="text-xs uppercase tracking-wider text-stone-500 font-bold mb-2.5 block flex items-center gap-1.5">
                   <Truck className="w-3.5 h-3.5 text-stone-800" />
-                  <span>Επιλογή Τρόπου Αποστολής</span>
+                  <span className="ve-span">Επιλογή Τρόπου Αποστολής</span>
                 </label>
                 <div className="space-y-2">
                   {SHIPPING_OPTIONS.map((opt) => {
                     const isFree = opt.freeThreshold > 0 && subtotal >= opt.freeThreshold;
                     const priceLabel = isFree ? 'ΔΩΡΕΑΝ' : opt.price === 0 ? 'ΔΩΡΕΑΝ' : `+€${opt.price.toFixed(2)}`;
+                    const buttonClass3 = selectedShipping === opt.id
+                            ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
+                            : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300';
+                    const spanClass = isFree || opt.price === 0 ? 'text-emerald-700' : 'text-stone-900';
                     return (
                       <button
                         key={opt.id}
                         type="button"
                         onClick={() => setSelectedShipping(opt.id)}
-                        className={`w-full p-2.5 rounded-xl border text-xs flex items-center justify-between transition ${
-                          selectedShipping === opt.id
-                            ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
-                            : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-                        }`}
+                        className={`w-full p-2.5 rounded-xl border text-xs flex items-center justify-between transition ${buttonClass3}`}
                       >
-                        <span>{opt.label}</span>
-                        <span className={`font-bold ${isFree || opt.price === 0 ? 'text-emerald-700' : 'text-stone-900'}`}>
+                        <span className="ve-span">{opt.label}</span>
+                        <span className={`font-bold ${spanClass}`}>
                           {priceLabel}
                         </span>
                       </button>
@@ -380,17 +378,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           <div className="p-6 border-t border-stone-200 bg-stone-50 space-y-4">
             <div className="space-y-1.5 text-xs text-stone-600">
               <div className="flex justify-between">
-                <span>Υποσύνολο:</span>
+                <span className="ve-span">Υποσύνολο:</span>
                 <span className="font-bold text-stone-900">€{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Μεταφορικά ({activeShippingObj.label.split(' ')[0]}):</span>
+                <span className="ve-span">Μεταφορικά ({activeShippingObj.label.split(' ')[0]}):</span>
                 <span className="font-bold text-stone-900">
                   {shippingCost === 0 ? 'ΔΩΡΕΑΝ' : `€${shippingCost.toFixed(2)}`}
                 </span>
               </div>
               <div className="flex justify-between text-sm font-bold text-stone-900 pt-2 border-t border-stone-200">
-                <span>Τελικό Σύνολο:</span>
+                <span className="ve-span">Τελικό Σύνολο:</span>
                 <span className="text-xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
                   €{total.toFixed(2)}
                 </span>
@@ -399,7 +397,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
             <div className="text-[11px] text-stone-500 flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Χειροποίητη συσκευασία δώρου & ασφαλής αποστολή</span>
+              <span className="ve-span">Χειροποίητη συσκευασία δώρου & ασφαλής αποστολή</span>
             </div>
 
             {isCheckoutStep ? (
@@ -410,10 +408,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 className="w-full py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
               >
                 {isSubmitting ? (
-                  <span>Καταχώρηση...</span>
+                  <span className="ve-span">Καταχώρηση...</span>
                 ) : (
                   <>
-                    <span>Καταχώρηση παραγγελίας</span>
+                    <span className="ve-span">Καταχώρηση παραγγελίας</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -423,7 +421,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 onClick={() => setIsCheckoutStep(true)}
                 className="w-full py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
               >
-                <span>Στοιχεία και επιβεβαίωση</span>
+                <span className="ve-span">Στοιχεία και επιβεβαίωση</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             )}

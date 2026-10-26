@@ -74,11 +74,11 @@ export function ImageLightbox({ images, index, title, onIndexChange, onClose }: 
         const dy = event.changedTouches[0].clientY - start.y;
         if (Math.abs(dx) >= 50 && Math.abs(dy) < Math.abs(dx) * .65) move(dx < 0 ? 1 : -1);
       }}>
-      {isVideo ? <div className="lightbox-video"><VideoPlayer url={media.url} title={media.title || title} autoPlay /></div> : <img key={media.url} src={media.url} alt={media.title || title} referrerPolicy="no-referrer" draggable={false} />}
+      {isVideo ? <div className="lightbox-video"><VideoPlayer url={media.url} title={media.title || title} autoPlay /></div> : <img className="ve-img" key={media.url} src={media.url} alt={media.title || title} referrerPolicy="no-referrer" draggable={false} />}
     </div>
     <div className="image-lightbox-caption">
-      <p>{title}</p>
-      <p role="status" aria-live="polite">{isVideo ? 'Βίντεο' : 'Εικόνα'} {current + 1} από {images.length}</p>
+      <p className="ve-p">{title}</p>
+      <p className="ve-p" role="status" aria-live="polite">{isVideo ? 'Βίντεο' : 'Εικόνα'} {current + 1} από {images.length}</p>
       {isVideo && videoLink(media.url) && <a className="lightbox-external-link" href={videoLink(media.url)!.original} target="_blank" rel="noopener noreferrer">Άνοιγμα στον πάροχο βίντεο</a>}
     </div>
   </div>;

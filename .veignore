@@ -1,0 +1,8 @@
+# Δεν είναι μέρος του live site
+video-compression-check.html
+server/**
+server-dist/**
+scripts/**
+netlify/**
+**/*.test.ts
+**/*.test.tsx

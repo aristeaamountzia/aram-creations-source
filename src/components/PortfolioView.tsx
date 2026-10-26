@@ -261,12 +261,15 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     const totalVideoCount = items.filter(itemHasVideo).length;
     const zoomImages = (selectedItem ? getItemMediaList(selectedItem) : [])
         .map((media, index) => ({ ...media, mediaIndex: index }));
-    return (<div className={`portfolio-view min-h-screen pb-24 font-sans transition-colors duration-300 ${'bg-[#faf9ff] text-[#252134] selection:bg-[#e4dcfa]'}`}>
+    const favoriteButtonClass = selectedItem && favorites.includes(selectedItem.id)
+        ? 'bg-rose-50 border-rose-200 text-rose-700'
+        : 'bg-white border-[#d8cfea] text-[#5b516d] hover:text-stone-950';
+    return (<div className="portfolio-view min-h-screen pb-24 font-sans transition-colors duration-300 bg-[#faf9ff] text-[#252134] selection:bg-[#e4dcfa]">
       
       {/* Toast Notification */}
-      {copiedToast && (<div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-xs animate-in fade-in slide-in-from-bottom-2 border ${'bg-stone-900 text-white border-stone-800'}`}>
+      {copiedToast && (<div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-xs animate-in fade-in slide-in-from-bottom-2 border bg-stone-900 text-white border-stone-800">
           <Check className="w-4 h-4 text-emerald-400"/>
-          <span>Ο σύνδεσμος του έργου αντιγράφηκε στο πρόχειρο!</span>
+          <span className="ve-span">Ο σύνδεσμος του έργου αντιγράφηκε στο πρόχειρο!</span>
         </div>)}
       {shareError && (<div role="alert" className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl text-xs bg-rose-50 text-rose-800 border border-rose-200">
           {shareError}
@@ -281,13 +284,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
           categories={[{ id: 'all', label: 'Όλες οι Κατηγορίες' }, ...artCategories.map(category => ({ id: category.id, label: category.title, count: items.filter(item => item.category === category.id).length }))]}
           selectedCategory={selectedCatId} onCategory={id => setSelectedCatId(id as CategoryId | 'all')}
           actions={<>
-            <button type="button" aria-pressed={filterMode === 'all'} onClick={() => setFilterMode('all')}>Όλα ({items.length})</button>
-            <button type="button" aria-pressed={filterMode === 'favorites'} onClick={() => setFilterMode('favorites')}><Heart aria-hidden="true" />Αγαπημένα ({favorites.length})</button>
-            <div className="catalog-sort"><span>Ταξινόμηση:</span><select aria-label="Ταξινόμηση Portfolio" value={sortBy} onChange={event => setSortBy(event.target.value as any)}>
-              <option value="default">Προτεινόμενα</option><option value="newest">Νεότερα</option><option value="title">Αλφαβητικά (Α-Ω)</option><option value="category">Ανά Κατηγορία</option>
+            <button className="ve-button" type="button" aria-pressed={filterMode === 'all'} onClick={() => setFilterMode('all')}>Όλα ({items.length})</button>
+            <button className="ve-button" type="button" aria-pressed={filterMode === 'favorites'} onClick={() => setFilterMode('favorites')}><Heart aria-hidden="true" />Αγαπημένα ({favorites.length})</button>
+            <div className="catalog-sort"><span className="ve-span">Ταξινόμηση:</span><select className="ve-select" aria-label="Ταξινόμηση Portfolio" value={sortBy} onChange={event => setSortBy(event.target.value as any)}>
+              <option className="ve-option" value="default">Προτεινόμενα</option><option className="ve-option" value="newest">Νεότερα</option><option className="ve-option" value="title">Αλφαβητικά (Α-Ω)</option><option className="ve-option" value="category">Ανά Κατηγορία</option>
             </select></div>
           </>}>
-          {activeCategoryMeta && <p className="catalog-category-note"><strong>{activeCategoryMeta.title}:</strong> {activeCategoryMeta.description}</p>}
+          {activeCategoryMeta && <p className="catalog-category-note"><strong className="ve-strong">{activeCategoryMeta.title}:</strong> {activeCategoryMeta.description}</p>}
         </CatalogControls>
       </div>
 
@@ -295,24 +298,24 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Results Header */}
-        <div className={`flex items-center justify-between text-xs mb-6 font-sans ${'text-[#675f79]'}`}>
-          <span>Εμφάνιση {filteredAndSortedItems.length} έργων</span>
-          {searchTerm && (<button onClick={() => setSearchTerm('')} className={`underline underline-offset-4 ${'hover:text-stone-950'}`}>
+        <div className="flex items-center justify-between text-xs mb-6 font-sans text-[#675f79]">
+          <span className="ve-span">Εμφάνιση {filteredAndSortedItems.length} έργων</span>
+          {searchTerm && (<button onClick={() => setSearchTerm('')} className="underline underline-offset-4 hover:text-stone-950">
               Καθαρισμός αναζήτησης
             </button>)}
         </div>
 
-        {filteredAndSortedItems.length === 0 ? (<div className={`py-24 text-center border border-dashed rounded-2xl p-8 ${'border-[#d8cfea] bg-white'}`}>
+        {filteredAndSortedItems.length === 0 ? (<div className="py-24 text-center border border-dashed rounded-2xl p-8 border-[#d8cfea] bg-white">
             <Palette className="w-12 h-12 text-[#675f79] mx-auto mb-4"/>
-            <h3 className={`text-lg font-sans ${'text-[#252134]'}`}>Δεν βρέθηκαν έργα</h3>
-            <p className={`text-xs mt-1 max-w-sm mx-auto ${'text-[#675f79]'}`}>
+            <h3 className="text-lg font-sans text-[#252134]">Δεν βρέθηκαν έργα</h3>
+            <p className="text-xs mt-1 max-w-sm mx-auto text-[#675f79]">
               Δοκιμάστε να αλλάξετε τα φίλτρα, την αναζήτηση ή να επιλέξετε άλλη κατηγορία.
             </p>
             <button onClick={() => {
                 setSelectedCatId('all');
                 setSearchTerm('');
                 setFilterMode('all');
-            }} className={`mt-4 px-4 py-2 rounded-lg text-xs transition-colors ${'bg-stone-200 hover:bg-stone-300 text-stone-800'}`}>
+            }} className="mt-4 px-4 py-2 rounded-lg text-xs transition-colors bg-stone-200 hover:bg-stone-300 text-stone-800">
               Επαναφορά Όλων
             </button>
           </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -321,6 +324,9 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 const mediaList = getItemMediaList(item);
                 const hasVideo = itemHasVideo(item);
                 const isFav = favorites.includes(item.id);
+                const buttonClass = isFav
+                        ? 'bg-[#eee8ff] text-[#6253ae] border-[#d7ceef]'
+                        : 'bg-white/90 text-[#675f79] hover:text-stone-950 border-[#d8cfea]';
                 return (<div key={item.id} id={`art-card-${item.id}`} onClick={() => {
                         setSelectedItem(item);
                         setActiveMediaIdx(0);
@@ -330,7 +336,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                             setSelectedItem(item);
                             setActiveMediaIdx(0);
                         }
-                    }} role="group" tabIndex={0} aria-label={`${item.title}. Πατήστε Enter για άνοιγμα έργου.`} className={`catalog-card group cursor-pointer rounded-2xl overflow-hidden border transition-all duration-300 flex flex-col justify-between hover:shadow-sm ${'bg-white border-[#e5def3] hover:border-stone-400'}`}>
+                    }} role="group" tabIndex={0} aria-label={`${item.title}. Πατήστε Enter για άνοιγμα έργου.`} className="catalog-card group cursor-pointer rounded-2xl overflow-hidden border transition-all duration-300 flex flex-col justify-between hover:shadow-sm bg-white border-[#e5def3] hover:border-stone-400">
                   {/* Media Visual Container */}
                   <div className="relative aspect-[4/3] overflow-hidden bg-[#f3f0fa]">
                     {mediaList[0]?.type === 'video' ? <div className="flex h-full items-center justify-center bg-[#ede8fb]"><Play className="h-12 w-12 text-[#6253ae]" aria-label="Έργο με βίντεο" /></div> : <img src={mediaList[0]?.url || item.image} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 "/>}
@@ -348,9 +354,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                     </div>
 
                     {/* Top Right: Favorite button */}
-                    <button onClick={(e) => toggleFavorite(item.id, e)} aria-label={isFav ? `Αφαίρεση ${item.title} από τα αγαπημένα` : `Προσθήκη ${item.title} στα αγαπημένα`} aria-pressed={isFav} className={`absolute top-3 right-3 z-10 p-2 rounded-full backdrop-blur-md transition-transform active:scale-90 border ${isFav
-                        ? 'bg-[#eee8ff] text-[#6253ae] border-[#d7ceef]'
-                        : 'bg-white/90 text-[#675f79] hover:text-stone-950 border-[#d8cfea]'}`} title={isFav ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}>
+                    <button onClick={(e) => toggleFavorite(item.id, e)} aria-label={isFav ? `Αφαίρεση ${item.title} από τα αγαπημένα` : `Προσθήκη ${item.title} στα αγαπημένα`} aria-pressed={isFav} className={`absolute top-3 right-3 z-10 p-2 rounded-full backdrop-blur-md transition-transform active:scale-90 border ${buttonClass}`} title={isFav ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}>
                       <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`}/>
                     </button>
 
@@ -360,13 +364,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                         {/* Video indicator badge */}
                         {hasVideo && (<span className="inline-flex items-center gap-1 bg-[#6253ae]/95 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-md ">
                             <Film className="w-3 h-3"/>
-                            <span>Βίντεο</span>
+                            <span className="ve-span">Βίντεο</span>
                           </span>)}
 
                         {/* Media counter */}
                         {mediaList.length > 1 && (<span className="inline-flex items-center gap-1 bg-white/95 backdrop-blur-md text-[#514663] text-[10px] font-sans px-2 py-0.5 rounded-md border border-[#e2dcf0]">
                             <Layers className="w-3 h-3"/>
-                            <span>{mediaList.length} media</span>
+                            <span className="ve-span">{mediaList.length} media</span>
                           </span>)}
                       </div>
 
@@ -379,31 +383,31 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
                   {/* Artwork Content Info */}
                   <div className="p-5 flex-1 flex flex-col justify-between">
-                    <div>
-                      <h3 className={`font-sans text-lg sm:text-xl transition-colors line-clamp-1 ${'text-[#252134] group-hover:text-[#5b516d]'}`}>
+                    <div className="ve-div">
+                      <h3 className="font-sans text-lg sm:text-xl transition-colors line-clamp-1 text-[#252134] group-hover:text-[#5b516d]">
                         {item.title}
                       </h3>
                       
-                      <div className={`mt-1 text-xs font-sans line-clamp-1 ${'text-[#675f79]'}`}>
+                      <div className="mt-1 text-xs font-sans line-clamp-1 text-[#675f79]">
                         {item.medium}
                       </div>
 
-                      {item.dimensions && (<div className={`mt-0.5 text-[11px] font-sans ${'text-[#675f79]'}`}>
+                      {item.dimensions && (<div className="mt-0.5 text-[11px] font-sans text-[#675f79]">
                           Διαστάσεις: {item.dimensions}
                         </div>)}
 
-                      <p className={`mt-3 text-xs line-clamp-2 leading-relaxed ${'text-[#675f79]'}`}>
+                      <p className="mt-3 text-xs line-clamp-2 leading-relaxed text-[#675f79]">
                         {item.description}
                       </p>
                     </div>
 
                     {/* Footer Row */}
-                    <div className={`mt-5 pt-3.5 border-t flex items-center justify-between text-xs ${'border-[#e5def3] text-[#675f79]'}`}>
-                      <span className={`text-[11px] font-sans ${'text-[#675f79]'}`}>
+                    <div className="mt-5 pt-3.5 border-t flex items-center justify-between text-xs border-[#e5def3] text-[#675f79]">
+                      <span className="text-[11px] font-sans text-[#675f79]">
                         {hasVideo ? 'Προβολή Έργου & Βίντεο' : 'Προβολή Έργου'}
                       </span>
-                      <span className={`flex items-center gap-1 transition-colors font-medium ${'text-[#5b516d] group-hover:text-stone-950'}`}>
-                        <span>Άνοιγμα</span>
+                      <span className="flex items-center gap-1 transition-colors font-medium text-[#5b516d] group-hover:text-stone-950">
+                        <span className="ve-span">Άνοιγμα</span>
                         <ArrowUpRight className="w-3.5 h-3.5"/>
                       </span>
                     </div>
@@ -432,9 +436,9 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
             </button>)}
 
           {/* Modal Container */}
-          <div onClick={(e) => e.stopPropagation()} className={`border max-w-4xl w-full rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col md:flex-row my-auto max-h-[92vh] ${'bg-white border-[#e5def3] text-[#252134]'}`}>
+          <div onClick={(e) => e.stopPropagation()} className="border max-w-4xl w-full rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col md:flex-row my-auto max-h-[92vh] bg-white border-[#e5def3] text-[#252134]">
             {/* Left Column: Media Stage & Thumbnails Strip */}
-            <div className={`w-full md:w-1/2 p-4 flex flex-col justify-between border-b md:border-b-0 md:border-r shrink-0 ${'bg-stone-100 border-[#e5def3]'}`}>
+            <div className="w-full md:w-1/2 p-4 flex flex-col justify-between border-b md:border-b-0 md:border-r shrink-0 bg-stone-100 border-[#e5def3]">
               {(() => {
                 const mediaList = getItemMediaList(selectedItem);
                 const currentMedia = mediaList[activeMediaIdx] || mediaList[0];
@@ -448,7 +452,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                           <img src={normalizedUrl} alt={selectedItem.title} referrerPolicy="no-referrer" className="w-full h-full object-contain cursor-zoom-in" onClick={() => setIsZoomOpen(true)}/>
                           <button onClick={() => setIsZoomOpen(true)} className="absolute bottom-3 right-3 p-2 rounded-lg bg-stone-900/80 hover:bg-stone-800 text-stone-200 border border-stone-700/80 text-xs flex items-center gap-1.5 transition opacity-90 group-hover:opacity-100" title="Μεγέθυνση σε πλήρη οθόνη">
                             <Maximize2 className="w-3.5 h-3.5"/>
-                            <span>Zoom</span>
+                            <span className="ve-span">Zoom</span>
                           </button>
                         </>)}
 
@@ -460,18 +464,19 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
                     {isVideo && <button type="button" onClick={() => setIsZoomOpen(true)} className="mt-2 rounded-lg border px-3 py-2 text-sm">Προβολή βίντεο σε πλήρη οθόνη</button>}
                     {/* Thumbnails Gallery Strip */}
-                    {mediaList.length > 1 && (<div className={`mt-3 pt-3 border-t ${'border-[#d8cfea]'}`}>
-                        <div className={`text-[11px] font-sans mb-2 flex items-center justify-between ${'text-[#675f79]'}`}>
-                          <span>Διαθέσιμα Media ({mediaList.length})</span>
-                          <span className={`text-[10px] ${'text-[#675f79]'}`}>Κάντε κλικ για εναλλαγή</span>
+                    {mediaList.length > 1 && (<div className="mt-3 pt-3 border-t border-[#d8cfea]">
+                        <div className="text-[11px] font-sans mb-2 flex items-center justify-between text-[#675f79]">
+                          <span className="ve-span">Διαθέσιμα Media ({mediaList.length})</span>
+                          <span className="text-[10px] text-[#675f79]">Κάντε κλικ για εναλλαγή</span>
                         </div>
                         <div className="flex items-center gap-2 overflow-x-auto pb-1 horizontal-scrollbar">
                           {mediaList.map((media, idx) => {
                             const isThumbVideo = media.type === 'video';
                             const isActive = idx === activeMediaIdx;
-                            return (<button key={idx} type="button" onClick={() => setActiveMediaIdx(idx)} aria-label={`Εμφάνιση ${media.type === 'video' ? 'βίντεο' : 'εικόνας'} ${idx + 1}`} aria-pressed={isActive} className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border transition-all ${isActive
+                            const buttonClass2 = isActive
                                     ? 'border-[#7067d6] ring-2 ring-[#7067d6]/20 scale-105'
-                                    : 'border-[#d8cfea] hover:border-stone-500 opacity-80 hover:opacity-100'}`}>
+                                    : 'border-[#d8cfea] hover:border-stone-500 opacity-80 hover:opacity-100';
+                            return (<button key={idx} type="button" onClick={() => setActiveMediaIdx(idx)} aria-label={`Εμφάνιση ${media.type === 'video' ? 'βίντεο' : 'εικόνας'} ${idx + 1}`} aria-pressed={isActive} className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border transition-all ${buttonClass2}`}>
                                 {isThumbVideo ? (<div className="w-full h-full bg-stone-900 flex flex-col items-center justify-center text-red-400">
                                     <Play className="w-4 h-4 fill-current"/>
                                     <span className="text-[8px] font-sans mt-0.5">VIDEO</span>
@@ -486,58 +491,58 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
             {/* Right Column: Curatorial & Artwork Metadata */}
             <div className="w-full md:w-1/2 p-6 flex flex-col justify-between overflow-y-auto">
-              <div>
+              <div className="ve-div">
                 {/* Header Strip with Close button */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-xs font-sans uppercase px-2.5 py-1 rounded ${'text-[#5b516d] bg-stone-100'}`}>
+                    <span className="text-xs font-sans uppercase px-2.5 py-1 rounded text-[#5b516d] bg-stone-100">
                       {artCategories.find((c) => c.id === selectedItem.category)?.title}
                     </span>
-                    {selectedItem.year && (<span className={`text-xs font-sans px-2 py-1 rounded ${'text-[#675f79] bg-stone-100'}`}>
+                    {selectedItem.year && (<span className="text-xs font-sans px-2 py-1 rounded text-[#675f79] bg-stone-100">
                         {selectedItem.year}
                       </span>)}
-                    {selectedItem.status && (<span className={`text-xs font-sans px-2.5 py-1 rounded ${'text-emerald-800 bg-emerald-50 border border-emerald-200'}`}>
+                    {selectedItem.status && (<span className="text-xs font-sans px-2.5 py-1 rounded text-emerald-800 bg-emerald-50 border border-emerald-200">
                         {portfolioStatusLabel(design, selectedItem.status)}
                       </span>)}
                   </div>
 
-                  <button onClick={closeItemDetail} className={`p-1.5 rounded-full transition ${'bg-stone-100 hover:bg-stone-200 text-[#675f79] hover:text-stone-950'}`} title="Κλείσιμο (Esc)">
+                  <button onClick={closeItemDetail} className="p-1.5 rounded-full transition bg-stone-100 hover:bg-stone-200 text-[#675f79] hover:text-stone-950" title="Κλείσιμο (Esc)">
                     <X className="w-5 h-5"/>
                   </button>
                 </div>
 
                 {/* Title & Medium */}
-                <h2 className={`mt-4 text-2xl sm:text-3xl font-sans leading-snug ${'text-[#252134]'}`}>
+                <h2 className="mt-4 text-2xl sm:text-3xl font-sans leading-snug text-[#252134]">
                   {selectedItem.title}
                 </h2>
 
-                <div className={`mt-2 text-xs font-sans flex items-center gap-1.5 ${'text-[#6253ae]'}`}>
+                <div className="mt-2 text-xs font-sans flex items-center gap-1.5 text-[#6253ae]">
                   <Palette className="w-3.5 h-3.5"/>
-                  <span>{design.labels.medium}: {selectedItem.medium}</span>
+                  <span className="ve-span">{design.labels.medium}: {selectedItem.medium}</span>
                 </div>
 
-                {selectedItem.dimensions && (<div className={`mt-1 text-xs font-sans flex items-center gap-1.5 ${'text-[#675f79]'}`}>
+                {selectedItem.dimensions && (<div className="mt-1 text-xs font-sans flex items-center gap-1.5 text-[#675f79]">
                     <Compass className="w-3.5 h-3.5"/>
-                    <span>{design.labels.dimensions}: {selectedItem.dimensions}</span>
+                    <span className="ve-span">{design.labels.dimensions}: {selectedItem.dimensions}</span>
                   </div>)}
 
                 {/* Curatorial Description */}
                 <div className="mt-5">
-                  <h4 className={`text-[11px] font-sans uppercase tracking-wider mb-1 ${'text-[#675f79]'}`}>
+                  <h4 className="text-[11px] font-sans uppercase tracking-wider mb-1 text-[#675f79]">
                     Επιμελητική Περιγραφή
                   </h4>
-                  <p className={`text-sm leading-relaxed ${'text-[#5b516d]'}`}>
+                  <p className="text-sm leading-relaxed text-[#5b516d]">
                     {selectedItem.description}
                   </p>
                 </div>
 
                 {/* Curatorial Highlights / Details */}
                 {selectedItem.details && selectedItem.details.length > 0 && (<div className="mt-5">
-                    <h4 className={`text-[11px] font-sans uppercase tracking-wider mb-2 ${'text-[#675f79]'}`}>
+                    <h4 className="text-[11px] font-sans uppercase tracking-wider mb-2 text-[#675f79]">
                       Χαρακτηριστικά & Τεχνική
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedItem.details.map((detail, idx) => (<span key={idx} className={`text-[11px] px-2.5 py-1 rounded font-sans ${'bg-stone-100 text-[#5b516d] border border-[#e5def3]'}`}>
+                      {selectedItem.details.map((detail, idx) => (<span key={idx} className="text-[11px] px-2.5 py-1 rounded font-sans bg-stone-100 text-[#5b516d] border border-[#e5def3]">
                           • {detail}
                         </span>))}
                     </div>
@@ -547,18 +552,16 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
               </div>
 
               {/* Bottom Actions Bar */}
-              <div className={`mt-8 pt-5 border-t flex flex-wrap items-center justify-between gap-3 ${'border-[#e5def3]'}`}>
+              <div className="mt-8 pt-5 border-t flex flex-wrap items-center justify-between gap-3 border-[#e5def3]">
                 <div className="flex items-center gap-2">
-                  <button onClick={() => toggleFavorite(selectedItem.id)} aria-pressed={favorites.includes(selectedItem.id)} aria-label={favorites.includes(selectedItem.id) ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'} className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition ${favorites.includes(selectedItem.id)
-                ? 'bg-rose-50 border-rose-200 text-rose-700'
-                : 'bg-white border-[#d8cfea] text-[#5b516d] hover:text-stone-950'}`}>
+                  <button onClick={() => toggleFavorite(selectedItem.id)} aria-pressed={favorites.includes(selectedItem.id)} aria-label={favorites.includes(selectedItem.id) ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'} className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition ${favoriteButtonClass}`}>
                     <Heart className={`w-3.5 h-3.5 ${favorites.includes(selectedItem.id) ? 'fill-current' : ''}`}/>
-                    <span>{favorites.includes(selectedItem.id) ? 'Στα Αγαπημένα' : 'Αγαπημένο'}</span>
+                    <span className="ve-span">{favorites.includes(selectedItem.id) ? 'Στα Αγαπημένα' : 'Αγαπημένο'}</span>
                   </button>
 
-                  <button onClick={() => handleShare(selectedItem)} className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition ${'bg-white hover:bg-stone-100 border-[#d8cfea] text-[#5b516d] hover:text-stone-950'}`} title="Κοινοποίηση">
+                  <button onClick={() => handleShare(selectedItem)} className="px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition bg-white hover:bg-stone-100 border-[#d8cfea] text-[#5b516d] hover:text-stone-950" title="Κοινοποίηση">
                     <Share2 className="w-3.5 h-3.5"/>
-                    <span>Κοινοποίηση</span>
+                    <span className="ve-span">Κοινοποίηση</span>
                   </button>
                 </div>
 
@@ -566,9 +569,9 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 const it = selectedItem;
                 closeItemDetail();
                 onContactArtist(it);
-            }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 transition shadow-md ${'bg-[#6253ae] hover:bg-[#544695] text-white'}`}>
+            }} className="px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 transition shadow-md bg-[#6253ae] hover:bg-[#544695] text-white">
                   <Mail className="w-4 h-4"/>
-                  <span>Εκδήλωση Ενδιαφέροντος</span>
+                  <span className="ve-span">Εκδήλωση Ενδιαφέροντος</span>
                 </button>
               </div>
             </div>
