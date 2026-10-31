@@ -5128,7 +5128,7 @@ interface BackOfficeViewProps {
                                                         onChange={e => updateAssistantSetting('backofficeEndpoint', e.target.value)}
                                                     />
                                                     <p className="text-[11px] text-stone-500 mt-2 leading-relaxed">
-                                                        Στο Netlify το κενό endpoint χρησιμοποιεί αυτόματα το /api/backoffice-ai. Για AI προτάσεις χρειάζεται ενεργό Netlify AI Gateway ή GEMINI_API_KEY. Η σύνδεση ως διαχειριστής αρκεί για πρόσβαση· ο AI access code είναι προαιρετικός.
+                                                        Το κενό endpoint χρησιμοποιεί αυτόματα το /api/backoffice-ai. Όρισε GEMINI_API_KEY ή GOOGLE_API_KEY. Προαιρετικά, βάλε OPENAI_API_KEY και AI_PROVIDER=auto για fallback· η σειρά παρόχων και μοντέλων ρυθμίζεται με AI_PROVIDER_ORDER και *_MODEL_ORDER. Αν ενεργοποιηθεί fallback, τα δεδομένα και οι εικόνες μπορεί να σταλούν στην OpenAI όταν αποτύχει το Gemini. Η σύνδεση ως διαχειριστής αρκεί για πρόσβαση.
                                                     </p>
                                                 </div>
 
@@ -5151,7 +5151,7 @@ interface BackOfficeViewProps {
                                             <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                                                 <p className="text-xs font-black text-amber-800 uppercase tracking-wider">Γρήγορος έλεγχος</p>
                                                 <p className="text-sm text-amber-900 mt-2 leading-relaxed">
-                                                    Αν το AI γράψει σφάλμα στη φόρμα, έλεγξε πρώτα τα Netlify environment variables GEMINI_API_KEY, AI_PROVIDER, GEMINI_MODEL και ADMIN_EMAILS. Για τοπική χρήση πρέπει να είναι ανοιχτός και ο τοπικός AI server.
+                                                    Για σφάλμα 503, έλεγξε τα API keys και το AI_PROVIDER στα environment variables του Netlify και κάνε νέο deploy (ή βάλε τα στο τοπικό περιβάλλον του server). Για σφάλμα 401, συνδέσου ξανά με λογαριασμό διαχειριστή ή έλεγξε το AI access code.
                                                 </p>
                                             </section>
                                         </div>
@@ -5483,7 +5483,3 @@ interface BackOfficeViewProps {
                 </div>
             );
         }
-
-
-
-

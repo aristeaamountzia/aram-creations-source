@@ -1,7 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
-import { GoogleGenAI } from "@google/genai";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+import {
+  BackofficeAiConfigurationError,
+  generateBackofficeAiJson,
+  getBackofficeAiAccessCode,
+} from "../../server/backoffice-ai";
 
 type AiInput = {
   product?: Record<string, unknown>;
@@ -26,7 +30,7 @@ async function isAuthorized(request: Request): Promise<boolean> {
     }
   }
 
-  const configured = process.env.AI_ACCESS_CODE || "";
+  const configured = getBackofficeAiAccessCode();
   const provided = request.headers.get("x-aram-ai-secret") || "";
   if (!configured) return false;
   const expected = Buffer.from(configured);
@@ -64,35 +68,12 @@ export default async function handleRequest(request: Request) {
     } catch {
       return json({ error: "Μη έγκυρα δεδομένα AI." }, 400);
     }
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return json({ error: "Το AI Gateway δεν είναι διαθέσιμο σε αυτή τη Function." }, 503);
-
     const images = Array.isArray(input.imageDataUrls) && input.imageDataUrls.length
       ? input.imageDataUrls : input.imageDataUrl ? [input.imageDataUrl] : [];
-    const contents: Array<string | { inlineData: { mimeType: string; data: string } }> = [];
-    for (const image of images.slice(0, 3)) {
-      const match = typeof image === "string" && image.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
-      if (match) contents.push({ inlineData: { mimeType: match[1], data: match[2] } });
-    }
-    contents.push(promptFor(input));
-    const ai = new GoogleGenAI({
-      apiKey,
-      ...(process.env.GOOGLE_GEMINI_BASE_URL ? { httpOptions: { baseUrl: process.env.GOOGLE_GEMINI_BASE_URL } } : {}),
-    });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents,
-      config: { responseMimeType: "application/json", temperature: 0.6 },
-    });
-    const result = response.text?.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim() || "{}";
-    try {
-      return json(JSON.parse(result));
-    } catch {
-      return json({ error: "Το AI επέστρεψε μη έγκυρη απάντηση. Δοκίμασε ξανά." }, 502);
-    }
+    return json(await generateBackofficeAiJson(promptFor(input), images));
   } catch (error) {
     console.error("Back Office AI failed", error);
-    return json({ error: "Η δημιουργία AI απέτυχε προσωρινά." }, 500);
+    if (error instanceof BackofficeAiConfigurationError) return json({ error: error.message }, 503);
+    return json({ error: "Η δημιουργία AI απέτυχε προσωρινά." }, 502);
   }
 }
-

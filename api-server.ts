@@ -5,9 +5,13 @@ import type { Request, Response } from "express";
 import path from "path";
 import { isVintedHost as validVintedHost } from './src/lib/vinted-url';
 import { timingSafeEqual } from "node:crypto";
-import { GoogleGenAI } from "@google/genai";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
+import {
+  BackofficeAiConfigurationError,
+  generateBackofficeAiJson,
+  getBackofficeAiAccessCode,
+} from "./server/backoffice-ai";
 
 const app = express();
 
@@ -25,23 +29,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Lazy initialize Gemini API client
-let genAiClient: GoogleGenAI | null = null;
-function getGenAI(): GoogleGenAI {
-  if (!genAiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn("GEMINI_API_KEY environment variable is missing.");
-    }
-    const gatewayBaseUrl = process.env.GOOGLE_GEMINI_BASE_URL;
-    genAiClient = new GoogleGenAI({
-      apiKey: apiKey || "",
-      ...(gatewayBaseUrl ? { httpOptions: { baseUrl: gatewayBaseUrl } } : {}),
-    });
-  }
-  return genAiClient;
-}
-
 // 1. Health check
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({
@@ -49,7 +36,7 @@ app.get("/api/health", (_req: Request, res: Response) => {
     app: "Aram Creations Unified Platform",
     timestamp: new Date().toISOString(),
     firebaseProject: "aramcreations-e1529",
-    aiConfigured: Boolean(process.env.GEMINI_API_KEY),
+    aiConfigured: Boolean(process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim()),
     aiGatewayConfigured: Boolean(process.env.GOOGLE_GEMINI_BASE_URL),
   });
 });
@@ -57,7 +44,7 @@ app.get("/api/health", (_req: Request, res: Response) => {
 // 2. Gemini AI Assistant endpoint
 async function handleBackofficeAi(req: Request, res: Response) {
   try {
-    const configuredAccessCode = process.env.AI_ACCESS_CODE || "";
+    const configuredAccessCode = getBackofficeAiAccessCode();
     const providedAccessCode = req.get("X-Aram-AI-Secret") || "";
     const bearer = req.get('Authorization')?.match(/^Bearer\s+(.+)$/i)?.[1] || '';
     let verifiedAdmin = false;
@@ -85,30 +72,9 @@ async function handleBackofficeAi(req: Request, res: Response) {
       imageDataUrls = [],
     } = req.body || {};
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(503).json({ error: "Το AI δεν είναι ενεργό στο Netlify. Ενεργοποίησε το Netlify AI Gateway ή όρισε GEMINI_API_KEY στο περιβάλλον Functions." });
-    }
-
-    const ai = getGenAI();
-    const contents: any[] = [];
     const imageList = Array.isArray(imageDataUrls) && imageDataUrls.length > 0
       ? imageDataUrls
       : imageDataUrl ? [imageDataUrl] : [];
-
-    for (const img of imageList.slice(0, 3)) {
-      if (typeof img === "string" && img.startsWith("data:")) {
-        const matches = img.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
-        if (matches) {
-          contents.push({
-            inlineData: {
-              mimeType: matches[1],
-              data: matches[2],
-            },
-          });
-        }
-      }
-    }
 
     const systemPrompt = req.body?.mode === 'portfolio_item' ? `Είσαι επιμελητής εικαστικού Portfolio για το Aram Creations. Γράψε στα Ελληνικά, με ακρίβεια και χωρίς να εφευρίσκεις άγνωστα χαρακτηριστικά.
 Στοιχεία έργου:
@@ -148,46 +114,13 @@ ${task ? `Τύπος εργασίας: ${task}` : ""}
   "altText": "Περιγραφικό alt text εικόνας στα Ελληνικά"
 }`;
 
-    contents.push(systemPrompt);
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: contents,
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.6,
-      },
-    });
-
-    const responseText = response.text || "{}";
-    let parsedData = {};
-    try {
-      const cleanJson = responseText
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-      parsedData = JSON.parse(cleanJson);
-    } catch {
-      parsedData = {
-        title: product.name || "Χειροποίητη Δημιουργία Aram",
-        description: responseText,
-        category: product.category || "Κολιέ",
-        status: "Διαθέσιμο",
-        colors: product.colors || [],
-        materials: product.materials || [],
-        tags: ["χειροποίητο", "aramcreations"],
-        shortDescription: product.name || "Χειροποίητο κόσμημα Aram Creations",
-        instagramCaption: `✨ ${product.name || "Χειροποίητο κόσμημα"} ✨ Aram Creations #handmadejewelry #aramcreations`,
-        altText: product.name || "Χειροποίητο κόσμημα",
-      };
-    }
-
+    const parsedData = await generateBackofficeAiJson(systemPrompt, imageList);
     return res.json(parsedData);
   } catch (error: any) {
     console.error("Error in backoffice-ai:", error);
-    return res.status(500).json({
-      error: error.message || "Failed to generate AI content",
+    const status = error instanceof BackofficeAiConfigurationError ? 503 : 502;
+    return res.status(status).json({
+      error: status === 503 ? error.message : "Η δημιουργία AI απέτυχε προσωρινά.",
     });
   }
 }
@@ -724,4 +657,3 @@ app.use(express.static(path.join(process.cwd(), "public")));
 
 
 export { app };
-
