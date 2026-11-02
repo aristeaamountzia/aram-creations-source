@@ -1,4 +1,12 @@
 // @ts-nocheck
+const stripVintedCondition = (text: string | null | undefined): string => {
+    if (!text) return '';
+    return text
+        .split('\n')
+        .filter(line => !/vinted condition|καινούργιο με ετικέτα/i.test(line))
+        .join('\n')
+        .trim();
+};
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import { PortfolioDesignSettings } from './PortfolioDesignSettings';
@@ -332,7 +340,7 @@ interface BackOfficeViewProps {
             const [heroUploadStatus, setHeroUploadStatus] = useState('');
             const [portfolioHeroUploadStatus, setPortfolioHeroUploadStatus] = useState('');
             const [isSavingSettings, setIsSavingSettings] = useState(false);
-            const [activeSettingsTab, setActiveSettingsTab] = useState('fields');
+            const [activeSettingsTab, setActiveSettingsTab] = useState('design');
             const [draggedCategoryIdx, setDraggedCategoryIdx] = useState(null);
             const [smartSuggestions, setSmartSuggestions] = useState(null);
             const [selectedItemIds, setSelectedItemIds] = useState([]);
@@ -342,6 +350,7 @@ interface BackOfficeViewProps {
             const lassoBaseSelectionRef = useRef([]);
             const productGridRef = useRef(null);
             const [isBulkOpen, setIsBulkOpen] = useState(false);
+            const [bulkTab, setBulkTab] = useState('fields');
             const [bulkDraft, setBulkDraft] = useState({
                 category: '',
                 collection: '',
@@ -352,6 +361,21 @@ interface BackOfficeViewProps {
                 colors: [],
                 notes: ''
             });
+            const [bulkFindText, setBulkFindText] = useState('');
+            const [bulkReplaceText, setBulkReplaceText] = useState('');
+            const [bulkFindScopes, setBulkFindScopes] = useState({
+                name: true,
+                notes: true,
+                materials: false,
+                colors: false,
+                collection: false
+            });
+            const [bulkCaseSensitive, setBulkCaseSensitive] = useState(false);
+            const [bulkWholeWord, setBulkWholeWord] = useState(false);
+            const [bulkStock, setBulkStock] = useState('');
+            const [bulkPriceAdjustmentMode, setBulkPriceAdjustmentMode] = useState('none');
+            const [bulkPriceAdjustmentValue, setBulkPriceAdjustmentValue] = useState('');
+            const [bulkTagMode, setBulkTagMode] = useState('append');
 
             const [searchQuery, setSearchQuery] = useState('');
             const [selectedCategory, setSelectedCategory] = useState('Όλα');
@@ -364,7 +388,10 @@ interface BackOfficeViewProps {
             const [isAddOpen, setIsAddOpen] = useState(false);
             const [isDetailOpen, setIsDetailOpen] = useState(false);
             const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const [activeFormTab, setActiveFormTab] = useState('form-basic');
             useEffect(() => { setVideoProgress(null); }, [isAddOpen, isSettingsOpen]);
+
+
             const [currentItem, setCurrentItem] = useState(null);
             const [isEditMode, setIsEditMode] = useState(false);
             const [activeDetailMediaIdx, setActiveDetailMediaIdx] = useState(0);
@@ -420,6 +447,23 @@ interface BackOfficeViewProps {
             });
             const [showAiAccessCode, setShowAiAccessCode] = useState(false);
             const [isVintedImportOpen, setIsVintedImportOpen] = useState(false);
+
+            // Global Escape key listener for all modals
+            useEffect(() => {
+                const handleKeyDown = (e: KeyboardEvent) => {
+                    if (e.key === 'Escape') {
+                        if (imageEditorTarget && !isApplyingImageEdit) { closeImageEditor(); return; }
+                        if (isDetailOpen) { setIsDetailOpen(false); return; }
+                        if (isBulkOpen) { setIsBulkOpen(false); return; }
+                        if (isVintedImportOpen) { setIsVintedImportOpen(false); return; }
+                        if (isSettingsOpen && !mediaPreparing && !isSavingSettings) { setIsSettingsOpen(false); return; }
+                        if (isAddOpen && !isSaving && !mediaPreparing) { setIsAddOpen(false); return; }
+                        if (isHistoryOpen) { setIsHistoryOpen(false); return; }
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [isAddOpen, isBulkOpen, isSettingsOpen, isDetailOpen, isHistoryOpen, isVintedImportOpen, isSaving, mediaPreparing, isSavingSettings]);
             const [vintedLinksText, setVintedLinksText] = useState('');
             const [vintedImportItems, setVintedImportItems] = useState([]);
             const [vintedImportStatus, setVintedImportStatus] = useState('');
@@ -707,7 +751,17 @@ interface BackOfficeViewProps {
                     if (shopSettings.portfolioHeroVideoUrl.trim() && !portfolioHeroVideoUrl(shopSettings.portfolioHeroVideoUrl)) throw new Error('Βάλε έγκυρο σύνδεσμο http ή https για το βίντεο Portfolio.');
                     validatePortfolioDesign(normalizePortfolioDesign(shopSettings.portfolioDesign));
                     const beforeSettings = (await getDoc(settingsRef)).data() || {};
-                    const savedSettings = { ...shopSettings, customFields: { customCategories, customCollections, customStatuses, customMaterials, customPlatforms, customColors, statusOptionOrder, collectionOptionOrder, platformOptionOrder, colorOptionOrder, materialOptionOrder, hiddenCategoryOptions, hiddenStatusOptions, hiddenCollectionOptions, hiddenPlatformOptions, hiddenColorOptions, hiddenMaterialOptions } };
+                    const ds = shopSettings.designStudio || DEFAULT_DESIGN_STUDIO;
+                    const savedSettings = {
+                        ...shopSettings,
+                        designStudio: ds,
+                        bgColor: ds.pageBackground || shopSettings.bgColor,
+                        textColor: ds.ink || shopSettings.textColor,
+                        primaryColor: ds.accent || shopSettings.primaryColor,
+                        fontFamily: ds.fontFamily || shopSettings.fontFamily,
+                        borderRadius: ds.cardRadius || shopSettings.borderRadius,
+                        customFields: { customCategories, customCollections, customStatuses, customMaterials, customPlatforms, customColors, statusOptionOrder, collectionOptionOrder, platformOptionOrder, colorOptionOrder, materialOptionOrder, hiddenCategoryOptions, hiddenStatusOptions, hiddenCollectionOptions, hiddenPlatformOptions, hiddenColorOptions, hiddenMaterialOptions }
+                    };
                     await setDoc(settingsRef, savedSettings, { merge: true });
                     pushVersionHistory({
                         type: 'SETTINGS_UPDATE',
@@ -1531,7 +1585,7 @@ interface BackOfficeViewProps {
             };
 
             const getImageEditorList = (scope) => scope === 'private' ? formPrivateMediaList : formShopMediaList;
-            const imageEditorMedia = imageEditorTarget ? getImageEditorList(imageEditorTarget.scope)[imageEditorTarget.index] : null;
+            const imageEditorMedia = imageEditorTarget?.directMedia || (imageEditorTarget ? (getImageEditorList(imageEditorTarget.scope)?.[imageEditorTarget.index] || formShopMediaList?.[0] || formPrivateMediaList?.[0]) : null);
             const isAnimatedGifMedia = (media) => media?.fileObj?.type === 'image/gif' || /\.gif(?:$|[?#])/i.test(media?.url || '');
             const IMAGE_EDITOR_ASPECTS = {
                 square: { label: '1:1', ratio: 1, width: 1400, height: 1400 },
@@ -1542,15 +1596,40 @@ interface BackOfficeViewProps {
             const getImageEditorAspect = (key = imageEditorSettings.cropAspect) => IMAGE_EDITOR_ASPECTS[key] || IMAGE_EDITOR_ASPECTS.square;
             const clampImageEditorZoom = (value) => Math.max(1, Math.min(4, Number(value) || 1));
 
+            const handleOpenImageEditor = (url?: string) => {
+                const targetUrl = url || formShopMediaList?.[0]?.url || formPrivateMediaList?.[0]?.url || currentItem?.imageUrl || currentItem?.image || currentItem?.mediaList?.[0]?.url;
+                if (!targetUrl) {
+                    alert('Δεν βρέθηκε εικόνα για επεξεργασία.');
+                    return;
+                }
+                const shopIndex = formShopMediaList?.findIndex(m => m.url === targetUrl);
+                if (shopIndex !== undefined && shopIndex >= 0) {
+                    openImageEditor('shop', shopIndex);
+                    return;
+                }
+                const privIndex = formPrivateMediaList?.findIndex(m => m.url === targetUrl);
+                if (privIndex !== undefined && privIndex >= 0) {
+                    openImageEditor('private', privIndex);
+                    return;
+                }
+                const newEntry = { url: targetUrl, type: 'image', showInShop: true, isNew: false };
+                setFormShopMediaList(prev => (prev && prev.length > 0) ? [newEntry, ...prev] : [newEntry]);
+                setImageEditorError('');
+                setImageEditorTarget({ scope: 'shop', index: 0, directMedia: newEntry });
+                setImageEditorImageInfo({ width: 0, height: 0 });
+                setImageEditorSettings({ rotate: 0, zoom: 1, panX: 0, panY: 0, brightness: 100, contrast: 100, cropAspect: 'square' });
+            };
+
             const openImageEditor = (scope, index) => {
-                const media = getImageEditorList(scope)[index];
+                const list = getImageEditorList(scope);
+                const media = list?.[index] || formShopMediaList?.[0] || formPrivateMediaList?.[0] || (modalPreviewMedia ? { url: modalPreviewMedia, type: 'image', showInShop: true } : null);
                 if (!media || media.type === 'video') return;
                 if (isAnimatedGifMedia(media)) {
                     alert('Τα GIF διατηρούν την κίνησή τους. Η επεξεργασία με crop ή φίλτρα θα τα μετέτρεπε σε στατική εικόνα, γι\' αυτό δεν εφαρμόζεται.');
                     return;
                 }
                 setImageEditorError('');
-                setImageEditorTarget({ scope, index });
+                setImageEditorTarget({ scope, index: Math.max(0, index), directMedia: media });
                 setImageEditorImageInfo({ width: 0, height: 0 });
                 setImageEditorSettings({ rotate: 0, zoom: 1, panX: 0, panY: 0, brightness: 100, contrast: 100, cropAspect: 'square' });
             };
@@ -1693,8 +1772,20 @@ interface BackOfficeViewProps {
                     const editedName = originalName.replace(/\.[^/.]+$/, '') + '-edited.jpg';
                     const editedFile = new File([blob], editedName, { type: 'image/jpeg', lastModified: Date.now() });
                     const editedUrl = URL.createObjectURL(editedFile);
-                    const updateList = (list) => list.map((media, index) => {
-                        if (index !== imageEditorTarget.index) return media;
+                    const updateList = (list) => {
+                        if (!list || list.length === 0) {
+                            return [{
+                                url: editedUrl,
+                                type: 'image',
+                                fileObj: editedFile,
+                                fileName: editedName,
+                                isNew: true,
+                                edited: true,
+                                originalUrl: imageEditorMedia.url
+                            }];
+                        }
+                        return list.map((media, index) => {
+                            if (index !== imageEditorTarget.index) return media;
                         const restoreBackup = media.restoreBackup || (media.originalUrl ? {
                             url: media.originalUrl,
                             type: media.originalType || media.type || 'image',
@@ -1724,6 +1815,7 @@ interface BackOfficeViewProps {
                         };
                     });
 
+                    };
                     if (imageEditorTarget.scope === 'private') {
                         const nextList = updateList(formPrivateMediaList);
                         setFormPrivateMediaList(nextList);
@@ -2049,7 +2141,7 @@ interface BackOfficeViewProps {
                 setFormName(item.name || ''); setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status || 'Διαθέσιμο'); setFormDate(item.creationDate || '');
                 setFormPrice(item.price ? item.price.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
                 setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
-                setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(item.notes || '');
+                setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(stripVintedCondition(item.notes || ''));
 
                 const existingPurchaseLinks = item.purchaseLinks || item.productLinks || [];
                 setFormPurchaseLinks(existingPurchaseLinks);
@@ -2254,7 +2346,7 @@ interface BackOfficeViewProps {
                     productLinks: sourceUrl ? [{ site: 'Vinted', url: sourceUrl }] : [],
                     purchaseLinks: sourceUrl ? [{ site: 'Vinted', url: sourceUrl }] : [],
                     postedPlatforms: sourceUrl ? [{ site: 'Vinted', url: sourceUrl, showInShop: true }] : [],
-                    notes: [description, condition ? `Vinted condition: ${condition}` : ''].filter(Boolean).join('\n'),
+                    notes: description || '',
                     imageUrl: mediaList[0]?.url || '',
                     images: imageUrls,
                     fileType: 'image',
@@ -2650,7 +2742,7 @@ interface BackOfficeViewProps {
                         productLinks: sanitizedPurchaseLinks,
                         purchaseLinks: sanitizedPurchaseLinks,
                         postedPlatforms: sanitizedPostedPlatforms,
-                        notes: formNotes.trim(),
+                        notes: stripVintedCondition(formNotes.trim()),
                         imageUrl: mainImage.url,
                         fileType: mainImage.type,
                         mediaList: finalMediaUrls,
@@ -2804,12 +2896,15 @@ interface BackOfficeViewProps {
 
             const visibleItemIds = useMemo(() => filteredAndSortedJewelry.map(item => item.id), [filteredAndSortedJewelry]);
 
-            const selectItem = (id, shiftKey = false) => {
-                if (shiftKey && selectionAnchorId) {
-                    const start = visibleItemIds.indexOf(selectionAnchorId);
+                        const selectItem = (id, shiftKey = false) => {
+                const anchor = selectionAnchorId || (selectedItemIds.length > 0 ? selectedItemIds[selectedItemIds.length - 1] : null);
+                if (shiftKey && anchor) {
+                    const start = visibleItemIds.indexOf(anchor);
                     const end = visibleItemIds.indexOf(id);
                     if (start >= 0 && end >= 0) {
-                        const range = visibleItemIds.slice(Math.min(start, end), Math.max(start, end) + 1);
+                        const min = Math.min(start, end);
+                        const max = Math.max(start, end);
+                        const range = visibleItemIds.slice(min, max + 1);
                         setSelectedItemIds(prev => Array.from(new Set([...prev, ...range])));
                         return;
                     }
@@ -2819,11 +2914,18 @@ interface BackOfficeViewProps {
             };
 
             const handleProductSelectionClick = (event, id) => {
-                if (!event.shiftKey) return;
-                const target = event.target;
-                if (target.closest('button, input, label, a')) return;
-                event.preventDefault();
-                selectItem(id, true);
+                const target = event.target as HTMLElement;
+                if (target.closest('button, input, label, a, select, textarea, [data-no-lasso]')) return;
+                if (event.shiftKey) {
+                    event.preventDefault();
+                    selectItem(id, true);
+                    return;
+                }
+                if (event.ctrlKey || event.metaKey) {
+                    event.preventDefault();
+                    selectItem(id, false);
+                    return;
+                }
             };
 
             const finishLassoSelection = () => {
@@ -2831,27 +2933,59 @@ interface BackOfficeViewProps {
                 setLassoRect(null);
             };
 
-            const handleLassoStart = (event) => {
-                if (event.button !== 0 || event.target !== event.currentTarget) return;
-                const bounds = event.currentTarget.getBoundingClientRect();
-                lassoStartRef.current = { x: event.clientX, y: event.clientY, bounds };
-                lassoBaseSelectionRef.current = event.shiftKey ? selectedItemIds : [];
+            const handleLassoStart = (event: React.PointerEvent<HTMLDivElement>) => {
+                if (event.button !== 0) return;
+                const target = event.target as HTMLElement;
+                if (target.closest('button, input, select, textarea, label, a, [data-no-lasso], [data-product-id]')) return;
+
+                const startX = event.clientX;
+                const startY = event.clientY;
+                const baseSelection = event.shiftKey ? [...selectedItemIds] : [];
                 if (!event.shiftKey) setSelectedItemIds([]);
-                event.currentTarget.setPointerCapture?.(event.pointerId);
-                setLassoRect({ left: event.clientX - bounds.left, top: event.clientY - bounds.top, width: 0, height: 0 });
+
+                let isDragging = false;
+
+                const onPointerMove = (e: PointerEvent) => {
+                    const dx = Math.abs(e.clientX - startX);
+                    const dy = Math.abs(e.clientY - startY);
+                    if (!isDragging && (dx > 4 || dy > 4)) {
+                        isDragging = true;
+                    }
+                    if (!isDragging) return;
+
+                    const minX = Math.min(startX, e.clientX);
+                    const maxX = Math.max(startX, e.clientX);
+                    const minY = Math.min(startY, e.clientY);
+                    const maxY = Math.max(startY, e.clientY);
+
+                    setLassoRect({ left: minX, top: minY, width: maxX - minX, height: maxY - minY });
+
+                    const touchedIds: string[] = [];
+                    const cardNodes = document.querySelectorAll('[data-product-id]');
+                    cardNodes.forEach((node) => {
+                        const rect = node.getBoundingClientRect();
+                        if (rect.left < maxX && rect.right > minX && rect.top < maxY && rect.bottom > minY) {
+                            const pid = (node as HTMLElement).dataset.productId;
+                            if (pid) touchedIds.push(pid);
+                        }
+                    });
+                    setSelectedItemIds(Array.from(new Set([...baseSelection, ...touchedIds])));
+                };
+
+                const onPointerUp = () => {
+                    window.removeEventListener('pointermove', onPointerMove);
+                    window.removeEventListener('pointerup', onPointerUp);
+                    window.removeEventListener('pointercancel', onPointerUp);
+                    setLassoRect(null);
+                };
+
+                window.addEventListener('pointermove', onPointerMove);
+                window.addEventListener('pointerup', onPointerUp);
+                window.addEventListener('pointercancel', onPointerUp);
             };
 
-            const handleLassoMove = (event) => {
-                const start = lassoStartRef.current;
-                if (!start || !productGridRef.current) return;
-                const left = Math.min(start.x, event.clientX), top = Math.min(start.y, event.clientY);
-                const right = Math.max(start.x, event.clientX), bottom = Math.max(start.y, event.clientY);
-                setLassoRect({ left: left - start.bounds.left, top: top - start.bounds.top, width: right - left, height: bottom - top });
-                const touched = Array.from(productGridRef.current.querySelectorAll('[data-product-id]')).filter((node) => {
-                    const rect = node.getBoundingClientRect();
-                    return rect.left < right && rect.right > left && rect.top < bottom && rect.bottom > top;
-                }).map((node) => node.dataset.productId);
-                setSelectedItemIds(Array.from(new Set([...lassoBaseSelectionRef.current, ...touched])));
+            const handleLassoMove = (_event: React.PointerEvent<HTMLDivElement>) => {
+                // Tracking handled via window pointermove
             };
 
             const selectVisibleItems = () => {
@@ -2862,6 +2996,11 @@ interface BackOfficeViewProps {
                 setSelectedItemIds([]);
                 setIsBulkOpen(false);
                 setBulkDraft({ category: '', collection: '', shopPlacement: '', status: '', price: '', materials: [], colors: [], notes: '' });
+                setBulkFindText('');
+                setBulkReplaceText('');
+                setBulkStock('');
+                setBulkPriceAdjustmentMode('none');
+                setBulkPriceAdjustmentValue('');
             };
 
             const bulkMaterials = Array.isArray(bulkDraft.materials) ? bulkDraft.materials : splitTags(bulkDraft.materials || '');
@@ -2952,6 +3091,136 @@ interface BackOfficeViewProps {
                 return direction === 'up' ? currentInsertIndex === 0 : currentInsertIndex >= remaining.length;
             };
 
+
+            const handleBulkFindAndReplace = async (isDeleteOnly = false) => {
+                if (!bulkFindText.trim()) {
+                    alert('Παρακαλώ εισάγετε λέξη ή φράση προς εντοπισμό.');
+                    return;
+                }
+                if (selectedItems.length === 0) {
+                    alert('Δεν έχουν επιλεγεί προϊόντα.');
+                    return;
+                }
+
+                const searchTarget = bulkFindText;
+                const replacement = isDeleteOnly ? '' : bulkReplaceText;
+
+                let patternStr = searchTarget.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&');
+                if (bulkWholeWord) {
+                    patternStr = `\\b${patternStr}\\b`;
+                }
+                const flags = bulkCaseSensitive ? 'g' : 'gi';
+                const regex = new RegExp(patternStr, flags);
+
+                let matchCount = 0;
+                const updatesList = [];
+
+                const replaceInString = (val) => {
+                    if (!val || typeof val !== 'string') return val;
+                    let res = val.replace(regex, replacement);
+                    if (isDeleteOnly) {
+                        res = res.replace(/\s{2,}/g, ' ').trim();
+                    }
+                    return res;
+                };
+
+                selectedItems.forEach(item => {
+                    const oldData = {};
+                    const newData = {};
+                    let changed = false;
+
+                    if (bulkFindScopes.name && item.name) {
+                        const nextName = replaceInString(item.name);
+                        if (nextName !== item.name) {
+                            oldData.name = item.name;
+                            newData.name = nextName;
+                            changed = true;
+                            matchCount++;
+                        }
+                    }
+
+                    if (bulkFindScopes.notes && item.notes) {
+                        const nextNotes = replaceInString(item.notes);
+                        if (nextNotes !== item.notes) {
+                            oldData.notes = item.notes;
+                            newData.notes = nextNotes;
+                            changed = true;
+                            matchCount++;
+                        }
+                    }
+
+                    if (bulkFindScopes.collection && item.collection) {
+                        const nextCol = replaceInString(item.collection);
+                        if (nextCol !== item.collection) {
+                            oldData.collection = item.collection;
+                            newData.collection = nextCol;
+                            changed = true;
+                            matchCount++;
+                        }
+                    }
+
+                    if (bulkFindScopes.materials && Array.isArray(item.materials)) {
+                        const nextMats = item.materials
+                            .map(m => replaceInString(m))
+                            .filter(Boolean);
+                        if (JSON.stringify(nextMats) !== JSON.stringify(item.materials)) {
+                            oldData.materials = item.materials;
+                            newData.materials = nextMats;
+                            changed = true;
+                            matchCount++;
+                        }
+                    }
+
+                    if (bulkFindScopes.colors && Array.isArray(item.colors)) {
+                        const nextCols = item.colors
+                            .map(c => replaceInString(c))
+                            .filter(Boolean);
+                        if (JSON.stringify(nextCols) !== JSON.stringify(item.colors)) {
+                            oldData.colors = item.colors;
+                            newData.colors = nextCols;
+                            changed = true;
+                            matchCount++;
+                        }
+                    }
+
+                    if (changed) {
+                        updatesList.push({ id: item.id, oldData, newData });
+                    }
+                });
+
+                if (updatesList.length === 0) {
+                    alert(`Δεν εντοπίστηκε η λέξη "${searchTarget}" στα επιλεγμένα πεδία των ${selectedItems.length} προϊόντων.`);
+                    return;
+                }
+
+                const actionLabel = isDeleteOnly ? 'Διαγραφή' : 'Αντικατάσταση';
+                if (!window.confirm(`${actionLabel}: Εντοπίστηκαν ${matchCount} αντικαταστάσεις σε ${updatesList.length} προϊόντα. Θέλετε να εφαρμοστεί η αλλαγή;`)) {
+                    return;
+                }
+
+                try {
+                    const batch = writeBatch(db);
+                    updatesList.forEach(u => {
+                        batch.update(doc(db, "jewelry", u.id), {
+                            ...u.newData,
+                            updatedAt: serverTimestamp()
+                        });
+                    });
+                    await batch.commit();
+
+                    pushUndoAction({
+                        type: 'BULK_UPDATE',
+                        items: updatesList,
+                        message: `${actionLabel} λέξης σε ${updatesList.length} προϊόντα.`
+                    });
+
+                    alert(`✅ Ολοκληρώθηκε: Έγιναν ${matchCount} αλλαγές σε ${updatesList.length} προϊόντα.`);
+                    clearBulkSelection();
+                } catch (err) {
+                    alert('Σφάλμα κατά την αντικατάσταση: ' + (err.message || err));
+                }
+            };
+
             const handleBulkUpdate = async () => {
                 if (selectedItems.length === 0) return;
                 const updates = {};
@@ -2969,8 +3238,13 @@ interface BackOfficeViewProps {
                     }
                     updates.price = parsedBulkPrice;
                 }
-                if (bulkMaterials.length) updates.materials = bulkMaterials;
-                if (bulkColors.length) updates.colors = bulkColors;
+                if (bulkStock !== '') {
+                    const parsedStock = parseInt(bulkStock, 10);
+                    if (!Number.isNaN(parsedStock) && parsedStock >= 0) {
+                        updates.stock = parsedStock;
+                        if (parsedStock === 0) updates.status = 'Πουλήθηκε';
+                    }
+                }
                 if (bulkDraft.notes.trim()) updates.notes = bulkDraft.notes.trim();
                 const shopOrderUpdates = getBulkShopOrderUpdates(bulkDraft.shopPlacement);
                 if (Object.keys(updates).length === 0 && !bulkDraft.shopPlacement) {
@@ -2991,15 +3265,61 @@ interface BackOfficeViewProps {
                     bulkUpdateMap.set(id, existing);
                 };
 
-                if (fields.length) {
-                    selectedItems.forEach(item => {
+                // Process selected items with field updates, pricing adjustments, and tag additions/removals
+                selectedItems.forEach(item => {
+                    const itemUpdates = { ...updates };
+
+                    // Handle price percentage or fixed amount adjustment
+                    if (bulkPriceAdjustmentMode !== 'none' && bulkPriceAdjustmentValue !== '') {
+                        const adjVal = Number(bulkPriceAdjustmentValue);
+                        if (!Number.isNaN(adjVal) && adjVal > 0) {
+                            const curPrice = Number(item.price) || 0;
+                            let nextPrice = curPrice;
+                            if (bulkPriceAdjustmentMode === 'percent_increase') {
+                                nextPrice = Math.round((curPrice * (1 + adjVal / 100)) * 2) / 2;
+                            } else if (bulkPriceAdjustmentMode === 'percent_decrease') {
+                                nextPrice = Math.max(0, Math.round((curPrice * (1 - adjVal / 100)) * 2) / 2);
+                            } else if (bulkPriceAdjustmentMode === 'fixed_increase') {
+                                nextPrice = Math.round((curPrice + adjVal) * 2) / 2;
+                            } else if (bulkPriceAdjustmentMode === 'fixed_decrease') {
+                                nextPrice = Math.max(0, Math.round((curPrice - adjVal) * 2) / 2);
+                            }
+                            itemUpdates.price = nextPrice;
+                        }
+                    }
+
+                    // Handle tag modes (append, remove, overwrite)
+                    if (bulkMaterials.length > 0) {
+                        const curMats = Array.isArray(item.materials) ? item.materials : [];
+                        if (bulkTagMode === 'append') {
+                            itemUpdates.materials = Array.from(new Set([...curMats, ...bulkMaterials]));
+                        } else if (bulkTagMode === 'remove') {
+                            itemUpdates.materials = curMats.filter(m => !bulkMaterials.includes(m));
+                        } else {
+                            itemUpdates.materials = bulkMaterials;
+                        }
+                    }
+
+                    if (bulkColors.length > 0) {
+                        const curCols = Array.isArray(item.colors) ? item.colors : [];
+                        if (bulkTagMode === 'append') {
+                            itemUpdates.colors = Array.from(new Set([...curCols, ...bulkColors]));
+                        } else if (bulkTagMode === 'remove') {
+                            itemUpdates.colors = curCols.filter(c => !bulkColors.includes(c));
+                        } else {
+                            itemUpdates.colors = bulkColors;
+                        }
+                    }
+
+                    const itemFields = Object.keys(itemUpdates);
+                    if (itemFields.length > 0) {
                         mergeBulkUpdate(
                             item.id,
-                            Object.fromEntries(fields.map(field => [field, item[field] ?? (Array.isArray(updates[field]) ? [] : '')])),
-                            updates
+                            Object.fromEntries(itemFields.map(field => [field, item[field] ?? (Array.isArray(itemUpdates[field]) ? [] : '')])),
+                            itemUpdates
                         );
-                    });
-                }
+                    }
+                });
                 shopOrderUpdates.forEach(item => mergeBulkUpdate(item.id, item.oldData, item.newData));
                 const undoItems = Array.from(bulkUpdateMap.values());
 
@@ -3385,7 +3705,15 @@ interface BackOfficeViewProps {
 
             if (activeCollection === 'orders') return <OrdersManager onBack={() => setActiveCollection('jewelry')} />;
             if (activeCollection === 'portfolio') {
-                return <PortfolioManager onBack={() => setActiveCollection('jewelry')} />;
+                return (
+                    <PortfolioManager
+                        onBack={() => setActiveCollection('jewelry')}
+                        onNavigateOrders={() => setActiveCollection('orders')}
+                        onOpenSettings={() => { setIsSettingsOpen(true); setActiveSettingsTab('portfolio'); }}
+                        currentUser={currentUser}
+                        onSignOut={handleAdminSignOut}
+                    />
+                );
             }
 
             return (
@@ -3530,8 +3858,8 @@ interface BackOfficeViewProps {
                     ) : (
                         <>
                             {viewMode === 'grid' && (
-                                <div ref={productGridRef} onPointerDown={handleLassoStart} onPointerMove={handleLassoMove} onPointerUp={finishLassoSelection} onPointerCancel={finishLassoSelection} className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 select-none">
-                                    {lassoRect && <div aria-hidden="true" className="pointer-events-none absolute z-20 border-2 border-emerald-600 bg-emerald-300/20" style={lassoRect} />}
+                                <div ref={productGridRef} onPointerDown={handleLassoStart} className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 select-none p-3 sm:p-4 bg-stone-50/50 rounded-2xl border border-stone-200/60">
+                                    {lassoRect && <div aria-hidden="true" className="pointer-events-none fixed z-[9999] border-2 border-emerald-500 bg-emerald-400/20 rounded shadow-sm" style={{ left: `${lassoRect.left}px`, top: `${lassoRect.top}px`, width: `${lassoRect.width}px`, height: `${lassoRect.height}px` }} />}
                                     {filteredAndSortedJewelry.map((item) => {
                                         const isSold = isSoldItem(item);
                                         const isBulkDragged = draggedProductId && selectedItemIds.includes(draggedProductId) && selectedItemIds.includes(item.id);
@@ -3549,13 +3877,13 @@ interface BackOfficeViewProps {
                                         >
                                             <div className="aspect-square bg-stone-100 flex items-center justify-center overflow-hidden relative">
                                                 <label onClick={(e) => e.stopPropagation()} className="absolute top-2 left-2 z-10 bg-white/90 backdrop-blur-sm border border-stone-200 rounded-lg p-1 shadow-sm cursor-pointer">
-                                                    <input type="checkbox" className="w-4 h-4 rounded border-stone-300" checked={selectedItemIds.includes(item.id)} onChange={(event) => selectItem(item.id, event.shiftKey)} />
+                                                    <input type="checkbox" className="w-4 h-4 rounded border-stone-300 accent-stone-900 cursor-pointer" checked={selectedItemIds.includes(item.id)} onClick={(event) => { event.stopPropagation(); selectItem(item.id, event.shiftKey); }} onChange={() => {}} />
                                                 </label>
                                                 {item.imageUrl ? (
                                                     item.fileType === 'video' ? (
                                                         <video src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} muted loop autoPlay playsInline />
                                                     ) : (
-                                                        <img src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
+                                                        <img referrerPolicy="no-referrer" src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
                                                     )
                                                 ) : <IconImage />}
 
@@ -3615,7 +3943,7 @@ interface BackOfficeViewProps {
                             )}
 
                             {viewMode === 'list' && (
-                                <div className="flex flex-col gap-3">
+                                <div onPointerDown={handleLassoStart} className="flex flex-col gap-3 p-3 sm:p-4 bg-stone-50/50 rounded-2xl border border-stone-200/60 select-none">
                                     {filteredAndSortedJewelry.map((item) => {
                                         const isSold = isSoldItem(item);
                                         const isBulkDragged = draggedProductId && selectedItemIds.includes(draggedProductId) && selectedItemIds.includes(item.id);
@@ -3633,14 +3961,14 @@ interface BackOfficeViewProps {
                                         >
                                             <div className="hidden md:flex h-10 w-6 items-center justify-center text-stone-300 font-black select-none">::</div>
                                             <label onClick={(e) => e.stopPropagation()} className="flex items-center justify-center p-2 cursor-pointer">
-                                                <input type="checkbox" className="w-4 h-4 rounded border-stone-300" checked={selectedItemIds.includes(item.id)} onChange={(event) => selectItem(item.id, event.shiftKey)} />
+                                                <input type="checkbox" className="w-4 h-4 rounded border-stone-300 accent-stone-900 cursor-pointer" checked={selectedItemIds.includes(item.id)} onClick={(event) => { event.stopPropagation(); selectItem(item.id, event.shiftKey); }} onChange={() => {}} />
                                             </label>
                                             <div className="w-16 h-16 bg-stone-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center border border-stone-200 relative">
                                                 {item.imageUrl ? (
                                                     item.fileType === 'video' ? (
                                                         <video src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} muted />
                                                     ) : (
-                                                        <img src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
+                                                        <img referrerPolicy="no-referrer" src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
                                                     )
                                                 ) : <IconImage />}
                                                 {item.stock > 1 && !isSold && <div className="absolute bottom-0 right-0 bg-stone-900 text-white text-[9px] px-1 font-bold rounded-tl">{item.stock}x</div>}
@@ -3679,103 +4007,335 @@ interface BackOfficeViewProps {
                     )}
 
                     {isBulkOpen && (
-                        <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
-                                <div className="p-5 border-b border-stone-100 bg-stone-50 flex items-center justify-between">
-                                    <div>
-                                        <h2 className="text-lg font-black text-stone-800">Μαζική επεξεργασία</h2>
-                                        <p className="text-xs font-bold text-stone-400">{selectedItems.length} προϊόντα επιλεγμένα</p>
+                        <div
+                            onClick={(e) => { if (e.target === e.currentTarget) setIsBulkOpen(false); }}
+                            className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 cursor-pointer overflow-y-auto"
+                        >
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col border border-stone-200 cursor-default animate-fade-in"
+                            >
+                                {/* Header */}
+                                <div className="p-4 sm:p-5 border-b border-stone-100 bg-stone-50 flex items-center justify-between gap-4 shrink-0">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="flex -space-x-2 overflow-hidden shrink-0">
+                                            {selectedItems.slice(0, 5).map((item) => (
+                                                <div key={item.id} className="w-10 h-10 rounded-lg border-2 border-white bg-stone-200 overflow-hidden shadow-sm">
+                                                    {item.imageUrl ? <img referrerPolicy="no-referrer" src={item.imageUrl} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs">✨</div>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h2 className="text-base sm:text-lg font-black text-stone-800 leading-tight">Μαζική επεξεργασία</h2>
+                                            <p className="text-xs font-bold text-stone-500">{selectedItems.length} επιλεγμένα προϊόντα</p>
+                                        </div>
                                     </div>
-                                    <button onClick={() => setIsBulkOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1 rounded-lg border border-stone-200"><IconX /></button>
+                                    <button onClick={() => setIsBulkOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-2 rounded-lg border border-stone-200" title="Κλείσιμο (Esc)"><IconX /></button>
                                 </div>
-                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-stone-600 mb-1">Μετακίνηση κατηγορίας</label>
-                                        <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.category} onChange={e => setBulkDraft({...bulkDraft, category: e.target.value})}>
-                                            <option value="">Καμία αλλαγή</option>
-                                            {allFormCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-stone-600 mb-1">Συλλογή</label>
-                                        <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.collection} onChange={e => setBulkDraft({...bulkDraft, collection: e.target.value})}>
-                                            <option value="">Καμία αλλαγή</option>
-                                            {allCollections.map(col => <option key={col} value={col}>{col}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="md:col-span-2 border border-amber-100 bg-amber-50/60 rounded-xl p-4">
-                                        <label className="block text-xs font-bold text-amber-800 mb-1">Σειρά εμφάνισης στο Shop</label>
-                                        <select className="w-full border border-amber-200 rounded-lg px-4 py-2.5 bg-white outline-none" value={bulkDraft.shopPlacement} onChange={e => setBulkDraft({...bulkDraft, shopPlacement: e.target.value})}>
-                                            <option value="">Καμία αλλαγή</option>
-                                            <option value="top">Μετακίνηση στην αρχή του Shop</option>
-                                            <option value="up">Μετακίνηση μία θέση πάνω</option>
-                                            <option value="down">Μετακίνηση μία θέση κάτω</option>
-                                            <option value="bottom">Μετακίνηση στο τέλος του Shop</option>
-                                        </select>
-                                        <p className="mt-2 text-[11px] font-medium text-amber-700">Μετακινεί μαζί τα επιλεγμένα προϊόντα κρατώντας την ίδια σειρά μεταξύ τους.</p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-stone-600 mb-1">Κατάσταση</label>
-                                        <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.status} onChange={e => setBulkDraft({...bulkDraft, status: e.target.value})}>
-                                            <option value="">Καμία αλλαγή</option>
-                                            {allFormStatuses.map(stat => <option key={stat} value={stat}>{stat}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-stone-600 mb-1">Τιμή</label>
-                                        <input type="number" min="0" step="any" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.price} onChange={e => setBulkDraft({...bulkDraft, price: e.target.value})} placeholder="Καμία αλλαγή" />
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <div className="flex items-center justify-between gap-3 mb-2">
-                                            <label className="block text-xs font-bold text-indigo-700">Χρώματα</label>
-                                            {bulkColors.length > 0 && (
-                                                <button type="button" onClick={() => clearBulkTags('colors')} className="text-[11px] font-bold text-stone-500 hover:text-stone-900">Καθαρισμός</button>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-wrap gap-2 p-3 bg-indigo-50/40 border border-indigo-100 rounded-xl max-h-32 overflow-auto">
-                                            {allAvailableColors.map(col => {
-                                                const isSelected = bulkColors.includes(col);
-                                                return (
-                                                    <button key={col} type="button" onClick={() => toggleBulkTag('colors', col)} className={`text-[11px] px-2.5 py-1 rounded-md border font-bold transition ${isSelected ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-indigo-100 text-indigo-700 hover:bg-indigo-100'}`}>
-                                                        {isSelected ? '✓ ' : '+ '}{col}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <div className="flex items-center justify-between gap-3 mb-2">
-                                            <label className="block text-xs font-bold text-stone-700">Υλικά</label>
-                                            {bulkMaterials.length > 0 && (
-                                                <button type="button" onClick={() => clearBulkTags('materials')} className="text-[11px] font-bold text-stone-500 hover:text-stone-900">Καθαρισμός</button>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-wrap gap-2 p-3 bg-stone-50 border border-stone-100 rounded-xl max-h-32 overflow-auto">
-                                            {allAvailableMaterials.map(mat => {
-                                                const isSelected = bulkMaterials.includes(mat);
-                                                return (
-                                                    <button key={mat} type="button" onClick={() => toggleBulkTag('materials', mat)} className={`text-[11px] px-2.5 py-1 rounded-md border font-bold transition ${isSelected ? 'bg-stone-900 border-stone-900 text-white shadow-sm' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'}`}>
-                                                        {isSelected ? '✓ ' : '+ '}{mat}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-stone-600 mb-1">Σχόλια / σημειώσεις</label>
-                                        <textarea className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none h-20 resize-none" value={bulkDraft.notes} onChange={e => setBulkDraft({...bulkDraft, notes: e.target.value})} placeholder="Καμία αλλαγή"></textarea>
-                                    </div>
+
+                                {/* Navigation Tabs */}
+                                <div className="px-5 py-2.5 border-b border-stone-200 bg-stone-50/90 flex flex-wrap items-center gap-2 shrink-0">
+                                    {[
+                                        ['fields', '📋 Βασικά Στοιχεία'],
+                                        ['search_replace', '🔍 Εντοπισμός & Αντικατάσταση'],
+                                        ['pricing', '💶 Τιμές & Απόθεμα'],
+                                        ['tags', '🏷️ Χρώματα & Υλικά']
+                                    ].map(([tabId, label]) => (
+                                        <button
+                                            key={tabId}
+                                            type="button"
+                                            onClick={() => setBulkTab(tabId)}
+                                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition border shadow-xs ${
+                                                bulkTab === tabId
+                                                    ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
+                                                    : 'bg-white hover:bg-stone-100 text-stone-700 border-stone-200'
+                                            }`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
                                 </div>
-                                <div className="p-5 border-t border-stone-100 bg-stone-50 flex justify-end gap-3">
-                                    <button onClick={() => setIsBulkOpen(false)} className="px-6 py-2.5 bg-white border border-stone-200 text-stone-700 rounded-lg text-sm font-bold hover:bg-stone-100 transition">Κλείσιμο</button>
-                                    <button onClick={handleBulkUpdate} className="px-6 py-2.5 bg-stone-900 text-white rounded-lg text-sm font-bold hover:bg-stone-800 transition shadow-md">Εφαρμογή</button>
+
+                                {/* Body - Smooth Scroll */}
+                                <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-6">
+                                    {bulkTab === 'fields' && (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-stone-600 mb-1">Μετακίνηση κατηγορίας</label>
+                                                    <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.category} onChange={e => setBulkDraft({...bulkDraft, category: e.target.value})}>
+                                                        <option value="">Καμία αλλαγή</option>
+                                                        {allFormCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-stone-600 mb-1">Συλλογή</label>
+                                                    <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.collection} onChange={e => setBulkDraft({...bulkDraft, collection: e.target.value})}>
+                                                        <option value="">Καμία αλλαγή</option>
+                                                        {allCollections.map(col => <option key={col} value={col}>{col}</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-stone-600 mb-1">Κατάσταση</label>
+                                                    <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkDraft.status} onChange={e => setBulkDraft({...bulkDraft, status: e.target.value})}>
+                                                        <option value="">Καμία αλλαγή</option>
+                                                        {allFormStatuses.map(stat => <option key={stat} value={stat}>{stat}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-stone-600 mb-1">Απόθεμα (τεμάχια)</label>
+                                                    <input type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkStock} onChange={e => setBulkStock(e.target.value)} placeholder="Καμία αλλαγή" />
+                                                </div>
+                                            </div>
+
+                                            <div className="border border-amber-100 bg-amber-50/60 rounded-xl p-4">
+                                                <label className="block text-xs font-bold text-amber-800 mb-1">Σειρά εμφάνισης στο Shop</label>
+                                                <select className="w-full border border-amber-200 rounded-lg px-4 py-2.5 bg-white outline-none" value={bulkDraft.shopPlacement} onChange={e => setBulkDraft({...bulkDraft, shopPlacement: e.target.value})}>
+                                                    <option value="">Καμία αλλαγή</option>
+                                                    <option value="top">Μετακίνηση στην αρχή του Shop</option>
+                                                    <option value="up">Μετακίνηση μία θέση πάνω</option>
+                                                    <option value="down">Μετακίνηση μία θέση κάτω</option>
+                                                    <option value="bottom">Μετακίνηση στο τέλος του Shop</option>
+                                                </select>
+                                                <p className="mt-2 text-[11px] font-medium text-amber-700">Μετακινεί μαζί τα επιλεγμένα προϊόντα κρατώντας την ίδια σειρά μεταξύ τους.</p>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-stone-600 mb-1">Σημειώσεις / Περιγραφή</label>
+                                                <textarea className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none h-24 resize-y text-sm" value={bulkDraft.notes} onChange={e => setBulkDraft({...bulkDraft, notes: e.target.value})} placeholder="Καμία αλλαγή (ή εισάγετε νέες σημειώσεις για όλα)"></textarea>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {bulkTab === 'search_replace' && (
+                                        <div className="space-y-5 bg-stone-50/50 p-4 sm:p-5 rounded-xl border border-stone-200">
+                                            <div>
+                                                <h3 className="text-sm font-black text-stone-900 mb-1">Μαζικός Εντοπισμός & Αντικατάσταση / Διαγραφή</h3>
+                                                <p className="text-xs text-stone-500">Εντοπίστε λέξεις ή φράσεις στα επιλεγμένα προϊόντα και αντικαταστήστε τις ή διαγράψτε τις αυτόματα.</p>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-stone-700 mb-1">Λέξη / Φράση προς εύρεση *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={bulkFindText}
+                                                        onChange={e => setBulkFindText(e.target.value)}
+                                                        className="w-full border border-stone-300 rounded-lg px-3.5 py-2.5 bg-white outline-none focus:border-stone-900 text-sm font-medium"
+                                                        placeholder="π.χ. παλιό κείμενο, ορχιδέα..."
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-stone-700 mb-1">Αντικατάσταση με</label>
+                                                    <input
+                                                        type="text"
+                                                        value={bulkReplaceText}
+                                                        onChange={e => setBulkReplaceText(e.target.value)}
+                                                        className="w-full border border-stone-300 rounded-lg px-3.5 py-2.5 bg-white outline-none focus:border-stone-900 text-sm font-medium"
+                                                        placeholder="Αφήστε κενό για απλή διαγραφή"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <span className="block text-xs font-bold text-stone-700 mb-2">Πεδία εφαρμογής:</span>
+                                                <div className="flex flex-wrap gap-3">
+                                                    {[
+                                                        ['name', 'Τίτλος / Όνομα'],
+                                                        ['notes', 'Σημειώσεις / Περιγραφή'],
+                                                        ['materials', 'Υλικά'],
+                                                        ['colors', 'Χρώματα'],
+                                                        ['collection', 'Συλλογή']
+                                                    ].map(([field, label]) => (
+                                                        <label key={field} className="flex items-center gap-1.5 text-xs font-medium text-stone-700 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-stone-200">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={Boolean(bulkFindScopes[field])}
+                                                                onChange={e => setBulkFindScopes(prev => ({ ...prev, [field]: e.target.checked }))}
+                                                                className="accent-stone-900"
+                                                            />
+                                                            <span>{label}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-4 text-xs">
+                                                <label className="flex items-center gap-1.5 cursor-pointer text-stone-700">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={bulkCaseSensitive}
+                                                        onChange={e => setBulkCaseSensitive(e.target.checked)}
+                                                        className="accent-stone-900"
+                                                    />
+                                                    <span>Ταίριασμα πεζών/κεφαλαίων</span>
+                                                </label>
+                                                <label className="flex items-center gap-1.5 cursor-pointer text-stone-700">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={bulkWholeWord}
+                                                        onChange={e => setBulkWholeWord(e.target.checked)}
+                                                        className="accent-stone-900"
+                                                    />
+                                                    <span>Μόνο ολόκληρη λέξη</span>
+                                                </label>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-3 pt-2 border-t border-stone-200">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleBulkFindAndReplace(false)}
+                                                    className="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1.5"
+                                                >
+                                                    🔄 Αντικατάσταση στα {selectedItems.length} επιλεγμένα
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleBulkFindAndReplace(true)}
+                                                    className="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5"
+                                                >
+                                                    🗑️ Διαγραφή λέξης από τα επιλεγμένα
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {bulkTab === 'pricing' && (
+                                        <div className="space-y-5">
+                                            <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-100">
+                                                <h3 className="text-sm font-black text-emerald-900 mb-1">Άμεση Τιμολόγηση</h3>
+                                                <p className="text-xs text-emerald-700 mb-3">Ορίστε συγκεκριμένη σταθερή τιμή για όλα τα επιλεγμένα προϊόντα.</p>
+                                                <label className="block text-xs font-bold text-stone-700 mb-1">Νέα Τιμή (€)</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    className="w-full sm:w-60 border border-stone-200 rounded-lg px-4 py-2.5 bg-white outline-none focus:border-stone-900 text-sm font-bold"
+                                                    value={bulkDraft.price}
+                                                    onChange={e => setBulkDraft({...bulkDraft, price: e.target.value})}
+                                                    placeholder="π.χ. 25.00"
+                                                />
+                                            </div>
+
+                                            <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-100 space-y-3">
+                                                <h3 className="text-sm font-black text-amber-900">Μαζική Προσαρμογή Τιμών (+/- % ή €)</h3>
+                                                <p className="text-xs text-amber-700">Αυξήστε ή μειώστε τις υφιστάμενες τιμές κάθε προϊόντος κατά ποσοστό ή σταθερό ποσό.</p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-stone-700 mb-1">Τρόπος προσαρμογής</label>
+                                                        <select
+                                                            value={bulkPriceAdjustmentMode}
+                                                            onChange={e => setBulkPriceAdjustmentMode(e.target.value)}
+                                                            className="w-full border border-stone-200 rounded-lg px-3 py-2 bg-white text-xs font-bold outline-none"
+                                                        >
+                                                            <option value="none">Χωρίς σχετική προσαρμογή</option>
+                                                            <option value="percent_increase">Αύξηση κατά ποσοστό (%)</option>
+                                                            <option value="percent_decrease">Μείωση κατά ποσοστό (%)</option>
+                                                            <option value="fixed_increase">Αύξηση κατά σταθερό ποσό (€)</option>
+                                                            <option value="fixed_decrease">Μείωση κατά σταθερό ποσό (€)</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-stone-700 mb-1">Ποσό / Ποσοστό</label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.1"
+                                                            disabled={bulkPriceAdjustmentMode === 'none'}
+                                                            value={bulkPriceAdjustmentValue}
+                                                            onChange={e => setBulkPriceAdjustmentValue(e.target.value)}
+                                                            placeholder="π.χ. 10 ή 5"
+                                                            className="w-full border border-stone-200 rounded-lg px-3 py-2 bg-white text-xs font-bold outline-none disabled:bg-stone-100"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {bulkTab === 'tags' && (
+                                        <div className="space-y-5">
+                                            <div className="flex flex-wrap items-center gap-4 p-3 bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold text-stone-700">
+                                                <span>Λειτουργία ετικετών:</span>
+                                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                                    <input type="radio" name="bulkTagMode" value="append" checked={bulkTagMode === 'append'} onChange={() => setBulkTagMode('append')} />
+                                                    <span>Προσθήκη</span>
+                                                </label>
+                                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                                    <input type="radio" name="bulkTagMode" value="remove" checked={bulkTagMode === 'remove'} onChange={() => setBulkTagMode('remove')} />
+                                                    <span>Αφαίρεση</span>
+                                                </label>
+                                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                                    <input type="radio" name="bulkTagMode" value="overwrite" checked={bulkTagMode === 'overwrite'} onChange={() => setBulkTagMode('overwrite')} />
+                                                    <span>Πλήρης αντικατάσταση</span>
+                                                </label>
+                                            </div>
+
+                                            <div>
+                                                <div className="flex items-center justify-between gap-3 mb-2">
+                                                    <label className="block text-xs font-bold text-indigo-700">Χρώματα</label>
+                                                    {bulkColors.length > 0 && (
+                                                        <button type="button" onClick={() => clearBulkTags('colors')} className="text-[11px] font-bold text-stone-500 hover:text-stone-900">Καθαρισμός</button>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 p-3 bg-indigo-50/40 border border-indigo-100 rounded-xl max-h-36 overflow-auto">
+                                                    {allAvailableColors.map(col => {
+                                                        const isSelected = bulkColors.includes(col);
+                                                        return (
+                                                            <button key={col} type="button" onClick={() => toggleBulkTag('colors', col)} className={`text-[11px] px-2.5 py-1 rounded-md border font-bold transition ${isSelected ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-indigo-100 text-indigo-700 hover:bg-indigo-100'}`}>
+                                                                {isSelected ? '✓ ' : '+ '}{col}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div className="flex items-center justify-between gap-3 mb-2">
+                                                    <label className="block text-xs font-bold text-stone-700">Υλικά</label>
+                                                    {bulkMaterials.length > 0 && (
+                                                        <button type="button" onClick={() => clearBulkTags('materials')} className="text-[11px] font-bold text-stone-500 hover:text-stone-900">Καθαρισμός</button>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 p-3 bg-stone-50 border border-stone-100 rounded-xl max-h-36 overflow-auto">
+                                                    {allAvailableMaterials.map(mat => {
+                                                        const isSelected = bulkMaterials.includes(mat);
+                                                        return (
+                                                            <button key={mat} type="button" onClick={() => toggleBulkTag('materials', mat)} className={`text-[11px] px-2.5 py-1 rounded-md border font-bold transition ${isSelected ? 'bg-stone-900 border-stone-900 text-white shadow-sm' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'}`}>
+                                                                {isSelected ? '✓ ' : '+ '}{mat}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Footer (sticky) */}
+                                <div className="p-4 sm:p-5 border-t border-stone-100 bg-stone-50 flex items-center justify-between gap-3 shrink-0">
+                                    <button onClick={clearBulkSelection} className="text-xs font-bold text-stone-500 hover:text-stone-800 transition">Ακύρωση & Αποεπιλογή</button>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => setIsBulkOpen(false)} className="px-5 py-2.5 bg-white border border-stone-200 text-stone-700 rounded-lg text-xs sm:text-sm font-bold hover:bg-stone-100 transition">Κλείσιμο</button>
+                                        <button onClick={handleBulkUpdate} className="px-6 py-2.5 bg-stone-900 text-white rounded-lg text-xs sm:text-sm font-bold hover:bg-stone-800 transition shadow-md">Εφαρμογή στα {selectedItems.length}</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
                     {isAddOpen && (
-                        <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-2 sm:p-4 z-50">
+                        <div
+                            onClick={(e) => {
+                                if (e.target === e.currentTarget && !isSaving && !mediaPreparing) {
+                                    setIsAddOpen(false);
+                                }
+                            }}
+                            className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 cursor-pointer overflow-y-auto"
+                        >
 
                             {isSaving && (
                                 <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-[60] flex flex-col items-center justify-center p-6 rounded-2xl">
@@ -3791,17 +4351,84 @@ interface BackOfficeViewProps {
                                 </div>
                             )}
 
-                            <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl relative">
-                                <div className="p-5 border-b border-stone-100 flex justify-between items-center bg-stone-50 rounded-t-2xl">
-                                    <div>
-                                        <h2 className="text-xl font-bold text-stone-800">
-                                            {isEditMode ? 'Επεξεργασία προϊόντος' : 'Νέα καταχώρηση'}
-                                        </h2>
-                                        <p className="text-xs font-bold text-stone-400">{isEditMode ? 'Επεξεργασία υπάρχουσας καταχώρησης' : 'Νέα καταχώρηση καταλόγου'}</p>
-                                    </div>
-                                    <button type="button" disabled={mediaPreparing || isSaving} onClick={() => setIsAddOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1 rounded-lg border border-stone-200"><IconX /></button>
-                                </div>
-                                <div className="px-5 py-3 border-b border-stone-100 bg-white flex gap-2 overflow-x-auto">
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl relative border border-stone-200 cursor-default animate-fade-in"
+                            >
+                                {(() => {
+                                    const modalPreviewMedia = formShopMediaList?.[0]?.url || currentItem?.imageUrl || currentItem?.mediaList?.[0]?.url || formPrivateMediaList?.[0]?.url;
+                                    const modalPreviewType = formShopMediaList?.[0]?.type || currentItem?.fileType || (modalPreviewMedia?.includes('.mp4') ? 'video' : 'image');
+                                    return (
+                                        <div className="p-4 sm:p-5 border-b border-stone-100 flex items-center justify-between gap-4 bg-stone-50 rounded-t-2xl shrink-0">
+                                            <div className="flex items-center gap-3.5 min-w-0">
+                                                {modalPreviewMedia ? (
+                                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-stone-200 bg-stone-100 overflow-hidden shrink-0 shadow-sm relative group">
+                                                        {modalPreviewType === 'video' ? (
+                                                            <video src={modalPreviewMedia} className="w-full h-full object-cover" muted playsInline />
+                                                        ) : (
+                                                            <img referrerPolicy="no-referrer" src={modalPreviewMedia} alt="" className="w-full h-full object-cover" />
+                                                        )}
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <span className="text-[10px] text-white font-bold">Προεπισκόπηση</span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border border-dashed border-stone-300 bg-stone-100 flex items-center justify-center text-stone-400 shrink-0">
+                                                        <span className="text-2xl">✨</span>
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                        <span className="text-[10px] font-black uppercase tracking-wider text-stone-400">
+                                                            {isEditMode ? 'Επεξεργασία Προϊόντος' : 'Νέα Καταχώρηση'}
+                                                        </span>
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-stone-200/80 text-stone-700">
+                                                            {formCategory || currentItem?.category || 'Κόσμημα'}
+                                                        </span>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${getStatusColor(formStatus || currentItem?.status || 'Διαθέσιμο')}`}>
+                                                            {formStatus || currentItem?.status || 'Διαθέσιμο'}
+                                                        </span>
+                                                        {formPrice && (
+                                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                                                {formPrice}€
+                                                            </span>
+                                                        )}
+                                                        {currentItem?.id && (
+                                                            <span className="text-[10px] font-mono text-stone-400 hidden sm:inline">
+                                                                #{currentItem.id.slice(0, 6)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <h2 className="text-base sm:text-lg font-black text-stone-900 leading-tight truncate">
+                                                        {formName || currentItem?.name || (isEditMode ? 'Επεξεργασία υπάρχουσας καταχώρησης' : 'Νέα καταχώρηση καταλόγου')}
+                                                    </h2>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                {modalPreviewMedia && modalPreviewType !== 'video' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenImageEditor(modalPreviewMedia)}
+                                                        className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-stone-200 rounded-lg text-xs font-bold text-stone-700 hover:bg-stone-100 transition shadow-sm"
+                                                        title="Επεξεργασία εικόνας στο ενσωματωμένο studio"
+                                                    >
+                                                        🎨 <span className="hidden md:inline">Επεξεργασία εικόνας</span>
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    disabled={mediaPreparing || isSaving}
+                                                    onClick={() => setIsAddOpen(false)}
+                                                    className="text-stone-400 hover:text-stone-800 bg-white p-2 rounded-lg border border-stone-200 transition shadow-sm"
+                                                    title="Κλείσιμο (Esc)"
+                                                >
+                                                    <IconX />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                                <div className="px-5 py-2.5 border-b border-stone-200 bg-stone-50/90 flex flex-wrap items-center gap-2 shrink-0">
                                     {[
                                         ['form-basic', 'Βασικά'],
                                         ['form-pricing', 'Τιμές'],
@@ -3809,16 +4436,28 @@ interface BackOfficeViewProps {
                                         ['form-links', 'Links'],
                                         ['form-shop-media', 'Εικόνες Shop'],
                                         ['form-private-media', 'Αρχείο'],
-                                        ['form-ai', 'AI']
+                                        ['form-ai', 'AI Studio']
                                     ].map(([id, label]) => (
-                                        <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="px-3.5 py-2 text-xs font-black bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg whitespace-nowrap transition border border-stone-200/70">
+                                        <button
+                                            key={id}
+                                            type="button"
+                                            onClick={() => {
+                                                setActiveFormTab(id);
+                                                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            }}
+                                            className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition border shadow-xs ${
+                                                activeFormTab === id
+                                                    ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
+                                                    : 'bg-white hover:bg-stone-100 text-stone-700 border-stone-200'
+                                            }`}
+                                        >
                                             {label}
                                         </button>
                                     ))}
                                 </div>
 
-                                {videoProgress && <div className="px-5 py-2"><VideoUploadStatus value={videoProgress} busy={videoCompressing} onCancel={() => videoAbort.current?.abort()} /></div>}
-                                <div className="overflow-y-auto p-6">
+                                {videoProgress && <div className="px-5 py-2 shrink-0"><VideoUploadStatus value={videoProgress} busy={videoCompressing} onCancel={() => videoAbort.current?.abort()} /></div>}
+                                <div className="overflow-y-auto p-6 flex-1">
                                     <form id="jewelry-form" onSubmit={handleSaveItem} className="flex flex-col gap-8">
                                         <section id="form-ai" className="order-last scroll-mt-4 rounded-2xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm">
                                             <div className="flex flex-col lg:flex-row lg:items-start gap-4">
@@ -3863,17 +4502,43 @@ interface BackOfficeViewProps {
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex flex-wrap gap-2">
-                                                        <button type="button" onClick={() => handleBackofficeAiGenerate('full')} disabled={isAiProductWorking} className="px-4 py-2 bg-violet-700 text-white rounded-lg text-xs font-bold hover:bg-violet-800 disabled:opacity-50 transition">Πλήρης πρόταση</button>
-                                                        <button type="button" onClick={() => handleBackofficeAiGenerate('title')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-violet-200 text-violet-800 rounded-lg text-xs font-bold hover:bg-violet-100 disabled:opacity-50 transition">Τίτλος</button>
-                                                        <button type="button" onClick={() => handleBackofficeAiGenerate('description')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-violet-200 text-violet-800 rounded-lg text-xs font-bold hover:bg-violet-100 disabled:opacity-50 transition">Περιγραφή</button>
-                                                        <button type="button" onClick={() => handleBackofficeAiGenerate('tags')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-violet-200 text-violet-800 rounded-lg text-xs font-bold hover:bg-violet-100 disabled:opacity-50 transition">Χρώματα / Υλικά</button>
-                                                        {isAiProductWorking && <span className="text-xs font-bold text-violet-700 px-2 py-2">Το AI γράφει...</span>}
+                                                    <div className="space-y-3">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('full')} disabled={isAiProductWorking} className="px-4 py-2 bg-violet-700 text-white rounded-lg text-xs font-bold hover:bg-violet-800 disabled:opacity-50 transition shadow-sm">Πλήρης πρόταση</button>
+                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('title')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-violet-200 text-violet-800 rounded-lg text-xs font-bold hover:bg-violet-100 disabled:opacity-50 transition">Τίτλος</button>
+                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('description')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-violet-200 text-violet-800 rounded-lg text-xs font-bold hover:bg-violet-100 disabled:opacity-50 transition">Περιγραφή</button>
+                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('tags')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-violet-200 text-violet-800 rounded-lg text-xs font-bold hover:bg-violet-100 disabled:opacity-50 transition">Χρώματα / Υλικά</button>
+                                                            
+                                                        </div>
+
+                                                        {isAiProductWorking && (
+                                                            <div className="space-y-1 bg-violet-100/70 p-2.5 rounded-lg border border-violet-200">
+                                                                <div className="flex items-center justify-between text-xs font-bold text-violet-800">
+                                                                    <span>Το AI επεξεργάζεται τα στοιχεία της δημιουργίας...</span>
+                                                                    <span className="animate-spin text-sm">✨</span>
+                                                                </div>
+                                                                <div className="w-full bg-violet-200 rounded-full h-1.5 overflow-hidden">
+                                                                    <div className="bg-violet-600 h-1.5 rounded-full animate-pulse w-full"></div>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     {aiProductError && (
-                                                        <div className="mt-3 border border-rose-200 bg-rose-50 text-rose-700 rounded-lg p-3 text-xs font-bold">
-                                                            {aiProductError}
+                                                        <div className="mt-3 border border-rose-200 bg-rose-50 text-rose-800 rounded-xl p-3.5 text-xs space-y-2">
+                                                            <div className="font-bold flex items-center gap-1.5 text-rose-800">
+                                                                <span>⚠️</span>
+                                                                <span>{aiProductError}</span>
+                                                            </div>
+                                                            <div className="p-2.5 bg-white/80 rounded-lg border border-rose-100 text-stone-700 space-y-1.5">
+                                                                <p className="font-bold text-stone-800">💡 Πώς να ενεργοποιήσετε το Google Gemini AI:</p>
+                                                                <ol className="list-decimal list-inside space-y-1 text-stone-600">
+                                                                    <li>Αποκτήστε δωρεάν κλειδί API από το <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline font-bold text-violet-700">Google AI Studio</a>.</li>
+                                                                    <li>Προσθέστε στο αρχείο <code>.env</code> της εφαρμογής τη γραμμή: <code>GEMINI_API_KEY=το_κλειδί_σας</code>.</li>
+                                                                    <li>Εναλλακτικά πατήστε το παρακάτω κουμπί για άμεση δοκιμή χωρίς κλειδί!</li>
+                                                                </ol>
+                                                                
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
@@ -4221,7 +4886,7 @@ interface BackOfficeViewProps {
                                                                     {media.type === 'video' ? (
                                                                         <video src={media.url} className="w-full h-full object-cover pointer-events-none" muted />
                                                                     ) : (
-                                                                        <img src={media.url} className="w-full h-full object-cover pointer-events-none" />
+                                                                        <img referrerPolicy="no-referrer" src={media.url} className="w-full h-full object-cover pointer-events-none" />
                                                                     )}
 
                                                                     <MediaDownload media={media} name={formName || 'aram-media'} className="absolute bottom-1 right-1 z-10" />
@@ -4275,7 +4940,7 @@ interface BackOfficeViewProps {
                                                                     {media.type === 'video' ? (
                                                                         <video src={media.url} className="w-full h-full object-cover pointer-events-none grayscale" muted />
                                                                     ) : (
-                                                                        <img src={media.url} className="w-full h-full object-cover pointer-events-none grayscale" />
+                                                                        <img referrerPolicy="no-referrer" src={media.url} className="w-full h-full object-cover pointer-events-none grayscale" />
                                                                     )}
 
                                                                     <div className="absolute top-1 left-1 bg-stone-800 text-white text-[9px] px-1 rounded shadow-sm">🔒 Κρυφό</div>
@@ -4350,7 +5015,7 @@ interface BackOfficeViewProps {
                                             <img
                                                 src={imageEditorMedia.url}
                                                 alt=""
-                                                draggable={false}
+                                                referrerPolicy="no-referrer" draggable={false}
                                                 onLoad={(e) => {
                                                     const nextInfo = { width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight };
                                                     setImageEditorImageInfo(nextInfo);
@@ -4457,8 +5122,14 @@ interface BackOfficeViewProps {
                     )}
 
                     {isDetailOpen && currentItem && (
-                        <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
+                        <div
+                            onClick={(e) => { if (e.target === e.currentTarget) setIsDetailOpen(false); }}
+                            className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 cursor-pointer overflow-y-auto"
+                        >
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row border border-stone-200 cursor-default animate-fade-in"
+                            >
 
                                 <div className="w-full md:w-1/2 p-3 md:p-4 bg-stone-50 border-r border-stone-100 flex flex-col justify-center relative">
                                     <div className="aspect-[4/5] md:aspect-square w-full rounded-xl overflow-hidden bg-white flex items-center justify-center relative shadow-inner border border-stone-100">
@@ -4472,7 +5143,7 @@ interface BackOfficeViewProps {
                                                     {activeMedia.type === 'video' ? (
                                                         <video src={activeMedia.url} key={activeMedia.url} className="w-full h-full object-cover" controls autoPlay muted loop playsInline />
                                                     ) : (
-                                                        <img src={activeMedia.url} key={activeMedia.url} className="w-full h-full object-cover" alt={currentItem.name} />
+                                                        <img referrerPolicy="no-referrer" src={activeMedia.url} key={activeMedia.url} className="w-full h-full object-cover" alt={currentItem.name} />
                                                     )}
                                                     {activeMedia.showInShop === false && (
                                                         <div className="absolute top-2 right-2 bg-stone-800 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1 shadow-lg">
@@ -4495,7 +5166,7 @@ interface BackOfficeViewProps {
                                                         {m.type === 'video' ? (
                                                             <div className="w-full h-full bg-stone-800 flex items-center justify-center text-[10px]">📹</div>
                                                         ) : (
-                                                            <img src={m.url} className="w-full h-full object-cover" />
+                                                            <img referrerPolicy="no-referrer" src={m.url} className="w-full h-full object-cover" />
                                                         )}
                                                         {m.showInShop === false && <span className="absolute top-0 right-0 bg-stone-900/90 text-white text-[8px] p-0.5 rounded-bl">🔒</span>}
                                                     </button>
@@ -4598,7 +5269,7 @@ interface BackOfficeViewProps {
                                     {currentItem.notes && (
                                         <div className="mb-8">
                                             <h4 className="text-[10px] font-bold text-stone-400 uppercase mb-2">Σημειωσεις</h4>
-                                            <p className="text-sm text-stone-700 bg-stone-50 p-4 rounded-xl border border-stone-100 whitespace-pre-wrap">{currentItem.notes}</p>
+                                            <p className="text-sm text-stone-700 bg-stone-50 p-4 rounded-xl border border-stone-100 whitespace-pre-wrap">{stripVintedCondition(currentItem.notes)}</p>
                                         </div>
                                     )}
 
@@ -4613,42 +5284,73 @@ interface BackOfficeViewProps {
 
                     {/* ΝΕΟ SETTINGS PANEL ΜΕ ΚΑΡΤΕΛΕΣ (Shop Design) */}
                     {isSettingsOpen && (
-                        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-2xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                        <div
+                            onClick={(e) => {
+                                if (e.target === e.currentTarget && !mediaPreparing && !isSavingSettings) {
+                                    setIsSettingsOpen(false);
+                                }
+                            }}
+                            className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 cursor-pointer overflow-y-auto"
+                        >
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-white rounded-2xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-stone-200 cursor-default animate-fade-in"
+                            >
                                 <div className="p-5 border-b border-stone-100 flex justify-between items-center bg-stone-50">
-                                    <div className="flex items-center gap-2">
-                                        <IconSettings />
-                                        <h2 className="text-lg font-bold text-stone-800">Διαχείριση Συστήματος</h2>
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-lg bg-stone-900 text-white flex items-center justify-center shadow-sm">
+                                            <IconSettings />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-black text-stone-900 leading-tight">Διαχείριση Συστήματος</h2>
+                                            <p className="text-xs font-bold text-stone-400">Εμφάνιση καταστημάτων, Design Studio, πεδία & AI</p>
+                                        </div>
                                     </div>
-                                    <button disabled={mediaPreparing || isSavingSettings} onClick={() => setIsSettingsOpen(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1 rounded-lg border border-stone-200 disabled:opacity-40"><IconX /></button>
+                                    <button
+                                        disabled={mediaPreparing || isSavingSettings}
+                                        onClick={() => setIsSettingsOpen(false)}
+                                        className="text-stone-400 hover:text-stone-800 bg-white p-2 rounded-lg border border-stone-200 disabled:opacity-40 transition shadow-sm"
+                                        title="Κλείσιμο (Esc)"
+                                    >
+                                        <IconX />
+                                    </button>
                                 </div>
 
-                                <div className="flex flex-wrap border-b border-stone-200 bg-stone-50 px-4 pt-2">
+                                <div className="flex flex-wrap border-b border-stone-200 bg-stone-100/70 px-4 pt-2 gap-1">
                                     <button
-                                        onClick={() => setActiveSettingsTab('fields')}
-                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'fields' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
+                                        type="button"
+                                        onClick={() => setActiveSettingsTab('design')}
+                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-lg transition flex items-center gap-1.5 ${activeSettingsTab === 'design' ? 'bg-white text-violet-900 border-t-2 border-x border-violet-600 shadow-sm' : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/50'}`}
                                     >
-                                        Προσαρμοσμένα Πεδία
+                                        🎨 Design Studio <span className="text-[10px] bg-violet-100 text-violet-800 px-1.5 py-0.2 rounded font-bold">Shop & Portfolio</span>
                                     </button>
                                     <button
+                                        type="button"
                                         onClick={() => setActiveSettingsTab('shop')}
-                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'shop' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
+                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-lg transition flex items-center gap-1.5 ${activeSettingsTab === 'shop' ? 'bg-white text-stone-900 border-t-2 border-x border-stone-800 shadow-sm' : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/50'}`}
                                     >
-                                        Σχεδιασμός Shop
-                                    </button>
-                                    <button type="button" onClick={() => setActiveSettingsTab('portfolio')}
-                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'portfolio' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}>
-                                        Σχεδιασμός Portfolio
-                                    </button>
-                                    <button type="button" onClick={() => setActiveSettingsTab('design')}
-                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'design' ? 'border-violet-700 text-violet-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}>
-                                        Design Studio
+                                        🛍️ Σχεδιασμός Shop
                                     </button>
                                     <button
-                                        onClick={() => setActiveSettingsTab('assistant')}
-                                        className={`px-4 py-3 font-bold text-sm border-b-2 transition ${activeSettingsTab === 'assistant' ? 'border-stone-800 text-stone-800' : 'border-transparent text-stone-500 hover:text-stone-700'}`}
+                                        type="button"
+                                        onClick={() => setActiveSettingsTab('portfolio')}
+                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-lg transition flex items-center gap-1.5 ${activeSettingsTab === 'portfolio' ? 'bg-white text-stone-900 border-t-2 border-x border-stone-800 shadow-sm' : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/50'}`}
                                     >
-                                        AI Back Office
+                                        🖼️ Σχεδιασμός Portfolio
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveSettingsTab('fields')}
+                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-lg transition flex items-center gap-1.5 ${activeSettingsTab === 'fields' ? 'bg-white text-stone-900 border-t-2 border-x border-stone-800 shadow-sm' : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/50'}`}
+                                    >
+                                        ⚙️ Προσαρμοσμένα Πεδία
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveSettingsTab('assistant')}
+                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-lg transition flex items-center gap-1.5 ${activeSettingsTab === 'assistant' ? 'bg-white text-stone-900 border-t-2 border-x border-stone-800 shadow-sm' : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/50'}`}
+                                    >
+                                        🤖 AI Back Office
                                     </button>
                                 </div>
 
@@ -5171,8 +5873,8 @@ interface BackOfficeViewProps {
 
 
                     {isVintedImportOpen && (
-                        <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-3 md:p-4 z-50">
-                            <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+                        <div onClick={(e) => { if (e.target === e.currentTarget && !isVintedImportWorking) setIsVintedImportOpen(false); }} className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 cursor-pointer overflow-y-auto">
+                            <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col border border-stone-200 cursor-default animate-fade-in">
                                 <div className="p-5 border-b border-stone-100 bg-teal-50 flex items-start justify-between gap-4">
                                     <div>
                                         <h2 className="text-xl font-black text-stone-900">Vinted Import</h2>
@@ -5310,7 +6012,7 @@ interface BackOfficeViewProps {
                                                                                     if (images.length) setVintedPreviewImage({ images, index: images.findIndex(entry => entry.url === previewVintedImageSrc(media.url)), title: item.name || 'Vinted preview' });
                                                                                 }}
                                                                             >
-                                                                                <img src={previewVintedImageSrc(media.url)} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                                                                <img referrerPolicy="no-referrer" src={previewVintedImageSrc(media.url)} alt="" className="w-full h-full object-cover" loading="lazy" />
                                                                             </button>
                                                                         </div>
                                                                     ))}
@@ -5424,8 +6126,8 @@ interface BackOfficeViewProps {
                     )}
 
                     {isHistoryOpen && (
-                        <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden">
+                        <div onClick={(e) => { if (e.target === e.currentTarget) setIsHistoryOpen(false); }} className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 cursor-pointer overflow-y-auto">
+                            <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden border border-stone-200 cursor-default animate-fade-in">
                                 <div className="p-5 border-b border-stone-100 bg-amber-50 flex items-center justify-between">
                                     <div>
                                         <h2 className="text-lg font-black text-stone-800">Ιστορικό εκδόσεων</h2>

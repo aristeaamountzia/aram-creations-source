@@ -25,7 +25,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [selectedShipping, setSelectedShipping] = useState(SHIPPING_OPTIONS[0].id);
   const [isCheckoutStep, setIsCheckoutStep] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
+  const [submittingStep, setSubmittingStep] = useState('');
+    const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [orderError, setOrderError] = useState('');
   const [savedTotal, setSavedTotal] = useState<number | null>(null);
   const [website, setWebsite] = useState('');
@@ -59,6 +60,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
     setIsSubmitting(true);
     setOrderError('');
+    setSubmittingStep('1/3 Έλεγχος στοιχείων και αποθέματος...');
     try {
       const payload = { customer, expectedTotal: Math.round(total * 100) / 100, shippingMethod: selectedShipping, paymentMethod, website, items: items.map(({ item, quantity, customInscription }) => ({ id: item.id, quantity, customInscription: customInscription || item.customInscription || '' })) };
       const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(payload))))).map(n => n.toString(16).padStart(2, '0')).join('');
@@ -68,17 +70,29 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         if (prior?.hash === hash && prior?.requestId) requestId = prior.requestId;
         localStorage.setItem('aram_checkout_request', JSON.stringify({ hash, requestId }));
       } catch { /* Browser storage is optional. */ }
+      
+      setSubmittingStep('2/3 Επικοινωνία με το σύστημα παραγγελιών...');
       const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, requestId }) });
-      const result = await response.json();
-      if (!response.ok || !result.ok) throw new Error(result.error || 'Η παραγγελία δεν καταχωρήθηκε. Δοκίμασε ξανά.');
+      const result = await response.json().catch(() => ({ ok: false, error: 'Ο διακομιστής δεν επέστρεψε έγκυρη απάντηση JSON.' }));
+      
+      if (!response.ok || !result.ok) {
+        const errMessage = result.error || result.message || 'Η παραγγελία δεν μπόρεσε να καταχωρηθεί.';
+        const errReason = result.reason ? ` (${result.reason})` : '';
+        throw new Error(`${errMessage}${errReason}`);
+      }
+      
+      setSubmittingStep('3/3 Επιβεβαίωση παραγγελίας...');
       setCompletedOrderNumber(result.order.number);
       setSavedTotal(result.order.total);
-      onCompleted();
+            onCompleted();
       setCustomer({ name: '', email: '', phone: '', address: '', city: '', postalCode: '', notes: '' });
       try { localStorage.removeItem('aram_checkout_request'); } catch { /* Optional storage. */ }
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Η σύνδεση διακόπηκε. Δοκίμασε ξανά.');
-    } finally { setIsSubmitting(false); }
+    } finally {
+      setIsSubmitting(false);
+      setSubmittingStep('');
+    }
   };
 
   const handleClose = () => {
@@ -136,7 +150,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <h3 className="text-2xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
                 Η παραγγελία καταχωρήθηκε
               </h3>
-              <p className="text-sm font-bold text-stone-700" style={{ fontFamily: 'Jura, sans-serif' }}>
+                            <p className="text-sm font-bold text-stone-700" style={{ fontFamily: 'Jura, sans-serif' }}>
                 Κωδικός αναφοράς: #{completedOrderNumber}
               </p>
               <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
@@ -374,7 +388,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           )}
         </div>
 
-        {orderError && <p role="alert" className="m-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{orderError}</p>}
+        {orderError && (
+          <div role="alert" className="mx-6 my-3 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 space-y-1.5">
+            <div className="flex items-center gap-2 font-bold text-xs text-rose-800">
+              <span className="text-base">⚠️</span>
+              <span>Σφάλμα Καταχώρησης Παραγγελίας</span>
+            </div>
+            <p className="text-xs text-rose-700 leading-relaxed font-medium">{orderError}</p>
+            <p className="text-[11px] text-stone-500 pt-1 border-t border-rose-100">
+              💡 Συμβουλή: Ελέγξτε τα στοιχεία παράδοσης (ονοματεπώνυμο, τηλέφωνο, διεύθυνση) ή επιλέξτε απευθείας αγορά μέσω Vinted.
+            </p>
+          </div>
+        )}
         {/* Drawer Footer */}
         {!completedOrderNumber && items.length > 0 && (
           <div className="p-6 border-t border-stone-200 bg-stone-50 space-y-4">
@@ -403,21 +428,34 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </div>
 
             {isCheckoutStep ? (
-              <button
-                type="submit"
-                form="order-form"
-                disabled={isSubmitting}
-                className="w-full py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
-              >
-                {isSubmitting ? (
-                  <span>Καταχώρηση...</span>
-                ) : (
-                  <>
-                    <span>Καταχώρηση παραγγελίας</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
+              <div className="space-y-2">
+                {isSubmitting && submittingStep && (
+                  <div className="space-y-1.5 bg-stone-100 p-2.5 rounded-xl border border-stone-200">
+                    <div className="flex justify-between items-center text-[11px] font-bold text-stone-700">
+                      <span>{submittingStep}</span>
+                      <span className="animate-spin text-xs">⏳</span>
+                    </div>
+                    <div className="w-full bg-stone-200 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-emerald-600 h-1.5 rounded-full animate-pulse w-full"></div>
+                    </div>
+                  </div>
                 )}
-              </button>
+                <button
+                  type="submit"
+                  form="order-form"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                >
+                  {isSubmitting ? (
+                    <span>Καταχώρηση παραγγελίας σε εξέλιξη...</span>
+                  ) : (
+                    <>
+                      <span>Καταχώρηση παραγγελίας</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
             ) : (
               <button
                 onClick={() => setIsCheckoutStep(true)}

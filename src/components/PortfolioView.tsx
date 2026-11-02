@@ -1,4 +1,5 @@
 import { usePortfolioDesign } from '../lib/use-portfolio-design';
+import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from '../lib/design-studio';
 import { portfolioStatusLabel } from '../lib/portfolio-settings';
 import { portfolioMedia } from '../lib/video-links';
 import { VideoPlayer } from './VideoPlayer';
@@ -25,8 +26,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     const [searchTerm, setSearchTerm] = useState('');
     const [filterMode, setFilterMode] = useState<'all' | 'favorites'>('all');
     const [heroVideoUrl, setHeroVideoUrl] = useState('');
+    const [designStudio, setDesignStudio] = useState<DesignStudio>(DEFAULT_DESIGN_STUDIO);
     useEffect(() => onSnapshot(doc(db, 'settings', 'shop'), snapshot => {
-        setHeroVideoUrl(portfolioHeroVideoUrl(snapshot.data()?.portfolioHeroVideoUrl));
+        const data = snapshot.data();
+        setHeroVideoUrl(portfolioHeroVideoUrl(data?.portfolioHeroVideoUrl));
+        if (data?.designStudio) {
+            setDesignStudio(normalizeDesignStudio(data.designStudio));
+        }
     }, error => console.warn('Portfolio hero settings could not be loaded:', error)), []);
     const [sortBy, setSortBy] = useState<'default' | 'newest' | 'title' | 'category'>('default');
     const [favorites, setFavorites] = useState<string[]>(() => {
@@ -261,7 +267,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     const totalVideoCount = items.filter(itemHasVideo).length;
     const zoomImages = (selectedItem ? getItemMediaList(selectedItem) : [])
         .map((media, index) => ({ ...media, mediaIndex: index }));
-    return (<div className={`portfolio-view min-h-screen pb-24 font-sans transition-colors duration-300 ${'bg-[#faf9ff] text-[#252134] selection:bg-[#e4dcfa]'}`}>
+    return (<div className={`portfolio-view min-h-screen pb-24 font-sans transition-colors duration-300 ${'bg-[#faf9ff] text-[#252134] selection:bg-[#e4dcfa]'}`} style={{ backgroundColor: designStudio.pageBackground || '#faf9ff', color: designStudio.ink || '#252134', fontFamily: designStudio.fontFamily || "'Jura', sans-serif" }}>
       
       {/* Toast Notification */}
       {copiedToast && (<div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-xs animate-in fade-in slide-in-from-bottom-2 border ${'bg-stone-900 text-white border-stone-800'}`}>
@@ -275,7 +281,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
       <PortfolioHero design={design} videoUrl={heroVideoUrl} itemCount={items.length} categoryCount={artCategories.length}
         videoCount={totalVideoCount} onContactArtist={() => onContactArtist()} />
 
-      <div className="catalog-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+      <div id="portfolio-catalog" className="catalog-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <CatalogControls label="Φίλτρα Portfolio" search={searchTerm} onSearch={setSearchTerm}
           placeholder="Αναζήτηση σε τίτλο, υλικά, διαστάσεις, τεχνική..."
           categories={[{ id: 'all', label: 'Όλες οι Κατηγορίες' }, ...artCategories.map(category => ({ id: category.id, label: category.title, count: items.filter(item => item.category === category.id).length }))]}
@@ -321,94 +327,145 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 const mediaList = getItemMediaList(item);
                 const hasVideo = itemHasVideo(item);
                 const isFav = favorites.includes(item.id);
-                return (<div key={item.id} id={`art-card-${item.id}`} onClick={() => {
+                return (
+                  <div
+                    key={item.id}
+                    id={`art-card-${item.id}`}
+                    onClick={() => {
+                      setSelectedItem(item);
+                      setActiveMediaIdx(0);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                        event.preventDefault();
                         setSelectedItem(item);
                         setActiveMediaIdx(0);
-                    }} onKeyDown={(event) => {
-                        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
-                            event.preventDefault();
-                            setSelectedItem(item);
-                            setActiveMediaIdx(0);
-                        }
-                    }} role="group" tabIndex={0} aria-label={`${item.title}. Πατήστε Enter για άνοιγμα έργου.`} className={`catalog-card group cursor-pointer rounded-2xl overflow-hidden border transition-all duration-300 flex flex-col justify-between hover:shadow-sm ${'bg-white border-[#e5def3] hover:border-stone-400'}`}>
-                  {/* Media Visual Container */}
-                  <div className="relative aspect-[4/3] overflow-hidden bg-[#f3f0fa]">
-                    {mediaList[0]?.type === 'video' ? <div className="flex h-full items-center justify-center bg-[#ede8fb]"><Play className="h-12 w-12 text-[#6253ae]" aria-label="Έργο με βίντεο" /></div> : <img src={mediaList[0]?.url || item.image} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 "/>}
+                      }
+                    }}
+                    role="group"
+                    tabIndex={0}
+                    aria-label={`${item.title}. Πατήστε Enter για άνοιγμα έργου.`}
+                    className="catalog-card group cursor-pointer bg-white border border-stone-200/90 rounded-2xl overflow-hidden hover:border-stone-400 hover:shadow-sm transition-all duration-300 flex flex-col justify-between"
+                    style={{
+                      borderRadius: designStudio.cardRadius || '16px',
+                      backgroundColor: designStudio.surface || '#ffffff',
+                      borderColor: designStudio.line || '#e7e5e4'
+                    }}
+                  >
+                    {/* Media Container aspect-[4/5] identical to Shop */}
+                    <div className="relative aspect-[4/5] overflow-hidden bg-stone-100">
+                      {mediaList[0]?.type === 'video' ? (
+                        <div className="flex h-full items-center justify-center bg-stone-900">
+                          <Play className="h-12 w-12 text-white" aria-label="Έργο με βίντεο" />
+                        </div>
+                      ) : (
+                        <img
+                          src={mediaList[0]?.url || item.image}
+                          alt={item.title}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                      )}
 
-                    
+                      {/* Top Badges */}
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                        <span className="bg-white/90 backdrop-blur-md text-stone-700 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-stone-200 shadow-xs">
+                          {cat?.title || item.category}
+                        </span>
+                        {item.year && (
+                          <span className="bg-white/90 backdrop-blur-md text-stone-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-stone-200 shadow-xs">
+                            {item.year}
+                          </span>
+                        )}
+                      </div>
 
-                    {/* Top Badges */}
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
-                      <span className="bg-white/95 backdrop-blur-md text-[#514663] text-[10px] font-sans uppercase px-2.5 py-0.5 rounded-full border border-[#e2dcf0]">
-                        {cat?.title}
-                      </span>
-                      {item.year && (<span className="bg-white/95 backdrop-blur-md text-[#655a78] text-[10px] font-sans px-2 py-0.5 rounded-full border border-[#e2dcf0]">
-                          {item.year}
-                        </span>)}
-                    </div>
+                      {/* Top Right: Favorite button */}
+                      <button
+                        onClick={(e) => toggleFavorite(item.id, e)}
+                        aria-label={isFav ? `Αφαίρεση ${item.title} από τα αγαπημένα` : `Προσθήκη ${item.title} στα αγαπημένα`}
+                        aria-pressed={isFav}
+                        className={`absolute top-3 right-3 z-10 p-2 rounded-full backdrop-blur-md transition-transform active:scale-90 border shadow-xs ${
+                          isFav ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-white/90 text-stone-600 hover:text-stone-900 border-stone-200'
+                        }`}
+                        title={isFav ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
+                      </button>
 
-                    {/* Top Right: Favorite button */}
-                    <button onClick={(e) => toggleFavorite(item.id, e)} aria-label={isFav ? `Αφαίρεση ${item.title} από τα αγαπημένα` : `Προσθήκη ${item.title} στα αγαπημένα`} aria-pressed={isFav} className={`absolute top-3 right-3 z-10 p-2 rounded-full backdrop-blur-md transition-transform active:scale-90 border ${isFav
-                        ? 'bg-[#eee8ff] text-[#6253ae] border-[#d7ceef]'
-                        : 'bg-white/90 text-[#675f79] hover:text-stone-950 border-[#d8cfea]'}`} title={isFav ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}>
-                      <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`}/>
-                    </button>
-
-                    {/* Bottom Media Indicators */}
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-10">
-                      <div className="flex items-center gap-1.5">
-                        {/* Video indicator badge */}
-                        {hasVideo && (<span className="inline-flex items-center gap-1 bg-[#6253ae]/95 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-md ">
-                            <Film className="w-3 h-3"/>
+                      {/* Bottom Media Indicators */}
+                      <div className="absolute bottom-3 left-3 flex items-center gap-1.5 z-10">
+                        {hasVideo && (
+                          <span className="px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                            <Play className="w-2.5 h-2.5 fill-white" />
                             <span>Βίντεο</span>
-                          </span>)}
-
-                        {/* Media counter */}
-                        {mediaList.length > 1 && (<span className="inline-flex items-center gap-1 bg-white/95 backdrop-blur-md text-[#514663] text-[10px] font-sans px-2 py-0.5 rounded-md border border-[#e2dcf0]">
-                            <Layers className="w-3 h-3"/>
-                            <span>{mediaList.length} media</span>
-                          </span>)}
+                          </span>
+                        )}
+                        {mediaList.length > 1 && (
+                          <span className="px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-white text-[10px] font-bold shadow-sm">
+                            {mediaList.length} φωτό
+                          </span>
+                        )}
                       </div>
 
-                      {/* Status badge */}
-                      {item.status && (<span className="text-[10px] font-sans text-[#514663] bg-white/95 backdrop-blur-md px-2 py-0.5 rounded border border-[#e2dcf0]">
-                          {portfolioStatusLabel(design, item.status)}
-                        </span>)}
+                      {/* Status badge bottom right */}
+                      {item.status && (
+                        <div className="absolute bottom-3 right-3 z-10">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-white/90 backdrop-blur-md text-stone-800 text-[10px] font-black uppercase tracking-wider shadow-sm border border-stone-200">
+                            {portfolioStatusLabel(design, item.status)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Artwork Content Info */}
-                  <div className="p-5 flex-1 flex flex-col justify-between">
-                    <div>
-                      <h3 className={`font-sans text-lg sm:text-xl transition-colors line-clamp-1 ${'text-[#252134] group-hover:text-[#5b516d]'}`}>
-                        {item.title}
-                      </h3>
-                      
-                      <div className={`mt-1 text-xs font-sans line-clamp-1 ${'text-[#675f79]'}`}>
-                        {item.medium}
+                    {/* Artwork Content Info */}
+                    <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                            {cat?.title || 'Έργο Τέχνης'}
+                          </span>
+                          {item.dimensions && (
+                            <span className="text-[10px] font-medium text-stone-400">
+                              {item.dimensions}
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="text-sm sm:text-base font-bold text-stone-900 line-clamp-2 group-hover:text-stone-700 transition-colors">
+                          {item.title}
+                        </h3>
+
+                        {item.medium && (
+                          <p className="text-xs text-stone-500 line-clamp-1 mt-1 leading-relaxed">
+                            {item.medium}
+                          </p>
+                        )}
+
+                        {item.description && (
+                          <p className="text-xs text-stone-400 line-clamp-2 mt-1 leading-relaxed font-sans">
+                            {item.description}
+                          </p>
+                        )}
                       </div>
 
-                      {item.dimensions && (<div className={`mt-0.5 text-[11px] font-sans ${'text-[#675f79]'}`}>
-                          Διαστάσεις: {item.dimensions}
-                        </div>)}
-
-                      <p className={`mt-3 text-xs line-clamp-2 leading-relaxed ${'text-[#675f79]'}`}>
-                        {item.description}
-                      </p>
-                    </div>
-
-                    {/* Footer Row */}
-                    <div className={`mt-5 pt-3.5 border-t flex items-center justify-between text-xs ${'border-[#e5def3] text-[#675f79]'}`}>
-                      <span className={`text-[11px] font-sans ${'text-[#675f79]'}`}>
-                        {hasVideo ? 'Προβολή Έργου & Βίντεο' : 'Προβολή Έργου'}
-                      </span>
-                      <span className={`flex items-center gap-1 transition-colors font-medium ${'text-[#5b516d] group-hover:text-stone-950'}`}>
-                        <span>Άνοιγμα</span>
-                        <ArrowUpRight className="w-3.5 h-3.5"/>
-                      </span>
+                      {/* Footer Row */}
+                      <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-stone-500">
+                          {item.year || 'Portfolio'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedItem(item); setActiveMediaIdx(0); }}
+                          className="px-3.5 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1.5"
+                        >
+                          <span>Προβολή</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>);
+                );
             })}
           </div>)}
       </section>
@@ -475,7 +532,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                                 {isThumbVideo ? (<div className="w-full h-full bg-stone-900 flex flex-col items-center justify-center text-red-400">
                                     <Play className="w-4 h-4 fill-current"/>
                                     <span className="text-[8px] font-sans mt-0.5">VIDEO</span>
-                                  </div>) : (<img src={media.url} alt={media.title || `Thumb ${idx + 1}`} className="w-full h-full object-cover"/>)}
+                                  </div>) : (<img src={media.url} alt={media.title || `Thumb ${idx + 1}`} referrerPolicy="no-referrer" className="w-full h-full object-cover"/>)}
                               </button>);
                         })}
                         </div>

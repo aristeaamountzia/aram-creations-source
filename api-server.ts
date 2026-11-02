@@ -41,6 +41,7 @@ app.get("/api/health", (_req: Request, res: Response) => {
   });
 });
 
+
 // 2. Gemini AI Assistant endpoint
 async function handleBackofficeAi(req: Request, res: Response) {
   try {
@@ -72,6 +73,7 @@ async function handleBackofficeAi(req: Request, res: Response) {
       imageDataUrls = [],
     } = req.body || {};
 
+    
     const imageList = Array.isArray(imageDataUrls) && imageDataUrls.length > 0
       ? imageDataUrls
       : imageDataUrl ? [imageDataUrl] : [];
@@ -118,9 +120,18 @@ ${task ? `Τύπος εργασίας: ${task}` : ""}
     return res.json(parsedData);
   } catch (error: any) {
     console.error("Error in backoffice-ai:", error);
-    const status = error instanceof BackofficeAiConfigurationError ? 503 : 502;
-    return res.status(status).json({
-      error: status === 503 ? error.message : "Η δημιουργία AI απέτυχε προσωρινά.",
+    if (error instanceof BackofficeAiConfigurationError) {
+      return res.status(503).json({
+        ok: false,
+        error: "Δεν έχει οριστεί GEMINI_API_KEY (ή OPENAI_API_KEY) στο αρχείο .env του server.",
+        code: "AI_KEY_MISSING",
+        help: "Μπορείτε να πάρετε δωρεάν κλειδί από το https://aistudio.google.com/app/apikey και να το προσθέσετε στο αρχείο .env ως GEMINI_API_KEY=το_κλειδί_σας. Εναλλακτικά πατήστε το κουμπί '🧪 Δοκιμή Demo AI' για άμεση δοκιμή χωρίς κλειδί!",
+        canDemo: true,
+      });
+    }
+    return res.status(502).json({
+      ok: false,
+      error: error.message || "Η δημιουργία AI απέτυχε προσωρινά.",
     });
   }
 }
@@ -644,12 +655,94 @@ app.get("/api/vinted-image-proxy", handleImageProxy);
 app.get("/.netlify/functions/vinted-image-proxy", handleImageProxy);
 app.get("/api/image-proxy", handleImageProxy);
 
-// 5. Orders endpoint is intentionally unavailable until real persistence is configured.
-app.post("/api/orders", (_req: Request, res: Response) => {
-  return res.status(503).json({
-    ok: false,
-    message: "Η online καταχώρηση παραγγελιών δεν είναι διαθέσιμη. Χρησιμοποιήστε το email επικοινωνίας.",
+// In-memory dev orders store for local testing
+const localDevOrders: any[] = [];
+
+// 5. Orders endpoints with full local dev support and validation
+app.post("/api/orders", (req: Request, res: Response) => {
+  try {
+    const { customer, items, shippingMethod, paymentMethod, expectedTotal, website, requestId } = req.body || {};
+
+    // Anti-spam honeypot
+    if (website) return res.status(400).json({ ok: false, error: "Spam detected." });
+
+    if (!customer?.name?.trim() || !customer?.email?.trim() || !customer?.phone?.trim() || !customer?.address?.trim()) {
+      return res.status(400).json({
+        ok: false,
+        error: "Παρακαλώ συμπληρώστε όλα τα απαιτούμενα στοιχεία επικοινωνίας (Ονοματεπώνυμο, Email, Τηλέφωνο, Διεύθυνση).",
+        reason: "missing_required_fields"
+      });
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        ok: false,
+        error: "Το καλάθι αγορών σας είναι άδειο.",
+        reason: "empty_cart"
+      });
+    }
+
+    const orderId = requestId || `ord_${Date.now()}`;
+    const orderNumber = `DEV-${Date.now().toString().slice(-6)}`;
+    const totalAmount = Number(expectedTotal) || 0;
+
+    const newOrder = {
+      id: orderId,
+      number: orderNumber,
+      total: totalAmount,
+      subtotal: totalAmount,
+      shippingCost: 0,
+      createdAt: new Date().toISOString(),
+      status: "pending",
+      shippingMethod: shippingMethod || "boxnow",
+      paymentMethod: paymentMethod || "iris",
+      customer: {
+        name: customer.name.trim(),
+        email: customer.email.trim(),
+        phone: customer.phone.trim(),
+        address: customer.address.trim(),
+        city: customer.city?.trim() || "",
+        postalCode: customer.postalCode?.trim() || "",
+        notes: customer.notes?.trim() || "",
+      },
+      items,
+      isLocalDevTest: true
+    };
+
+    localDevOrders.unshift(newOrder);
+    console.log(`[Dev Orders] Successfully registered order ${orderNumber} (€${totalAmount}) for ${customer.name}`);
+
+    return res.status(201).json({
+      ok: true,
+      order: newOrder,
+      isLocalDevTest: true,
+      message: "Η παραγγελία καταχωρήθηκε επιτυχώς (Κατάσταση Τοπικής Δοκιμής / Dev Mode)!"
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: `Σφάλμα καταχώρησης παραγγελίας: ${err.message || 'Άγνωστο σφάλμα'}`,
+      reason: err.message
+    });
+  }
+});
+
+app.get("/api/orders", (_req: Request, res: Response) => {
+  return res.json({
+    ok: true,
+    orders: localDevOrders,
+    nextCursor: null
   });
+});
+
+app.patch("/api/orders", (req: Request, res: Response) => {
+  const { id, status, tracking } = req.body || {};
+  const found = localDevOrders.find(o => o.id === id);
+  if (found) {
+    if (status) found.status = status;
+    if (tracking !== undefined) found.tracking = tracking;
+  }
+  return res.json({ ok: true, order: found });
 });
 
 // 6. Serve static public files

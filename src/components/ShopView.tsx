@@ -5,6 +5,7 @@ import { JewelryItem } from '../types';
 import { JEWELRY_CATALOG } from '../data';
 import { db } from '../firebase';
 import { DEFAULT_SHOP_SETTINGS, normalizeShopSettings, ShopSettings } from '../shopSettings';
+import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import {
   collection,
   doc,
@@ -21,6 +22,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Eye,
   Check,
   Play,
@@ -273,6 +275,18 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const [cardActiveMediaIndex, setCardActiveMediaIndex] = useState<Record<string, number>>({});
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isLightboxOpen) { setIsLightboxOpen(false); return; }
+        if (selectedItem) { setSelectedItem(null); return; }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLightboxOpen, selectedItem]);
+
   // 1. Live Firestore Sync
   useEffect(() => {
     let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
@@ -470,34 +484,83 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
   const activeMedia = selectedMediaList[activeMediaIndex] || selectedMediaList[0];
   const zoomImages = selectedMediaList.map((media, index) => ({ ...media, mediaIndex: index })).filter(media => media.type !== 'video');
+  const ds = shopSettings.designStudio || DEFAULT_DESIGN_STUDIO;
 
   return (
-    <div className="catalog-view shop-view min-h-screen" style={{ backgroundColor: shopSettings.bgColor, color: shopSettings.textColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
+    <div className="catalog-view shop-view min-h-screen" style={{ backgroundColor: ds.pageBackground || shopSettings.bgColor, color: ds.ink || shopSettings.textColor, fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif` }}>
       {/* Authentic Artisan Hero Banner */}
-      <section className={`shop-hero ${shopSettings.heroVideoUrl ? 'catalog-hero--video' : ''} relative overflow-hidden py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center`} style={{ backgroundColor: shopSettings.heroBgColor, color: shopSettings.heroTitleColor }}>
-        {shopSettings.heroVideoUrl && <video className="absolute inset-0 h-full w-full object-cover" src={shopSettings.heroVideoUrl} autoPlay muted loop playsInline aria-hidden="true" />}
-        {shopSettings.heroVideoUrl && <div className="absolute inset-0 bg-black/50" aria-hidden="true" />}
-        <div className="relative w-full max-w-4xl mx-auto space-y-4">
-          <h1 className={`${shopSettings.heroTitleSize} font-bold tracking-tight break-words`} style={{ color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroTitleColor, fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
+      <section
+        className={`shop-hero ${shopSettings.heroVideoUrl ? 'catalog-hero--video' : ''} min-h-[58vh] sm:min-h-[68vh] flex flex-col justify-center items-center relative overflow-hidden py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center`}
+        style={{ backgroundColor: shopSettings.heroBgColor, color: ds.heroTitleInk || shopSettings.heroTitleColor }}
+      >
+        {shopSettings.heroVideoUrl && (
+          <video
+            className="absolute inset-0 h-full w-full object-cover"
+            src={shopSettings.heroVideoUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            aria-hidden="true"
+          />
+        )}
+        {shopSettings.heroVideoUrl && (
+          <div
+            className="absolute inset-0 bg-black"
+            style={{ opacity: Number(ds.heroOverlay) || 0.55 }}
+            aria-hidden="true"
+          />
+        )}
+        <div className="relative z-10 w-full max-w-4xl mx-auto space-y-4 my-auto">
+          <h1
+            className={`${shopSettings.heroTitleSize || 'text-3xl sm:text-4xl md:text-5xl'} font-bold tracking-tight break-words`}
+            style={{
+              color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroTitleColor,
+              fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif`
+            }}
+          >
             {shopSettings.heroTitle}
           </h1>
-          <p className="text-sm sm:text-base max-w-2xl mx-auto leading-relaxed opacity-90" style={{ color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroSubtitleColor }}>
+          <p
+            className="text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed opacity-90"
+            style={{ color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroSubtitleColor }}
+          >
             {shopSettings.heroSubtitle}
           </p>
 
           {/* Quick Stats badges */}
           <div className="pt-2 flex flex-wrap justify-center gap-2.5 text-[11px] font-bold">
-            <span className="px-3.5 py-1 rounded-full bg-white/10 text-stone-200 border border-white/10">
+            <span className="px-3.5 py-1 rounded-full bg-white/10 text-stone-200 border border-white/15 backdrop-blur-xs">
               {isCatalogLoading ? '—' : totalAvailable} διαθέσιμα κομμάτια
             </span>
-            <span className="px-3.5 py-1 rounded-full bg-white/10 text-stone-200 border border-white/10">
+            <span className="px-3.5 py-1 rounded-full bg-white/10 text-stone-200 border border-white/15 backdrop-blur-xs">
               {visibleCategories.length - 1} κατηγορίες
             </span>
-            <span className="px-3.5 py-1 rounded-full bg-white/10 text-stone-200 border border-white/10">
+            <span className="px-3.5 py-1 rounded-full bg-white/10 text-stone-200 border border-white/15 backdrop-blur-xs">
               {isCatalogLoading ? '—' : jewelryList.length} συνολικές δημιουργίες
             </span>
           </div>
         </div>
+
+        {/* Animated scroll down indicator for mobile & desktop */}
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.getElementById('shop-catalog') || document.querySelector('.catalog-controls');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+          className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 cursor-pointer transition group focus:outline-hidden ${
+            shopSettings.heroVideoUrl ? 'text-white/90 hover:text-white' : 'text-stone-700 hover:text-stone-900'
+          }`}
+          aria-label="Κύλιση προς τα κάτω για προβολή δημιουργιών"
+        >
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest drop-shadow-md group-hover:scale-105 transition-transform">
+            Κύλιση για δημιουργίες
+          </span>
+          <div className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg animate-bounce group-hover:bg-black/60 transition">
+            <ChevronDown className="w-4 h-4 text-white drop-shadow" />
+          </div>
+        </button>
       </section>
 
       {shopSettings.announcementEnabled && shopSettings.announcementText && (
@@ -507,7 +570,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       )}
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
+      <div id="shop-catalog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
 
         <CatalogControls label="Φίλτρα Shop" search={searchQuery} onSearch={setSearchQuery}
           placeholder="Αναζήτηση με όνομα, υλικό, χρώμα..."
@@ -640,7 +703,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   className={`catalog-card group bg-white border border-stone-200/90 rounded-2xl overflow-hidden hover:border-stone-400 hover:shadow-sm transition-all duration-300 flex flex-col justify-between cursor-pointer ${
                     !isAvailable ? 'opacity-85' : ''
                   }`}
-                  style={{ borderRadius: shopSettings.borderRadius }}
+                  style={{ borderRadius: ds.cardRadius || shopSettings.borderRadius || "16px", backgroundColor: ds.surface || "#ffffff", borderColor: ds.line || "#e7e5e4" }}
                 >
                   {/* Media Container with multi-media support */}
                   <div className="relative aspect-[4/5] overflow-hidden bg-stone-100">
@@ -957,7 +1020,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                         <img
                           src={media.url}
                           alt={`Thumbnail ${idx + 1}`}
-                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer" className="w-full h-full object-cover"
                         />
                       )}
                     </button>
@@ -970,29 +1033,33 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             <div className="w-full md:w-1/2 p-6 sm:p-8 flex flex-col justify-between overflow-y-auto">
               <div className="space-y-4">
                 {/* Category & Collection */}
-                <div className="flex items-center justify-between gap-2 border-b border-stone-100 pb-3 pr-12">
-                  <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                <div className="flex items-center justify-between gap-3 border-b border-stone-100 pb-3 pr-14 sm:pr-16">
+                  <span className="text-xs font-bold uppercase tracking-wider text-stone-500 min-w-0 flex-1 truncate">
                     {selectedItem.category} {selectedItem.collection && `• ${selectedItem.collection}`}
                   </span>
 
-                  {/* Likes & Views Metrics Display */}
-                  <div className="flex items-center gap-3 text-xs font-bold text-stone-500">
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>{getItemViews(selectedItem)} προβολές</span>
+                  {/* Likes & Views Metrics Display - Clean Non-breaking Pill */}
+                  <div className="flex items-center gap-2.5 text-xs font-semibold text-stone-600 bg-stone-100/90 border border-stone-200/90 px-3 py-1 rounded-full shrink-0 whitespace-nowrap shadow-xs">
+                    <span className="flex items-center gap-1 text-stone-600" title={`${getItemViews(selectedItem)} προβολές`}>
+                      <Eye className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                      <span>{getItemViews(selectedItem)}</span>
+                      <span className="text-[11px] font-normal text-stone-500 hidden sm:inline">
+                        {getItemViews(selectedItem) === 1 ? 'προβολή' : 'προβολές'}
+                      </span>
                     </span>
+                    <span className="text-stone-300">·</span>
                     <button
                       onClick={(e) => toggleFavorite(selectedItem.id, e)}
                       aria-label={favoriteIds.includes(selectedItem.id) ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
                       aria-pressed={favoriteIds.includes(selectedItem.id)}
                       className={`flex items-center gap-1 transition ${
-                        favoriteIds.includes(selectedItem.id) ? 'text-rose-600' : 'hover:text-stone-800'
+                        favoriteIds.includes(selectedItem.id) ? 'text-rose-600 font-bold' : 'hover:text-stone-800'
                       }`}
                       title="Αγαπημένο"
                     >
                       <Heart
-                        className={`w-3.5 h-3.5 ${
-                          favoriteIds.includes(selectedItem.id) ? 'fill-rose-500 text-rose-500' : ''
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          favoriteIds.includes(selectedItem.id) ? 'fill-rose-500 text-rose-500' : 'text-stone-400'
                         }`}
                       />
                       <span>{getItemLikes(selectedItem)}</span>
