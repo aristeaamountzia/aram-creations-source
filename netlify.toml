@@ -4,7 +4,7 @@
   functions = ".netlify/functions-dist"
 
 [build.environment]
-  URL = "https://aram-creations-official.netlify.app"
+  URL = "https://aramcreationsofficial1.netlify.app"
   ADMIN_EMAIL = "aristeaamnta@gmail.com"
   AI_PROVIDER = "gemini"
   GEMINI_MODEL = "gemini-3.5-flash"
