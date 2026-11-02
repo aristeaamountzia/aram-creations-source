@@ -74,6 +74,7 @@ export default async function handleRequest(request: Request) {
   } catch (error) {
     console.error("Back Office AI failed", error);
     if (error instanceof BackofficeAiConfigurationError) return json({ error: error.message }, 503);
-    return json({ error: "Η δημιουργία AI απέτυχε προσωρινά." }, 502);
+    const detail = error instanceof Error ? error.message : String(error);
+    return json({ error: `Η δημιουργία AI απέτυχε: ${detail}` }, 502);
   }
 }
