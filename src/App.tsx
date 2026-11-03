@@ -2,8 +2,16 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SectionMode, ArtItem, JewelryItem, CartItem } from './types';
 import { Header } from './components/Header';
 import { ShopView } from './components/ShopView';
-import { PortfolioView } from './components/PortfolioView';
-import { BackOfficeView } from './components/BackOfficeView';
+const PortfolioView = React.lazy(() =>
+  import('./components/PortfolioView').then((module) => ({
+    default: module.PortfolioView,
+  }))
+);
+const BackOfficeView = React.lazy(() =>
+  import('./components/BackOfficeView').then((module) => ({
+    default: module.BackOfficeView,
+  }))
+);
 import { CartDrawer } from './components/CartDrawer';
 import { ContactModal } from './components/ContactModal';
 import { ShieldCheck, Mail, MapPin, ExternalLink, Lock } from 'lucide-react';
@@ -152,15 +160,17 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* Header (clean for customers: Shop | Portfolio only) */}
-      <Header
-        currentMode={currentMode}
-        onSelectMode={selectMode}
-        cartCount={totalCartCount}
-        onOpenCart={() => setIsCartOpen(true)}
-        onContactArtist={() => handleContactArtist()}
-        design={designStudioContent}
-      />
+      {/* Header (clean for customers: Shop | Portfolio only - hidden in back-office to prevent navigation conflict) */}
+      {currentMode !== 'admin' && (
+        <Header
+          currentMode={currentMode}
+          onSelectMode={selectMode}
+          cartCount={totalCartCount}
+          onOpenCart={() => setIsCartOpen(true)}
+          onContactArtist={() => handleContactArtist()}
+          design={designStudioContent}
+        />
+      )}
 
       {/* Main Content Body */}
       <main className="flex-1 min-w-0 w-full">
@@ -169,13 +179,35 @@ export const App: React.FC = () => {
         )}
 
         {currentMode === 'portfolio' && (
-          <PortfolioView onContactArtist={handleContactArtist} />
+          <React.Suspense
+            fallback={
+              <div className="min-h-screen flex items-center justify-center p-8 text-stone-500 font-sans">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm font-medium">Φόρτωση Portfolio...</span>
+                </div>
+              </div>
+            }
+          >
+            <PortfolioView onContactArtist={handleContactArtist} />
+          </React.Suspense>
         )}
 
         {currentMode === 'admin' && (
-          <BackOfficeView
-            onExit={() => selectMode('shop')}
-          />
+          <React.Suspense
+            fallback={
+              <div className="min-h-screen flex items-center justify-center p-8 text-stone-500 font-sans">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm font-medium">Φόρτωση Back-Office...</span>
+                </div>
+              </div>
+            }
+          >
+            <BackOfficeView
+              onExit={() => selectMode('shop')}
+            />
+          </React.Suspense>
         )}
       </main>
 
@@ -195,7 +227,8 @@ export const App: React.FC = () => {
         artItem={contactArtItem}
       />
 
-      {/* Footer */}
+      {/* Footer (hidden in admin mode) */}
+      {currentMode !== 'admin' && (
       <footer className="site-footer bg-[#fafafa] border-t border-stone-200/90 text-stone-600 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Col */}
@@ -204,6 +237,7 @@ export const App: React.FC = () => {
               <img
                 src={currentMode === 'portfolio' ? '/logo-portfolio.png' : '/logo.png'}
                 alt="Aram Creations"
+                referrerPolicy="no-referrer"
                 className="w-8 h-8 object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
@@ -298,6 +332,7 @@ export const App: React.FC = () => {
           </div>
         </div>
       </footer>
+      )}
     </div>
   );
 };

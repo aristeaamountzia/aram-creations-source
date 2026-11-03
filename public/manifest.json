@@ -1,0 +1,22 @@
+{
+  "name": "Aram Creations",
+  "short_name": "Aram",
+  "description": "Χειροποίητες δημιουργίες, κοσμήματα και portfolio έργων τέχνης",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#1c1917",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}
+

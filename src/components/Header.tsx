@@ -34,6 +34,8 @@ export const Header: React.FC<HeaderProps> = ({ currentMode, onSelectMode, cartC
             aria-label={`Aram Creations — ${isPortfolio ? 'Portfolio' : 'επιστροφή στο Shop'}`}
             className="header-brand flex min-w-0 items-center gap-2.5 text-left">
             <img src={isPortfolio ? '/logo-portfolio.png' : '/logo.png'} alt="Aram Creations"
+              referrerPolicy="no-referrer"
+              width="36" height="48"
               className="h-11 w-8 sm:h-12 sm:w-9 shrink-0 object-contain"
               onError={(event) => { const img = event.currentTarget; if (!img.src.endsWith('/logo.svg')) img.src = '/logo.svg'; }} />
             <span className="min-w-0">

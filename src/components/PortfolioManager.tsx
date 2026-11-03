@@ -1180,7 +1180,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                   {/* Media count pill */}
                   {media.length > 1 && (
                     <div className="absolute top-2 right-2 bg-stone-900/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                      🎬 {media.length} αρχεία
+                      {media.length} αρχεία
                     </div>
                   )}
 
@@ -1257,7 +1257,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
 
                     {item.dimensions && (
                       <p className="text-[11px] text-stone-400 font-mono mb-2">
-                        📏 {item.dimensions}
+                        {item.dimensions}
                       </p>
                     )}
 
@@ -1306,7 +1306,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                           className="p-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 rounded transition"
                           title="Επεξεργασία Εικόνας"
                         >
-                          ✂️
+                          <IconEdit />
                         </button>
                       )}
                       <button
@@ -1373,7 +1373,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 <div className="h-24 w-24 rounded-lg bg-stone-100 overflow-hidden shrink-0 border border-stone-200">
                   {first ? (
                     first.type === 'video' ? (
-                      <video src={first.url} className="w-full h-full object-cover" muted />
+                      <video src={first.url} referrerPolicy="no-referrer" className="w-full h-full object-cover" muted />
                     ) : (
                       <img
                         src={first.url || item.imageUrl || item.image}
@@ -1480,7 +1480,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                   const preview = form.mediaList?.[0]?.url;
                   if (!preview) return (
                     <div className="w-12 h-12 rounded-xl bg-stone-200 border border-stone-300 flex items-center justify-center text-stone-400 shrink-0">
-                      🖼️
+                      
                     </div>
                   );
                   return (
@@ -1702,7 +1702,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                         onChange={e => setForm({ ...form, inquiryOnly: e.target.checked })}
                         className="w-4 h-4 rounded border-stone-300 accent-stone-900"
                       />
-                      📩 Μόνο κατόπιν επικοινωνίας (κουμπί Εκδήλωσης Ενδιαφέροντος)
+                      Μόνο κατόπιν επικοινωνίας (κουμπί Εκδήλωσης Ενδιαφέροντος)
                     </label>
                   </div>
                 </>
@@ -1796,7 +1796,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                               }}
                               className="px-2 py-1 bg-stone-200 hover:bg-stone-300 rounded font-bold"
                             >
-                              ✂️ Edit
+                              Edit
                             </button>
                           )}
                           <button

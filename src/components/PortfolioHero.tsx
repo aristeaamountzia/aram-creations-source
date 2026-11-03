@@ -31,7 +31,7 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
     if (reducedMotion) videoRef.current?.pause();
   }, [reducedMotion]);
   return (
-    <section className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video' : ''} min-h-[58vh] sm:min-h-[68vh] flex flex-col justify-center items-center relative overflow-hidden border-b border-[#e5def3] bg-white px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8`}>
+    <section className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video bg-stone-950 text-white' : 'bg-white text-[#252134]'} min-h-[58vh] sm:min-h-[68vh] flex flex-col justify-center items-center relative overflow-hidden border-b border-[#e5def3] px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8`}>
       {hasVideo && (
         <>
           {videoLink(source) ? (
@@ -50,6 +50,7 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
               loop
               playsInline
               preload="metadata"
+              referrerPolicy="no-referrer"
               aria-hidden="true"
               className="absolute inset-0 h-full w-full object-cover"
               onError={() => setFailed(true)}

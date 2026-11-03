@@ -1,3 +1,4 @@
+import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import React, { useState, useEffect } from 'react';
 
 export interface ItemDetailModalProps {
@@ -95,7 +96,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
             <div className="aspect-square bg-stone-100 rounded-xl overflow-hidden border border-stone-200 flex items-center justify-center relative shadow-sm">
               {currentMedia ? (
                 currentMedia.type === 'video' ? (
-                  <video src={currentMedia.url} controls className="w-full h-full object-cover" />
+                  <video src={currentMedia.url} controls referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 ) : (
                   <img src={currentMedia.url} alt={title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 )
@@ -114,7 +115,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                   }}
                   className="absolute bottom-3 right-3 bg-white/90 hover:bg-white text-stone-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow border border-stone-200 flex items-center gap-1 transition"
                 >
-                  ✂️ Επεξεργασία Εικόνας
+                  Επεξεργασία Εικόνας
                 </button>
               )}
             </div>
@@ -232,7 +233,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                   Περιγραφή
                 </span>
                 <p className="bg-stone-50 p-3 rounded-lg text-stone-700 leading-relaxed text-xs border border-stone-100">
-                  {item.description}
+                  {sanitizeVintedDescription(item.description)}
                 </p>
               </div>
             )}
@@ -251,7 +252,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                 }}
                 className="px-3 py-1.5 bg-white border border-stone-200 rounded-lg text-xs font-bold text-stone-700 hover:bg-stone-100 transition shadow-sm"
               >
-                📄 Αντιγραφή
+                Αντιγραφή
               </button>
             )}
             {onDelete && (
@@ -263,7 +264,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                 }}
                 className="px-3 py-1.5 bg-rose-50 border border-rose-200 rounded-lg text-xs font-bold text-rose-700 hover:bg-rose-100 transition shadow-sm"
               >
-                🗑️ Διαγραφή
+                Διαγραφή
               </button>
             )}
           </div>
@@ -285,7 +286,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                 }}
                 className="px-5 py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-bold shadow-md transition"
               >
-                ✏️ Επεξεργασία
+                Επεξεργασία
               </button>
             )}
           </div>

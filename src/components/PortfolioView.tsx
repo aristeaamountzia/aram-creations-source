@@ -511,7 +511,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
                       {/* Media Counter Pill */}
                       <div className="absolute top-3 left-3 bg-stone-900/85 backdrop-blur-md px-2.5 py-1 rounded-md text-[11px] font-sans text-stone-300 border border-[#e2dcf0]">
-                        {isVideo ? '🎬 Βίντεο' : `📸 Εικόνα ${activeMediaIdx + 1} / ${mediaList.length}`}
+                        {isVideo ? 'Βίντεο' : `Εικόνα ${activeMediaIdx + 1} / ${mediaList.length}`}
                       </div>
                     </div>
 

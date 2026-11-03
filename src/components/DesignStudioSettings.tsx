@@ -444,7 +444,7 @@ export function DesignStudioSettings({ value, onChange }: Props) {
             }}
           >
             <div className="aspect-[4/3] bg-stone-200 rounded-lg overflow-hidden flex items-center justify-center relative mb-3">
-              <span className="text-xs text-stone-500 font-bold">✨ Φωτογραφία Έργου</span>
+              <span className="text-xs text-stone-500 font-bold">Φωτογραφία Έργου</span>
               <span
                 className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 border"
                 style={{
@@ -486,12 +486,12 @@ export function DesignStudioSettings({ value, onChange }: Props) {
       <div className="flex flex-wrap gap-1.5 border-b border-stone-200 pb-2">
         {(
           [
-            ['presets', '🎨 Προεπιλογές Στιλ (Presets)'],
-            ['palette', '🌈 Χρώματα & Παλέτα'],
-            ['typography', '✍️ Τυπογραφία & Μεγέθη'],
-            ['header', '🧭 Κεφαλίδα & Μενού'],
-            ['cards', '🃏 Κάρτες & Badges'],
-            ['hero', '🎬 Hero Αρχικής & Βίντεο']
+            ['presets', 'Προεπιλογές Στιλ (Presets)'],
+            ['palette', 'Χρώματα & Παλέτα'],
+            ['typography', 'Τυπογραφία & Μεγέθη'],
+            ['header', 'Κεφαλίδα & Μενού'],
+            ['cards', 'Κάρτες & Badges'],
+            ['hero', 'Hero Αρχικής & Βίντεο']
           ] as const
         ).map(([tab, label]) => (
           <button

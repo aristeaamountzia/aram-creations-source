@@ -1,12 +1,5 @@
 // @ts-nocheck
-const stripVintedCondition = (text: string | null | undefined): string => {
-    if (!text) return '';
-    return text
-        .split('\n')
-        .filter(line => !/vinted condition|καινούργιο με ετικέτα/i.test(line))
-        .join('\n')
-        .trim();
-};
+import { sanitizeVintedDescription as stripVintedCondition } from '../lib/vinted-sanitizer';
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import { PortfolioDesignSettings } from './PortfolioDesignSettings';
@@ -3226,7 +3219,7 @@ interface BackOfficeViewProps {
                         message: `${actionLabel} λέξης σε ${updatesList.length} προϊόντα.`
                     });
 
-                    alert(`✅ Ολοκληρώθηκε: Έγιναν ${matchCount} αλλαγές σε ${updatesList.length} προϊόντα.`);
+                    alert(`Ολοκληρώθηκε: Έγιναν ${matchCount} αλλαγές σε ${updatesList.length} προϊόντα.`);
                     clearBulkSelection();
                 } catch (err) {
                     alert('Σφάλμα κατά την αντικατάσταση: ' + (err.message || err));
@@ -3891,7 +3884,7 @@ interface BackOfficeViewProps {
                                             onDragOver={(event) => handleProductDragOver(event, item)}
                                             onDrop={(event) => handleProductDrop(event, item)}
                                             onDragEnd={handleProductDragEnd}
-                                            className={`bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition relative cursor-grab active:cursor-grabbing ${selectedItemIds.includes(item.id) ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200'} ${dragOverProductId === item.id ? 'ring-2 ring-amber-400 border-amber-300 shadow-lg' : ''} ${draggedProductId === item.id || isBulkDragged ? 'opacity-60 scale-[0.99]' : ''} ${isSold ? 'opacity-80' : ''}`}
+                                            className={`group bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition relative cursor-grab active:cursor-grabbing ${selectedItemIds.includes(item.id) ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200'} ${dragOverProductId === item.id ? 'ring-2 ring-amber-400 border-amber-300 shadow-lg' : ''} ${draggedProductId === item.id || isBulkDragged ? 'opacity-60 scale-[0.99]' : ''} ${isSold ? 'opacity-80' : ''}`}
                                         >
                                             <div className="aspect-square bg-stone-100 flex items-center justify-center overflow-hidden relative">
                                                 <label onClick={(e) => e.stopPropagation()} className="absolute top-2 left-2 z-10 bg-white/90 backdrop-blur-sm border border-stone-200 rounded-lg p-1 shadow-sm cursor-pointer">
@@ -3899,7 +3892,7 @@ interface BackOfficeViewProps {
                                                 </label>
                                                 {item.imageUrl ? (
                                                     item.fileType === 'video' ? (
-                                                        <video src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} muted loop autoPlay playsInline />
+                                                        <video src={item.imageUrl} referrerPolicy="no-referrer" className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} muted loop autoPlay playsInline />
                                                     ) : (
                                                         <img referrerPolicy="no-referrer" src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
                                                     )
@@ -3907,14 +3900,14 @@ interface BackOfficeViewProps {
 
                                                 {item.mediaList && item.mediaList.length > 1 && (
                                                     <div className="absolute top-2 right-2 bg-stone-900/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                                                        🎬 {item.mediaList.length} αρχεία
+                                                        {item.mediaList.length} αρχεία
                                                     </div>
                                                 )}
-                                                <div className="absolute bottom-2 right-2 flex gap-1 z-10">
-                                                    <button onClick={(e) => { e.stopPropagation(); handleMoveShopOrder(item, 'up'); }} disabled={isShopOrderMoveDisabled(item, 'up')} className="bg-white/90 disabled:opacity-40 text-stone-700 text-xs font-black px-2 py-1 rounded shadow" title="Πιο πάνω στο Shop">↑</button>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleMoveShopOrder(item, 'down'); }} disabled={isShopOrderMoveDisabled(item, 'down')} className="bg-white/90 disabled:opacity-40 text-stone-700 text-xs font-black px-2 py-1 rounded shadow" title="Πιο κάτω στο Shop">↓</button>
+                                                <div className="absolute bottom-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleMoveShopOrder(item, 'up'); }} disabled={isShopOrderMoveDisabled(item, 'up')} className="bg-white/95 disabled:opacity-40 text-stone-700 text-xs font-black px-2 py-1 rounded shadow" title="Πιο πάνω στο Shop">↑</button>
+                                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleMoveShopOrder(item, 'down'); }} disabled={isShopOrderMoveDisabled(item, 'down')} className="bg-white/95 disabled:opacity-40 text-stone-700 text-xs font-black px-2 py-1 rounded shadow" title="Πιο κάτω στο Shop">↓</button>
                                                 </div>
-                                                <div className="absolute bottom-2 left-2 bg-white/90 text-stone-600 text-[10px] font-black px-2 py-1 rounded shadow-sm border border-stone-200">Σύρε</div>
+                                                <div className="absolute bottom-2 left-2 bg-white/90 text-stone-600 text-[10px] font-black px-2 py-1 rounded shadow-sm border border-stone-200 opacity-0 group-hover:opacity-100 transition-opacity">Σύρε</div>
 
                                                 {item.stock > 1 && !isSold && (
                                                     <div className="absolute top-10 left-2 bg-stone-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded shadow flex items-center gap-1">
@@ -3944,14 +3937,14 @@ interface BackOfficeViewProps {
 
                                                 <div className="flex justify-between items-center pt-3 border-t border-stone-100">
                                                     <span className={`font-bold ${isSold ? 'text-stone-400' : 'text-stone-900'}`}>{item.price ? `${item.price}€` : '-'}</span>
-                                                    <div className="flex gap-1.5">
+                                                    <div className="flex gap-1">
                                                         {!isSold && (
-                                                            <button onClick={(e) => handleQuickSold(e, item)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition" title="Γρήγορη Πώληση"><IconBolt /></button>
+                                                            <button type="button" onClick={(e) => handleQuickSold(e, item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="Γρήγορη Πώληση"><IconBolt /></button>
                                                         )}
-                                                        <button onClick={() => handleCloneItem(item)} className="p-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 rounded transition" title="Αντιγραφή"><IconClone /></button>
-                                                        <button onClick={() => handleViewDetails(item)} className="p-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 rounded transition" title="Προβολή"><IconEye /></button>
-                                                        <button onClick={() => handleOpenEdit(item)} className="p-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 rounded transition" title="Επεξεργασία"><IconEdit /></button>
-                                                        <button onClick={() => handleDeleteItem(item.id, item.mediaList, item.imageUrl)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Διαγραφή"><IconTrash /></button>
+                                                        <button type="button" onClick={() => handleCloneItem(item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-stone-500 hover:bg-stone-100 hover:text-stone-800 rounded-lg transition" title="Αντιγραφή"><IconClone /></button>
+                                                        <button type="button" onClick={() => handleViewDetails(item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-stone-500 hover:bg-stone-100 hover:text-stone-800 rounded-lg transition" title="Προβολή"><IconEye /></button>
+                                                        <button type="button" onClick={() => handleOpenEdit(item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-stone-500 hover:bg-stone-100 hover:text-stone-800 rounded-lg transition" title="Επεξεργασία"><IconEdit /></button>
+                                                        <button type="button" onClick={() => handleDeleteItem(item.id, item.mediaList, item.imageUrl)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-red-500 hover:bg-red-50 rounded-lg transition" title="Διαγραφή"><IconTrash /></button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -3984,7 +3977,7 @@ interface BackOfficeViewProps {
                                             <div className="w-16 h-16 bg-stone-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center border border-stone-200 relative">
                                                 {item.imageUrl ? (
                                                     item.fileType === 'video' ? (
-                                                        <video src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} muted />
+                                                        <video src={item.imageUrl} referrerPolicy="no-referrer" className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} muted />
                                                     ) : (
                                                         <img referrerPolicy="no-referrer" src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
                                                     )
@@ -4001,21 +3994,21 @@ interface BackOfficeViewProps {
                                             <div className="hidden lg:flex flex-wrap gap-1 flex-1">
                                                 {item.colors?.slice(0, 1).map((col, i) => <span key={i} className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-1 rounded border border-indigo-100 uppercase font-bold">{col}</span>)}
                                                 {item.materials?.slice(0, 1).map((mat, i) => <span key={i} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-1 rounded border border-stone-200">{mat}</span>)}
-                                                {item.storage && <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-200">📦 {item.storage}</span>}
+                                                {item.storage && <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-200">{item.storage}</span>}
                                             </div>
                                             <div className={`font-bold md:w-20 md:text-right ${isSold ? 'text-stone-400' : 'text-stone-900'}`}>
                                                 {item.price ? `${item.price}€` : '-'}
                                             </div>
                                             <div className="flex gap-1 mt-3 md:mt-0 w-full md:w-auto justify-end border-t border-stone-100 md:border-none pt-3 md:pt-0">
-                                                <button onClick={(e) => { e.stopPropagation(); handleMoveShopOrder(item, 'up'); }} disabled={isShopOrderMoveDisabled(item, 'up')} className="p-2 text-amber-700 disabled:text-stone-300 hover:bg-amber-50 rounded-lg transition" title="Πιο πάνω στο Shop">↑</button>
-                                                <button onClick={(e) => { e.stopPropagation(); handleMoveShopOrder(item, 'down'); }} disabled={isShopOrderMoveDisabled(item, 'down')} className="p-2 text-amber-700 disabled:text-stone-300 hover:bg-amber-50 rounded-lg transition" title="Πιο κάτω στο Shop">↓</button>
+                                                <button type="button" onClick={(e) => { e.stopPropagation(); handleMoveShopOrder(item, 'up'); }} disabled={isShopOrderMoveDisabled(item, 'up')} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-amber-700 disabled:text-stone-300 hover:bg-amber-50 rounded-lg transition" title="Πιο πάνω στο Shop">↑</button>
+                                                <button type="button" onClick={(e) => { e.stopPropagation(); handleMoveShopOrder(item, 'down'); }} disabled={isShopOrderMoveDisabled(item, 'down')} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-amber-700 disabled:text-stone-300 hover:bg-amber-50 rounded-lg transition" title="Πιο κάτω στο Shop">↓</button>
                                                 {!isSold && (
-                                                    <button onClick={(e) => handleQuickSold(e, item)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="Γρήγορη Πώληση"><IconBolt /></button>
+                                                    <button type="button" onClick={(e) => handleQuickSold(e, item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="Γρήγορη Πώληση"><IconBolt /></button>
                                                 )}
-                                                <button onClick={() => handleCloneItem(item)} className="p-2 text-stone-500 hover:bg-stone-200 rounded-lg transition" title="Αντιγραφή"><IconClone /></button>
-                                                <button onClick={() => handleViewDetails(item)} className="p-2 text-stone-500 hover:bg-stone-200 rounded-lg transition" title="Προβολή"><IconEye /></button>
-                                                <button onClick={() => handleOpenEdit(item)} className="p-2 text-stone-500 hover:bg-stone-200 rounded-lg transition" title="Επεξεργασία"><IconEdit /></button>
-                                                <button onClick={() => handleDeleteItem(item.id, item.mediaList, item.imageUrl)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition" title="Διαγραφή"><IconTrash /></button>
+                                                <button type="button" onClick={() => handleCloneItem(item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-stone-500 hover:bg-stone-200 rounded-lg transition" title="Αντιγραφή"><IconClone /></button>
+                                                <button type="button" onClick={() => handleViewDetails(item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-stone-500 hover:bg-stone-200 rounded-lg transition" title="Προβολή"><IconEye /></button>
+                                                <button type="button" onClick={() => handleOpenEdit(item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-stone-500 hover:bg-stone-200 rounded-lg transition" title="Επεξεργασία"><IconEdit /></button>
+                                                <button type="button" onClick={() => handleDeleteItem(item.id, item.mediaList, item.imageUrl)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-red-500 hover:bg-red-50 rounded-lg transition" title="Διαγραφή"><IconTrash /></button>
                                             </div>
                                         </div>
                                     )})}
@@ -4039,7 +4032,7 @@ interface BackOfficeViewProps {
                                         <div className="flex -space-x-2 overflow-hidden shrink-0">
                                             {selectedItems.slice(0, 5).map((item) => (
                                                 <div key={item.id} className="w-10 h-10 rounded-lg border-2 border-white bg-stone-200 overflow-hidden shadow-sm">
-                                                    {item.imageUrl ? <img referrerPolicy="no-referrer" src={item.imageUrl} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs">✨</div>}
+                                                    {item.imageUrl ? <img referrerPolicy="no-referrer" src={item.imageUrl} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-stone-300">ARAM</div>}
                                                 </div>
                                             ))}
                                         </div>
@@ -4054,10 +4047,10 @@ interface BackOfficeViewProps {
                                 {/* Navigation Tabs */}
                                 <div className="px-5 py-2.5 border-b border-stone-200 bg-stone-50/90 flex flex-wrap items-center gap-2 shrink-0">
                                     {[
-                                        ['fields', '📋 Βασικά Στοιχεία'],
-                                        ['search_replace', '🔍 Εντοπισμός & Αντικατάσταση'],
-                                        ['pricing', '💶 Τιμές & Απόθεμα'],
-                                        ['tags', '🏷️ Χρώματα & Υλικά']
+                                        ['fields', 'Βασικά Στοιχεία'],
+                                        ['search_replace', 'Εντοπισμός & Αντικατάσταση'],
+                                        ['pricing', 'Τιμές & Απόθεμα'],
+                                        ['tags', 'Χρώματα & Υλικά']
                                     ].map(([tabId, label]) => (
                                         <button
                                             key={tabId}
@@ -4208,14 +4201,14 @@ interface BackOfficeViewProps {
                                                     onClick={() => handleBulkFindAndReplace(false)}
                                                     className="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1.5"
                                                 >
-                                                    🔄 Αντικατάσταση στα {selectedItems.length} επιλεγμένα
+                                                    Αντικατάσταση στα {selectedItems.length} επιλεγμένα
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleBulkFindAndReplace(true)}
                                                     className="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5"
                                                 >
-                                                    🗑️ Διαγραφή λέξης από τα επιλεγμένα
+                                                    Διαγραφή λέξης από τα επιλεγμένα
                                                 </button>
                                             </div>
                                         </div>
@@ -4358,7 +4351,7 @@ interface BackOfficeViewProps {
                             {isSaving && (
                                 <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-[60] flex flex-col items-center justify-center p-6 rounded-2xl">
                                     <div className="w-full max-w-sm text-center">
-                                        <div className="text-4xl mb-4 animate-bounce">☁️</div>
+                                        <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 font-bold">CSV</div>
                                         <h3 className="font-bold text-stone-800 mb-4">{uploadStatus || 'Προετοιμασία...'}</h3>
                                         <div className="w-full bg-stone-200 rounded-full h-3 mb-3 overflow-hidden shadow-inner">
                                             <div className="bg-emerald-500 h-3 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
@@ -4382,7 +4375,7 @@ interface BackOfficeViewProps {
                                                 {modalPreviewMedia ? (
                                                     <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-stone-200 bg-stone-100 overflow-hidden shrink-0 shadow-sm relative group">
                                                         {modalPreviewType === 'video' ? (
-                                                            <video src={modalPreviewMedia} className="w-full h-full object-cover" muted playsInline />
+                                                            <video src={modalPreviewMedia} referrerPolicy="no-referrer" className="w-full h-full object-cover" muted playsInline />
                                                         ) : (
                                                             <img referrerPolicy="no-referrer" src={modalPreviewMedia} alt="" className="w-full h-full object-cover" />
                                                         )}
@@ -4392,7 +4385,7 @@ interface BackOfficeViewProps {
                                                     </div>
                                                 ) : (
                                                     <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border border-dashed border-stone-300 bg-stone-100 flex items-center justify-center text-stone-400 shrink-0">
-                                                        <span className="text-2xl">✨</span>
+                                                        
                                                     </div>
                                                 )}
                                                 <div className="min-w-0">
@@ -4430,7 +4423,7 @@ interface BackOfficeViewProps {
                                                         className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-stone-200 rounded-lg text-xs font-bold text-stone-700 hover:bg-stone-100 transition shadow-sm"
                                                         title="Επεξεργασία εικόνας στο ενσωματωμένο studio"
                                                     >
-                                                        🎨 <span className="hidden md:inline">Επεξεργασία εικόνας</span>
+                                                        <span className="hidden md:inline">Επεξεργασία εικόνας</span>
                                                     </button>
                                                 )}
                                                 <button
@@ -4533,7 +4526,7 @@ interface BackOfficeViewProps {
                                                             <div className="space-y-1 bg-violet-100/70 p-2.5 rounded-lg border border-violet-200">
                                                                 <div className="flex items-center justify-between text-xs font-bold text-violet-800">
                                                                     <span>Το AI επεξεργάζεται τα στοιχεία της δημιουργίας...</span>
-                                                                    <span className="animate-spin text-sm">✨</span>
+                                                                    
                                                                 </div>
                                                                 <div className="w-full bg-violet-200 rounded-full h-1.5 overflow-hidden">
                                                                     <div className="bg-violet-600 h-1.5 rounded-full animate-pulse w-full"></div>
@@ -4545,11 +4538,11 @@ interface BackOfficeViewProps {
                                                     {aiProductError && (
                                                         <div className="mt-3 border border-rose-200 bg-rose-50 text-rose-800 rounded-xl p-3.5 text-xs space-y-2">
                                                             <div className="font-bold flex items-center gap-1.5 text-rose-800">
-                                                                <span>⚠️</span>
+                                                                
                                                                 <span>{aiProductError}</span>
                                                             </div>
                                                             <div className="p-2.5 bg-white/80 rounded-lg border border-rose-100 text-stone-700 space-y-1.5">
-                                                                <p className="font-bold text-stone-800">💡 Πώς να ενεργοποιήσετε το Google Gemini AI:</p>
+                                                                <p className="font-bold text-stone-800">Οδηγός Ενεργοποίησης Google Gemini AI:</p>
                                                                 <ol className="list-decimal list-inside space-y-1 text-stone-600">
                                                                     <li>Αποκτήστε δωρεάν κλειδί API από το <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline font-bold text-violet-700">Google AI Studio</a>.</li>
                                                                     <li>Προσθέστε στο αρχείο <code>.env</code> της εφαρμογής τη γραμμή: <code>GEMINI_API_KEY=το_κλειδί_σας</code>.</li>
@@ -4621,7 +4614,7 @@ interface BackOfficeViewProps {
                                                         }}>
                                                             <option value="" disabled>Επιλέξτε...</option>
                                                             {allFormCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                                            <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Προσθήκη Νέας...</option>
+                                                            <option value="NEW_CUSTOM" className="font-bold text-emerald-600">+ Προσθήκη Νέας...</option>
                                                         </select>
                                                     )}
                                                 </div>
@@ -4640,7 +4633,7 @@ interface BackOfficeViewProps {
                                                         }}>
                                                             <option value="">(Χωρίς Συλλογή)</option>
                                                             {allCollections.map(col => <option key={col} value={col}>{col}</option>)}
-                                                            <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Προσθήκη Νέας...</option>
+                                                            <option value="NEW_CUSTOM" className="font-bold text-emerald-600">+ Προσθήκη Νέας...</option>
                                                         </select>
                                                     )}
                                                 </div>
@@ -4658,7 +4651,7 @@ interface BackOfficeViewProps {
                                                             else { setFormStatus(e.target.value); }
                                                         }}>
                                                             {allFormStatuses.map(stat => <option key={stat} value={stat}>{stat}</option>)}
-                                                            <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Προσθήκη Νέας...</option>
+                                                            <option value="NEW_CUSTOM" className="font-bold text-emerald-600">+ Προσθήκη Νέας...</option>
                                                         </select>
                                                     )}
                                                 </div>
@@ -4785,7 +4778,7 @@ interface BackOfficeViewProps {
                                                             else { setNewPurchaseSite(e.target.value); }
                                                         }}>
                                                             {allAvailablePlatforms.map(plat => <option key={plat} value={plat}>{plat}</option>)}
-                                                            <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Άλλη Πλατφόρμα...</option>
+                                                            <option value="NEW_CUSTOM" className="font-bold text-emerald-600">+ Άλλη Πλατφόρμα...</option>
                                                         </select>
                                                     )}
 
@@ -4819,7 +4812,7 @@ interface BackOfficeViewProps {
                                                             else { setNewPostedSite(e.target.value); }
                                                         }}>
                                                             {allAvailablePlatforms.map(plat => <option key={plat} value={plat}>{plat}</option>)}
-                                                            <option value="NEW_CUSTOM" className="font-bold text-emerald-600">➕ Άλλη Πλατφόρμα...</option>
+                                                            <option value="NEW_CUSTOM" className="font-bold text-emerald-600">+ Άλλη Πλατφόρμα...</option>
                                                         </select>
                                                     )}
 
@@ -4840,7 +4833,7 @@ interface BackOfficeViewProps {
                                                         <span key={idx} className="bg-white border border-stone-200 text-xs px-2 py-1 rounded-md flex items-center gap-1.5 font-bold text-stone-700 shadow-sm max-w-full">
                                                             {platObj.site}
                                                             {platObj.url && <a href={platObj.url} target="_blank" rel="noopener noreferrer" className="text-stone-500 hover:text-stone-800" title={platObj.url}><IconExternalLink /></a>}
-                                                            {platObj.showInShop ? <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 rounded ml-1" title="Θα φαίνεται στο Shop">👀 Ορατό</span> : <span className="text-[10px] bg-stone-200 text-stone-500 px-1 rounded ml-1" title="Κρυφό από το Shop">🔒 Κρυφό</span>}
+                                                            {platObj.showInShop ? <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 rounded ml-1" title="Θα φαίνεται στο Shop">Ορατό</span> : <span className="text-[10px] bg-stone-200 text-stone-500 px-1 rounded ml-1" title="Κρυφό από το Shop">Κρυφό</span>}
                                                             <button type="button" onClick={() => setFormPostedPlatforms(formPostedPlatforms.filter((_, i) => i !== idx))} className="text-red-500 ml-1"><IconX /></button>
                                                         </span>
                                                     ))}
@@ -4902,7 +4895,7 @@ interface BackOfficeViewProps {
                                                                     className={`relative aspect-square border-2 ${idx === 0 ? 'border-emerald-500 shadow-md' : 'border-stone-200'} bg-stone-100 rounded-xl overflow-hidden group cursor-grab active:cursor-grabbing hover:opacity-90 transition`}
                                                                 >
                                                                     {media.type === 'video' ? (
-                                                                        <video src={media.url} className="w-full h-full object-cover pointer-events-none" muted />
+                                                                        <video src={media.url} referrerPolicy="no-referrer" className="w-full h-full object-cover pointer-events-none" muted />
                                                                     ) : (
                                                                         <img referrerPolicy="no-referrer" src={media.url} className="w-full h-full object-cover pointer-events-none" />
                                                                     )}
@@ -4956,12 +4949,12 @@ interface BackOfficeViewProps {
                                                                     className="relative aspect-square border-2 border-stone-300 bg-stone-200 rounded-xl overflow-hidden group cursor-grab active:cursor-grabbing hover:opacity-90 transition opacity-80"
                                                                 >
                                                                     {media.type === 'video' ? (
-                                                                        <video src={media.url} className="w-full h-full object-cover pointer-events-none grayscale" muted />
+                                                                        <video src={media.url} referrerPolicy="no-referrer" className="w-full h-full object-cover pointer-events-none grayscale" muted />
                                                                     ) : (
                                                                         <img referrerPolicy="no-referrer" src={media.url} className="w-full h-full object-cover pointer-events-none grayscale" />
                                                                     )}
 
-                                                                    <div className="absolute top-1 left-1 bg-stone-800 text-white text-[9px] px-1 rounded shadow-sm">🔒 Κρυφό</div>
+                                                                    <div className="absolute top-1 left-1 bg-stone-800 text-white text-[9px] px-1 rounded shadow-sm">Κρυφό</div>
 
                                                                     <MediaDownload media={media} name={formName || 'aram-private-media'} className="absolute top-8 right-1 z-10" />
                                                                     {media.type !== 'video' && !isAnimatedGifMedia(media) && (
@@ -5159,13 +5152,13 @@ interface BackOfficeViewProps {
                                             return (
                                                 <>
                                                     {activeMedia.type === 'video' ? (
-                                                        <video src={activeMedia.url} key={activeMedia.url} className="w-full h-full object-cover" controls autoPlay muted loop playsInline />
+                                                        <video src={activeMedia.url} key={activeMedia.url} referrerPolicy="no-referrer" className="w-full h-full object-cover" controls autoPlay muted loop playsInline />
                                                     ) : (
                                                         <img referrerPolicy="no-referrer" src={activeMedia.url} key={activeMedia.url} className="w-full h-full object-cover" alt={currentItem.name} />
                                                     )}
                                                     {activeMedia.showInShop === false && (
                                                         <div className="absolute top-2 right-2 bg-stone-800 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1 shadow-lg">
-                                                            🔒 Κρυφό
+                                                            Κρυφό
                                                         </div>
                                                     )}
                                                 </>
@@ -5182,11 +5175,11 @@ interface BackOfficeViewProps {
                                                 {currentMediaArray.map((m, idx) => (
                                                     <button key={idx} onClick={() => setActiveDetailMediaIdx(idx)} className={`w-12 h-12 rounded-md overflow-hidden flex-shrink-0 border-2 transition relative ${activeDetailMediaIdx === idx ? 'border-amber-400 scale-105 shadow-md' : 'border-stone-200 opacity-70 hover:opacity-100'}`}>
                                                         {m.type === 'video' ? (
-                                                            <div className="w-full h-full bg-stone-800 flex items-center justify-center text-[10px]">📹</div>
+                                                            <div className="w-full h-full bg-stone-800 flex items-center justify-center text-[10px]">VIDEO</div>
                                                         ) : (
                                                             <img referrerPolicy="no-referrer" src={m.url} className="w-full h-full object-cover" />
                                                         )}
-                                                        {m.showInShop === false && <span className="absolute top-0 right-0 bg-stone-900/90 text-white text-[8px] p-0.5 rounded-bl">🔒</span>}
+                                                        {m.showInShop === false && <span className="absolute top-0 right-0 bg-stone-900/90 text-white text-[8px] p-0.5 rounded-bl"></span>}
                                                     </button>
                                                 ))}
                                             </div>
@@ -5274,7 +5267,7 @@ interface BackOfficeViewProps {
                                                                 <span key={i} className="bg-stone-100 border border-stone-200 text-xs px-2 py-1 rounded flex items-center gap-1 font-bold text-stone-700">
                                                                     {plat.site}
                                                                     {plat.url && <a href={plat.url} target="_blank" rel="noopener noreferrer" className="text-stone-500 hover:text-stone-800 ml-1"><IconExternalLink /></a>}
-                                                                    {plat.showInShop ? <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 rounded ml-1" title="Ορατό στο Shop">👀 Ορατό</span> : <span className="text-[10px] bg-stone-200 text-stone-500 px-1 rounded ml-1" title="Κρυφό από το Shop">🔒 Κρυφό</span>}
+                                                                    {plat.showInShop ? <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 rounded ml-1" title="Ορατό στο Shop">Ορατό</span> : <span className="text-[10px] bg-stone-200 text-stone-500 px-1 rounded ml-1" title="Κρυφό από το Shop">Κρυφό</span>}
                                                                 </span>
                                                             ))}
                                                         </div>
@@ -5347,7 +5340,7 @@ interface BackOfficeViewProps {
                                                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                                         }`}
                                     >
-                                        🎨 Design Studio
+                                        Design Studio
                                         <span className="text-[10px] bg-violet-100 text-violet-800 px-2 py-0.5 rounded-full font-bold">Όλο το Site</span>
                                     </button>
                                     <button
@@ -5359,7 +5352,7 @@ interface BackOfficeViewProps {
                                                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                                         }`}
                                     >
-                                        🛍️ Βιτρίνα Shop
+                                        Βιτρίνα Shop
                                         <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Σελίδα Shop</span>
                                     </button>
                                     <button
@@ -5371,7 +5364,7 @@ interface BackOfficeViewProps {
                                                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                                         }`}
                                     >
-                                        🖼️ Portfolio
+                                        Portfolio
                                         <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Σελίδα Έργων</span>
                                     </button>
                                     <button
@@ -5383,7 +5376,7 @@ interface BackOfficeViewProps {
                                                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                                         }`}
                                     >
-                                        ⚙️ Προσαρμοσμένα Πεδία
+                                        Προσαρμοσμένα Πεδία
                                         <span className="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full font-bold">Φόρμες Προϊόντων</span>
                                     </button>
                                     <button
@@ -5395,7 +5388,7 @@ interface BackOfficeViewProps {
                                                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                                         }`}
                                     >
-                                        🤖 AI Back Office
+                                        AI Back Office
                                         <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-bold">Βοηθός AI</span>
                                     </button>
                                 </div>
@@ -5413,7 +5406,7 @@ interface BackOfficeViewProps {
 
                                     {settingsLoadError && (
                                         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-bold text-rose-800">
-                                            ⚠️ Προσοχή: Δεν ήταν δυνατή η φόρτωση των αποθηκευμένων ρυθμίσεων Shop. Εμφανίζονται οι τοπικές προεπιλογές: {settingsLoadError}
+                                            Προσοχή: Δεν ήταν δυνατή η φόρτωση των αποθηκευμένων ρυθμίσεων Shop. Εμφανίζονται οι τοπικές προεπιλογές: {settingsLoadError}
                                         </div>
                                     )}
 
@@ -5543,7 +5536,7 @@ interface BackOfficeViewProps {
 
                                                 {shopSettings.heroVideoUrl && (
                                                     <div className="pt-2 border-t border-stone-100 flex flex-col sm:flex-row items-center gap-4">
-                                                        <video src={shopSettings.heroVideoUrl} controls muted className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
+                                                        <video src={shopSettings.heroVideoUrl} controls muted referrerPolicy="no-referrer" className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <MediaDownload media={{ url: shopSettings.heroVideoUrl, type: 'video' }} name="aram-hero-video" />
                                                             <button
@@ -5753,7 +5746,7 @@ interface BackOfficeViewProps {
 
                                                 {shopSettings.portfolioHeroVideoUrl && (
                                                     <div className="pt-2 border-t border-stone-100 flex flex-col sm:flex-row items-center gap-4">
-                                                        <video src={shopSettings.portfolioHeroVideoUrl} controls muted className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
+                                                        <video src={shopSettings.portfolioHeroVideoUrl} controls muted referrerPolicy="no-referrer" className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <MediaDownload media={{ url: shopSettings.portfolioHeroVideoUrl, type: 'video' }} name="aram-portfolio-hero-video" />
                                                             <button
@@ -5811,12 +5804,12 @@ interface BackOfficeViewProps {
                                             <div className="flex flex-wrap items-center gap-1.5 border-b border-stone-200 pb-3">
                                                 {[
                                                     ['all', 'Όλα τα πεδία', null],
-                                                    ['color', '🎨 Χρώματα', settingsColorOptions.length],
-                                                    ['material', '🧵 Υλικά', settingsMaterialOptions.length],
-                                                    ['category', '📁 Κατηγορίες', settingsCategoryOptions.length],
-                                                    ['collection', '🏷️ Συλλογές', settingsCollectionOptions.length],
-                                                    ['status', '📦 Καταστάσεις', settingsStatusOptions.length],
-                                                    ['platform', '🌐 Πλατφόρμες', settingsPlatformOptions.length]
+                                                    ['color', 'Χρώματα', settingsColorOptions.length],
+                                                    ['material', 'Υλικά', settingsMaterialOptions.length],
+                                                    ['category', 'Κατηγορίες', settingsCategoryOptions.length],
+                                                    ['collection', 'Συλλογές', settingsCollectionOptions.length],
+                                                    ['status', 'Καταστάσεις', settingsStatusOptions.length],
+                                                    ['platform', 'Πλατφόρμες', settingsPlatformOptions.length]
                                                 ].map(([filterKey, filterLabel, count]) => (
                                                     <button
                                                         key={filterKey}
@@ -5944,22 +5937,22 @@ interface BackOfficeViewProps {
 
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
                                                     <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-3.5">
-                                                        <p className="text-xs font-black text-stone-800 uppercase tracking-wider">🎯 Πού δουλεύει</p>
+                                                        <p className="text-xs font-black text-stone-800 uppercase tracking-wider">Πού δουλεύει</p>
                                                         <p className="text-xs text-stone-500 mt-1.5 leading-relaxed">Μέσα στη φόρμα προϊόντος για δημιουργία τίτλων, περιγραφών, χρωμάτων, υλικών, tags και Instagram captions.</p>
                                                     </div>
                                                     <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-3.5">
-                                                        <p className="text-xs font-black text-stone-800 uppercase tracking-wider">🖼️ Εικόνες & Όραση</p>
+                                                        <p className="text-xs font-black text-stone-800 uppercase tracking-wider">Εικόνες & Όραση</p>
                                                         <p className="text-xs text-stone-500 mt-1.5 leading-relaxed">Αναλύει τις ανεβασμένες φωτογραφίες του κοσμήματος για αυτόματη ανίχνευση υλικών, χρωμάτων και λεπτομερειών.</p>
                                                     </div>
                                                     <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-3.5">
-                                                        <p className="text-xs font-black text-stone-800 uppercase tracking-wider">🔒 Ασφάλεια & Πρόσβαση</p>
+                                                        <p className="text-xs font-black text-stone-800 uppercase tracking-wider"> Ασφάλεια & Πρόσβαση</p>
                                                         <p className="text-xs text-stone-500 mt-1.5 leading-relaxed">Προστατεύεται με Firebase authentication και admin email check. Κανένα API key δεν εκτίθεται στο δημόσιο frontend.</p>
                                                     </div>
                                                 </div>
                                             </section>
 
                                             <section className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4.5 space-y-1.5">
-                                                <p className="text-xs font-black text-amber-900 uppercase tracking-wider">💡 Οδηγός Αντιμετώπισης Σφαλμάτων</p>
+                                                <p className="text-xs font-black text-amber-900 uppercase tracking-wider">Οδηγός Αντιμετώπισης Σφαλμάτων</p>
                                                 <p className="text-xs text-amber-800 leading-relaxed">
                                                     • <strong>Σφάλμα 503</strong>: Ελέγξτε τα <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">GEMINI_API_KEY</code> και <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">AI_PROVIDER</code> στα environment variables του Netlify (ή στο τοπικό αρχείο <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">.env</code>).<br />
                                                     • <strong>Σφάλμα 401</strong>: Απαιτείται ενεργή σύνδεση με λογαριασμό διαχειριστή στο Back Office.
@@ -5971,7 +5964,7 @@ interface BackOfficeViewProps {
 
                                 <div className="p-4 border-t border-stone-200 bg-stone-50 flex flex-col sm:flex-row items-center justify-between gap-3">
                                     <div className="text-xs text-stone-500 font-medium hidden sm:block">
-                                        💡 Οι ρυθμίσεις αποθηκεύονται απευθείας στη βάση δεδομένων και εφαρμόζονται άμεσα.
+                                        Οι ρυθμίσεις αποθηκεύονται απευθείας στη βάση δεδομένων και εφαρμόζονται άμεσα.
                                     </div>
                                     <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                                         <button

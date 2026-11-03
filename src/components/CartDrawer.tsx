@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CartItem, OrderCustomerInfo } from '../types';
-import { X, Trash2, ArrowRight, ShieldCheck, CheckCircle2, Truck, CreditCard, ChevronLeft } from 'lucide-react';
+import { X, Trash2, ArrowRight, ShieldCheck, CheckCircle2, Truck, CreditCard, ChevronLeft, AlertTriangle, Info } from 'lucide-react';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -391,18 +391,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         {orderError && (
           <div role="alert" className="mx-6 my-3 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 space-y-1.5">
             <div className="flex items-center gap-2 font-bold text-xs text-rose-800">
-              <span className="text-base">⚠️</span>
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
               <span>Σφάλμα Καταχώρησης Παραγγελίας</span>
             </div>
             <p className="text-xs text-rose-700 leading-relaxed font-medium">{orderError}</p>
             <p className="text-[11px] text-stone-500 pt-1 border-t border-rose-100">
-              💡 Συμβουλή: Ελέγξτε τα στοιχεία παράδοσης (ονοματεπώνυμο, τηλέφωνο, διεύθυνση) ή επιλέξτε απευθείας αγορά μέσω Vinted.
+              Συμβουλή: Ελέγξτε τα στοιχεία παράδοσης (ονοματεπώνυμο, τηλέφωνο, διεύθυνση) ή επιλέξτε απευθείας αγορά μέσω Vinted.
             </p>
           </div>
         )}
         {/* Drawer Footer */}
         {!completedOrderNumber && items.length > 0 && (
-          <div className="p-6 border-t border-stone-200 bg-stone-50 space-y-4">
+          <div className="sticky bottom-0 z-10 p-5 sm:p-6 border-t border-stone-200 bg-stone-50/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.06)] space-y-4">
             <div className="space-y-1.5 text-xs text-stone-600">
               <div className="flex justify-between">
                 <span>Υποσύνολο:</span>

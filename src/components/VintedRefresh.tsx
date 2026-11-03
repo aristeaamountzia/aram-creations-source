@@ -213,7 +213,7 @@ export function VintedRefresh({
           title="Επίλεξε προϊόντα με Vinted link. Έως 50 ανά έλεγχο."
           className="px-4 py-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold disabled:opacity-50 hover:bg-amber-100 transition shadow-sm flex items-center gap-1.5"
         >
-          <span>🔄</span>
+          
           <span>Έλεγχος / Ανανέωση Vinted ({candidates.length})</span>
         </button>
       </div>
@@ -236,7 +236,7 @@ export function VintedRefresh({
             <div className="p-5 border-b border-stone-100 bg-stone-50 flex items-start justify-between gap-4 shrink-0">
               <div className="space-y-1.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xl">🔄</span>
+                  
                   <h2 id="vinted-refresh-heading" className="text-lg font-black text-stone-900">
                     Ανανέωση από Vinted
                   </h2>
@@ -291,7 +291,7 @@ export function VintedRefresh({
                       activeTab === 'changes' ? 'bg-emerald-700 text-white shadow-sm' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
                     }`}
                   >
-                    <span>🟢 Μόνο με αλλαγές</span>
+                    <span>Μόνο με αλλαγές</span>
                     <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${activeTab === 'changes' ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-700'}`}>
                       {withChanges.length}
                     </span>
@@ -317,7 +317,7 @@ export function VintedRefresh({
                       activeTab === 'unchanged' ? 'bg-stone-700 text-white shadow-sm' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
                     }`}
                   >
-                    <span>⚪ Αμετάβλητα</span>
+                    <span>Αμετάβλητα</span>
                     <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${activeTab === 'unchanged' ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-700'}`}>
                       {unchanged.length}
                     </span>
@@ -331,7 +331,7 @@ export function VintedRefresh({
                         activeTab === 'errors' ? 'bg-rose-700 text-white shadow-sm' : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
                       }`}
                     >
-                      <span>⚠️ Σφάλματα</span>
+                      <span>Σφάλματα</span>
                       <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
                         {withErrors.length}
                       </span>
@@ -416,7 +416,7 @@ export function VintedRefresh({
                         {previewImg ? (
                           <img src={previewImg} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-xs text-stone-400">🖼️</span>
+                          <span className="text-[10px] text-stone-400 font-bold uppercase">ARAM</span>
                         )}
                       </div>
 
@@ -432,11 +432,11 @@ export function VintedRefresh({
                           )}
                           {hasChanges ? (
                             <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                              🟢 Εντοπίστηκαν αλλαγές
+                              Εντοπίστηκαν αλλαγές
                             </span>
                           ) : (
                             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-stone-100 text-stone-500 border border-stone-200">
-                              ⚪ Αμετάβλητο
+                              Αμετάβλητο
                             </span>
                           )}
                         </div>
@@ -456,7 +456,7 @@ export function VintedRefresh({
 
                     {/* What Stays Unchanged Guarantee Banner */}
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-stone-50 rounded-xl border border-stone-200/80 text-[11px] text-stone-600">
-                      <span className="text-stone-400">🔒</span>
+                      
                       <span><b>Παραμένουν αναλλοίωτα:</b> Τίτλος, Περιγραφή, Χρώματα, Υλικά, Συλλογή.</span>
                     </div>
 
@@ -466,14 +466,14 @@ export function VintedRefresh({
                         {'price' in row.patch && (
                           <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1">
                             <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
-                              <span>💰 Αλλαγή Τιμής Shop</span>
+                              <span>Αλλαγή Τιμής Shop</span>
                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
                                 {priceDiff > 0 ? `+${priceDiff.toFixed(2)} €` : `${priceDiff.toFixed(2)} €`}
                               </span>
                             </div>
                             <div className="flex items-center gap-2 text-xs">
                               <span className="line-through text-stone-400">{row.item.price} €</span>
-                              <span className="text-stone-400">➔</span>
+                              <span className="text-stone-400">→</span>
                               <span className="font-black text-emerald-800 text-sm">{row.choices.priceValue} €</span>
                             </div>
                           </div>
@@ -482,14 +482,14 @@ export function VintedRefresh({
                         {('status' in row.patch || 'stock' in row.patch) && (
                           <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 space-y-1">
                             <div className="flex items-center justify-between text-xs font-bold text-amber-900">
-                              <span>📦 Κατάσταση / Απόθεμα</span>
+                              <span>Κατάσταση / Απόθεμα</span>
                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-bold">
                                 {row.choices.statusValue}
                               </span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-stone-700">
                               <span className="text-stone-400">{row.item.status} ({row.item.stock ?? 1} τεμ.)</span>
-                              <span className="text-stone-400">➔</span>
+                              <span className="text-stone-400">→</span>
                               <span className="font-black text-amber-950">{row.choices.statusValue} ({row.choices.stockValue} τεμ.)</span>
                             </div>
                           </div>
@@ -627,7 +627,7 @@ export function VintedRefresh({
                     {row.error && (
                       <div role="alert" className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 space-y-1">
                         <div className="font-bold flex items-center gap-1.5">
-                          <span>⚠️</span>
+                          
                           <span>Αποτυχία ελέγχου Vinted</span>
                         </div>
                         <p>{row.error}</p>
@@ -639,7 +639,7 @@ export function VintedRefresh({
 
                     {row.result && (
                       <p className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 flex items-center gap-1.5">
-                        <span>✅</span>
+                        
                         <span>{row.result}</span>
                       </p>
                     )}

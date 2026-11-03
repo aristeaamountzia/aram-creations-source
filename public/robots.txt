@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin-aram-58142.html
+Disallow: /vinted-importer.html
+
+Sitemap: https://aramcreationsofficial1.netlify.app/sitemap.xml
+

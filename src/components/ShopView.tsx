@@ -245,6 +245,11 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const [sortBy, setSortBy] = useState<string>('featured');
   const [availableOnly, setAvailableOnly] = useState<boolean>(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
+  const [heroVideoFailed, setHeroVideoFailed] = useState<boolean>(false);
+
+  useEffect(() => {
+    setHeroVideoFailed(false);
+  }, [shopSettings.heroVideoUrl]);
 
   useEffect(() => {
     return onSnapshot(doc(db, 'settings', 'shop'), (snapshot) => {
@@ -485,15 +490,19 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const activeMedia = selectedMediaList[activeMediaIndex] || selectedMediaList[0];
   const zoomImages = selectedMediaList.map((media, index) => ({ ...media, mediaIndex: index })).filter(media => media.type !== 'video');
   const ds = shopSettings.designStudio || DEFAULT_DESIGN_STUDIO;
+  const hasHeroVideo = Boolean(shopSettings.heroVideoUrl) && !heroVideoFailed;
 
   return (
     <div className="catalog-view shop-view min-h-screen" style={{ backgroundColor: ds.pageBackground || shopSettings.bgColor, color: ds.ink || shopSettings.textColor, fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif` }}>
       {/* Authentic Artisan Hero Banner */}
       <section
-        className={`shop-hero ${shopSettings.heroVideoUrl ? 'catalog-hero--video' : ''} min-h-[58vh] sm:min-h-[68vh] flex flex-col justify-center items-center relative overflow-hidden py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center`}
-        style={{ backgroundColor: shopSettings.heroBgColor, color: ds.heroTitleInk || shopSettings.heroTitleColor }}
+        className={`shop-hero ${hasHeroVideo ? 'catalog-hero--video bg-stone-950' : 'bg-stone-900'} min-h-[58vh] sm:min-h-[68vh] flex flex-col justify-center items-center relative overflow-hidden py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center transition-colors`}
+        style={{
+          backgroundColor: hasHeroVideo ? '#0c0a09' : (shopSettings.heroBgColor && shopSettings.heroBgColor !== '#ffffff' ? shopSettings.heroBgColor : '#0c0a09'),
+          color: '#ffffff'
+        }}
       >
-        {shopSettings.heroVideoUrl && (
+        {hasHeroVideo && (
           <video
             className="absolute inset-0 h-full w-full object-cover"
             src={shopSettings.heroVideoUrl}
@@ -501,29 +510,28 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             muted
             loop
             playsInline
+            preload="metadata"
+            referrerPolicy="no-referrer"
+            onError={() => setHeroVideoFailed(true)}
             aria-hidden="true"
           />
         )}
-        {shopSettings.heroVideoUrl && (
-          <div
-            className="absolute inset-0 bg-black"
-            style={{ opacity: Number(ds.heroOverlay) || 0.55 }}
-            aria-hidden="true"
-          />
-        )}
+        <div
+          className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"
+          style={{ opacity: Number(ds.heroOverlay) || 0.55 }}
+          aria-hidden="true"
+        />
         <div className="relative z-10 w-full max-w-4xl mx-auto space-y-4 my-auto">
           <h1
-            className={`${shopSettings.heroTitleSize || 'text-3xl sm:text-4xl md:text-5xl'} font-bold tracking-tight break-words`}
+            className={`${shopSettings.heroTitleSize || 'text-3xl sm:text-4xl md:text-5xl'} font-bold tracking-tight break-words text-white drop-shadow-sm`}
             style={{
-              color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroTitleColor,
               fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif`
             }}
           >
             {shopSettings.heroTitle}
           </h1>
           <p
-            className="text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed opacity-90"
-            style={{ color: shopSettings.heroVideoUrl ? '#fff' : shopSettings.heroSubtitleColor }}
+            className="text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed text-stone-200 opacity-95 drop-shadow-xs"
           >
             {shopSettings.heroSubtitle}
           </p>
@@ -549,9 +557,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             const el = document.getElementById('shop-catalog') || document.querySelector('.catalog-controls');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }}
-          className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 cursor-pointer transition group focus:outline-hidden ${
-            shopSettings.heroVideoUrl ? 'text-white/90 hover:text-white' : 'text-stone-700 hover:text-stone-900'
-          }`}
+          className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 cursor-pointer transition group focus:outline-hidden text-white/90 hover:text-white"
           aria-label="Κύλιση προς τα κάτω για προβολή δημιουργιών"
         >
           <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest drop-shadow-md group-hover:scale-105 transition-transform">
@@ -838,7 +844,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="px-2.5 py-2 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold hover:bg-teal-100 transition flex items-center gap-1"
+                            className="px-2.5 py-2 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold hover:bg-teal-100 active:scale-[0.98] transition-all flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:outline-none"
                             title="Αγορά μέσω Vinted"
                           >
                             <span>Vinted</span>
@@ -854,7 +860,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                               ? 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed'
                               : isAdded
                               ? 'bg-emerald-600 text-white font-bold'
-                              : 'bg-stone-900 hover:bg-stone-800 text-white'
+                              : 'bg-stone-900 hover:bg-stone-800 active:scale-[0.98] text-white focus-visible:ring-2 focus-visible:ring-stone-900 focus-visible:outline-none'
                           }`}
                         >
                           {isAdded ? (

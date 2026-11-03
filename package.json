@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server-dist .netlify",
     "lint": "tsc --noEmit",
-    "test": "npx tsx --test server/orders-core.test.ts server/orders-origin.test.ts server/video-policy.test.ts server/catalog-excel.test.ts server/vinted-refresh.test.ts server/media-path.test.ts server/request-check.test.ts server/backoffice-ai.test.ts server/gemini-config.test.ts tests/portfolio-features.test.ts"
+    "test": "npx tsx --test server/orders-core.test.ts server/orders-origin.test.ts server/video-policy.test.ts server/catalog-excel.test.ts server/vinted-refresh.test.ts server/media-path.test.ts server/request-check.test.ts server/backoffice-ai.test.ts server/gemini-config.test.ts tests/portfolio-features.test.ts tests/vinted-sanitizer.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -36,6 +36,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
+    "playwright-core": "^1.64.1",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
