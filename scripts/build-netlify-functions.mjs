@@ -5,7 +5,7 @@ import { build } from "esbuild";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const source = join(root, "netlify", "functions");
-const output = join(root, ".netlify", "functions-dist");
+const output = join(root, "functions-dist");
 
 await mkdir(output, { recursive: true });
 await copyFile(join(source, "api.ts"), join(output, "api.ts"));
@@ -28,7 +28,7 @@ await build({
   banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' },
 });
 
-console.log("Netlify Functions prepared in .netlify/functions-dist");
+console.log("Netlify Functions prepared in functions-dist");
 await build({
   entryPoints: [join(source, 'media.ts')], outfile: join(output, 'media.mjs'), bundle: true,
   platform: 'node', format: 'esm', packages: 'bundle', target: 'node20',
