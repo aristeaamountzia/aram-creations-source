@@ -13,15 +13,15 @@ export type DesignStudio = {
 
 export const DEFAULT_DESIGN_STUDIO: DesignStudio = {
   brandName: 'aram.creations', shopCaption: 'Χειροποίητα κοσμήματα', portfolioCaption: 'Τέχνη & δημιουργίες', shopNavLabel: 'Shop', portfolioNavLabel: 'Portfolio', cartLabel: 'Καλάθι', contactLabel: 'Επικοινωνία',
-  fontFamily: "Jura, sans-serif", baseSize: '16px', pageBackground: '#f5f1e9', surface: '#fffdfa', ink: '#302c27', muted: '#716a61', line: '#ddd5c9', accent: '#6253ae',
-  radius: '12px', cardRadius: '12px', cardPadding: '20px', sectionGap: '32px',
-  headerBackground: '#201d1a', headerInk: '#fffdfa', headerMuted: '#c8c0b5', headerHeight: '76px', headerGap: '24px', navActiveBackground: '#f7f3ec', navActiveInk: '#201d1a',
-  buttonBackground: '#6253ae', buttonInk: '#ffffff', buttonRadius: '10px', buttonPaddingX: '20px', buttonPaddingY: '10px',
-  badgeBackground: '#f5f1e9', badgeInk: '#514663', badgeBorder: '#ddd5c9', badgeRadius: '999px',
-  adminCardBackground: '#ffffff', adminCardBorder: '#e7e5e4', adminCardInk: '#1c1917', adminMetaInk: '#78716c', adminStatusBackground: '#dcfce7', adminStatusInk: '#047857', adminTagBackground: '#f8fafc', adminTagInk: '#57534e', dragBackground: '#ffffff', dragInk: '#57534e',
-  heroMinHeight: '500px', heroOverlay: '0.55', heroTitleSize: '42px', heroTitleInk: '#ffffff', heroBodyInk: '#ffffff', heroContentWidth: '896px', heroTopPadding: '64px', heroBottomPadding: '64px',
-  portfolioCardBackground: '#fffdfa', portfolioCardBorder: '#ddd5c9', portfolioCardTitleInk: '#302c27', portfolioCardBodyInk: '#716a61', portfolioCardPadding: '20px', portfolioLinkInk: '#514663',
-  modalBackground: '#fffdfa', modalInk: '#302c27', modalMuted: '#716a61', modalBorder: '#ddd5c9', modalRadius: '18px'
+  fontFamily: "Jura, sans-serif", baseSize: '15px', pageBackground: '#fafaf9', surface: '#ffffff', ink: '#18181b', muted: '#71717a', line: '#e4e4e7', accent: '#18181b',
+  radius: '10px', cardRadius: '12px', cardPadding: '16px', sectionGap: '32px',
+  headerBackground: '#ffffff', headerInk: '#18181b', headerMuted: '#71717a', headerHeight: '76px', headerGap: '24px', navActiveBackground: '#18181b', navActiveInk: '#ffffff',
+  buttonBackground: '#18181b', buttonInk: '#ffffff', buttonRadius: '8px', buttonPaddingX: '18px', buttonPaddingY: '10px',
+  badgeBackground: '#f4f4f5', badgeInk: '#18181b', badgeBorder: '#e4e4e7', badgeRadius: '999px',
+  adminCardBackground: '#ffffff', adminCardBorder: '#e4e4e7', adminCardInk: '#18181b', adminMetaInk: '#71717a', adminStatusBackground: '#f4f4f5', adminStatusInk: '#18181b', adminTagBackground: '#f4f4f5', adminTagInk: '#27272a', dragBackground: '#ffffff', dragInk: '#27272a',
+  heroMinHeight: '520px', heroOverlay: '0.50', heroTitleSize: '40px', heroTitleInk: '#ffffff', heroBodyInk: '#f4f4f5', heroContentWidth: '896px', heroTopPadding: '64px', heroBottomPadding: '64px',
+  portfolioCardBackground: '#ffffff', portfolioCardBorder: '#e4e4e7', portfolioCardTitleInk: '#18181b', portfolioCardBodyInk: '#71717a', portfolioCardPadding: '16px', portfolioLinkInk: '#18181b',
+  modalBackground: '#ffffff', modalInk: '#18181b', modalMuted: '#71717a', modalBorder: '#e4e4e7', modalRadius: '16px'
 };
 
 export function normalizeDesignStudio(value?: Partial<DesignStudio>): DesignStudio {

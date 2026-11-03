@@ -30,8 +30,9 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
   useEffect(() => {
     if (reducedMotion) videoRef.current?.pause();
   }, [reducedMotion]);
+
   return (
-    <section className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video bg-stone-950 text-white' : 'bg-white text-[#252134]'} min-h-[58vh] sm:min-h-[68vh] flex flex-col justify-center items-center relative overflow-hidden border-b border-[#e5def3] px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8`}>
+    <section className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video bg-stone-950 text-white' : 'bg-stone-950 text-white'} min-h-[58vh] sm:min-h-[68vh] flex flex-col justify-center items-center relative overflow-hidden border-b border-stone-800 px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8`}>
       {hasVideo && (
         <>
           {videoLink(source) ? (
@@ -60,30 +61,18 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
         </>
       )}
       <div className="relative z-10 mx-auto w-full max-w-4xl space-y-4 my-auto">
-        <h1 className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight ${hasVideo ? 'text-white' : 'text-[#252134]'}`}>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white drop-shadow-sm">
           {design.title}
         </h1>
-        <p className={`mx-auto max-w-2xl text-sm sm:text-base md:text-lg leading-relaxed ${hasVideo ? 'text-white/90' : 'text-[#675f79]'}`}>
+        <p className="mx-auto max-w-2xl text-sm sm:text-base md:text-lg leading-relaxed text-stone-200 opacity-95 drop-shadow-xs">
           {design.subtitle}
         </p>
-        {showStats && (
-          <div className="pt-2 flex flex-wrap justify-center gap-2.5 text-[11px] font-bold">
-            {[`${itemCount} έργα`, `${categoryCount} κατηγορίες`, `${videoCount} έργα με βίντεο`].map(label => (
-              <span
-                key={label}
-                className={`rounded-full border px-3.5 py-1 ${hasVideo ? 'border-white/20 bg-white/10 text-white backdrop-blur-xs' : 'border-[#e5def3] bg-[#f7f5fd] text-[#675f79]'}`}
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        )}
         {showContact && (
-          <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
               onClick={onContactArtist}
-              className="flex items-center gap-2 rounded-xl bg-[#6253ae] px-5 py-2.5 text-xs font-bold text-white transition hover:bg-[#544695] sm:text-sm shadow-md"
+              className="flex items-center gap-2 rounded-xl bg-stone-900/90 hover:bg-stone-800 border border-stone-700/80 px-5 py-2.5 text-xs font-semibold text-white transition sm:text-sm shadow-md active:scale-95"
             >
               <Mail className="h-4 w-4" /><span>{design.contactLabel}</span>
             </button>
@@ -98,12 +87,10 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
           const el = document.getElementById('portfolio-catalog') || document.querySelector('.catalog-controls') || document.querySelector('.catalog-content');
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }}
-        className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 cursor-pointer transition group focus:outline-hidden ${
-          hasVideo ? 'text-white/90 hover:text-white' : 'text-[#252134] hover:text-stone-900'
-        }`}
+        className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 cursor-pointer transition group focus:outline-hidden text-white/90 hover:text-white"
         aria-label="Κύλιση προς τα κάτω για προβολή έργων"
       >
-        <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest drop-shadow-md group-hover:scale-105 transition-transform">
+        <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-widest drop-shadow-md group-hover:scale-105 transition-transform text-stone-300">
           Κύλιση για δημιουργίες
         </span>
         <div className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg animate-bounce group-hover:bg-black/60 transition">

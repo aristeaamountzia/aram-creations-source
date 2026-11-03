@@ -539,17 +539,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             {shopSettings.heroSubtitle}
           </p>
 
-          {/* Quick Stats badges */}
-          <div className="pt-2 flex flex-wrap justify-center gap-2.5 text-[11px] font-bold">
-            <span className="px-3.5 py-1 rounded-full bg-white/10 text-stone-200 border border-white/15 backdrop-blur-xs">
-              {isCatalogLoading ? '—' : totalAvailable} διαθέσιμα κομμάτια
-            </span>
-            <span className="px-3.5 py-1 rounded-full bg-white/10 text-stone-200 border border-white/15 backdrop-blur-xs">
-              {visibleCategories.length - 1} κατηγορίες
-            </span>
-            <span className="px-3.5 py-1 rounded-full bg-white/10 text-stone-200 border border-white/15 backdrop-blur-xs">
-              {isCatalogLoading ? '—' : jewelryList.length} συνολικές δημιουργίες
-            </span>
+          {/* Refined brand proof-point */}
+          <div className="pt-2 flex items-center justify-center gap-2 text-xs text-stone-300 font-medium">
             <a
               href="#vinted-reviews"
               onClick={(e) => {
@@ -557,11 +548,11 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 const el = document.getElementById('vinted-reviews');
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
-              className="px-3.5 py-1 rounded-full bg-teal-500/20 text-teal-200 border border-teal-400/30 backdrop-blur-xs flex items-center gap-1.5 hover:bg-teal-500/30 transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-xs text-stone-200 transition"
               title="Δείτε τις επίσημες αξιολογήσεις στο Vinted"
             >
               <Star className="w-3 h-3 fill-amber-300 text-amber-300 shrink-0" strokeWidth={1.5} />
-              <span>5.0 (10 κριτικές Vinted)</span>
+              <span>5.0 • 10 αξιολογήσεις στο Vinted</span>
             </a>
           </div>
         </div>
@@ -722,12 +713,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   role="group"
                   tabIndex={0}
                   aria-label={`${item.name || item.title || 'Κόσμημα'}. Πατήστε Enter για λεπτομέρειες.`}
-                  className={`catalog-card group bg-white border border-stone-200/90 rounded-2xl overflow-hidden hover:border-stone-400 hover:shadow-sm transition-all duration-300 flex flex-col justify-between cursor-pointer ${
+                  className={`catalog-card group bg-white border border-stone-200/80 rounded-xl overflow-hidden hover:border-stone-400/80 hover:shadow-xs transition-all duration-300 flex flex-col justify-between cursor-pointer ${
                     !isAvailable ? 'opacity-85' : ''
                   }`}
-                  style={{ borderRadius: ds.cardRadius || shopSettings.borderRadius || "16px", backgroundColor: ds.surface || "#ffffff", borderColor: ds.line || "#e7e5e4" }}
+                  style={{ borderRadius: ds.cardRadius || "12px", backgroundColor: ds.surface || "#ffffff", borderColor: ds.line || "#e4e4e7" }}
                 >
-                  {/* Media Container with multi-media support */}
+                  {/* Media Container (Clean 4:5 Luxury Jewelry Aspect) */}
                   <div className="relative aspect-[4/5] overflow-hidden bg-stone-100">
                     {activeCardMedia.type === 'video' ? (
                       <video
@@ -748,25 +739,37 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                       />
                     )}
 
-                    {/* Media type indicators */}
-                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
-                      {hasVideo && (
-                        <span className="px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1 shadow-sm">
-                          <Play className="w-2.5 h-2.5 fill-white" />
-                          <span>Βίντεο</span>
+                    {/* Discreet status badge if sold */}
+                    {!isAvailable && (
+                      <div className="absolute top-2.5 left-2.5 z-10">
+                        <span className={`px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase rounded-full backdrop-blur-xs ${
+                          isSold ? 'bg-stone-900/90 text-stone-100 shadow-xs' : 'bg-stone-800/80 text-stone-200'
+                        }`}>
+                          {isSold ? 'Πουλήθηκε' : item.status || 'Μη διαθέσιμο'}
                         </span>
-                      )}
-                      {hasMultipleMedia && (
-                        <span className="px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-white text-[10px] font-bold shadow-sm">
-                          {mediaList.length} φωτό
-                        </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
-                    {/* Card mini-gallery navigation dots if item has multiple images */}
+                    {/* Sleek Minimal Heart / Favorite Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => toggleFavorite(item.id, e)}
+                      aria-label={isFav ? `Αφαίρεση ${item.name || item.title} από τα αγαπημένα` : `Προσθήκη ${item.name || item.title} στα αγαπημένα`}
+                      aria-pressed={isFav}
+                      className={`absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full backdrop-blur-xs transition-transform active:scale-90 flex items-center justify-center border shadow-xs ${
+                        isFav
+                          ? 'bg-rose-50/95 border-rose-200 text-rose-600'
+                          : 'bg-white/80 hover:bg-white border-stone-200/80 text-stone-600 hover:text-stone-900'
+                      }`}
+                      title={isFav ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
+                    >
+                      <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
+                    </button>
+
+                    {/* Subtle Gallery Dots on Hover */}
                     {hasMultipleMedia && (
                       <div
-                        className="absolute bottom-3 right-3 max-w-[80%] overflow-x-auto flex items-center gap-1 z-10 bg-black/50 backdrop-blur-sm px-1.5 py-1 rounded-full opacity-90 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
+                        className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10 bg-black/40 backdrop-blur-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {mediaList.map((_, dotIdx) => (
@@ -787,68 +790,38 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                         ))}
                       </div>
                     )}
-
-                    {/* Category badge */}
-                    <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md border border-stone-200 text-stone-800 text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-lg font-bold shadow-sm">
-                      {item.category || 'Κόσμημα'}
-                    </div>
-
-                    {/* Like & Status buttons */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-                      {!isAvailable && (
-                        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border rounded-lg shadow-sm ${isSold ? 'text-white bg-rose-600 border-rose-700 ring-2 ring-rose-200' : 'text-amber-900 bg-amber-100 border-amber-200'}`}>
-                          {isSold ? 'Πουλήθηκε' : item.status || 'Μη διαθέσιμο'}
-                        </span>
-                      )}
-                      <button
-                          type="button"
-                          onClick={(e) => toggleFavorite(item.id, e)}
-                          aria-label={isFav ? `Αφαίρεση ${item.name || item.title} από τα αγαπημένα` : `Προσθήκη ${item.name || item.title} στα αγαπημένα`}
-                          aria-pressed={isFav}
-                          className={`p-2 rounded-xl backdrop-blur-md transition-transform active:scale-95 shadow-sm flex items-center gap-1 border ${
-                            isFav
-                              ? 'bg-rose-50 border-rose-200 text-rose-600'
-                              : 'bg-white/90 border-stone-200 text-stone-700 hover:text-rose-600 hover:bg-white'
-                          }`}
-                          title={isFav ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
-                        >
-                          <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
-                          <span className="text-[11px] font-bold">{likesCount}</span>
-                      </button>
-                    </div>
                   </div>
 
-                  {/* Card Content Info */}
-                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+                  {/* Card Content Info (Clean MONÉ-style Layout) */}
+                  <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between space-y-2.5">
                     <div>
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        {item.collection && (
-                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                            {item.collection}
+                      {/* Micro-header: Category + Refined Views & Likes */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.16em]">
+                          {item.category || item.collection || 'Κόσμημα'}
+                        </span>
+                        <div className="flex items-center gap-2.5 text-[11px] text-stone-400 font-medium">
+                          <span className="flex items-center gap-1" title={`${viewsCount} προβολές`}>
+                            <Eye className="w-3 h-3 text-stone-400" />
+                            <span>{viewsCount}</span>
                           </span>
-                        )}
-                        <div className="flex items-center gap-1 text-[11px] font-bold text-stone-400 ml-auto">
-                          <Eye className="w-3 h-3" />
-                          <span>{viewsCount}</span>
+                          <span className="flex items-center gap-1" title={`${likesCount} αγαπημένα`}>
+                            <Heart className={`w-3 h-3 ${isFav ? 'fill-rose-500 text-rose-500' : 'text-stone-400'}`} />
+                            <span>{likesCount}</span>
+                          </span>
                         </div>
                       </div>
 
-                      <h3 className="text-sm sm:text-base font-bold text-stone-900 line-clamp-2 group-hover:text-stone-700 transition-colors">
+                      {/* Clean Product Title */}
+                      <h3 className="text-sm font-semibold text-stone-900 line-clamp-1 group-hover:text-stone-600 transition-colors tracking-tight mt-1">
                         {item.name || item.title}
                       </h3>
-
-                      {item.description && (
-                        <p className="text-xs text-stone-500 line-clamp-2 mt-1.5 leading-relaxed font-sans">
-                          {sanitizeVintedDescription(item.description)}
-                        </p>
-                      )}
                     </div>
 
-                    {/* Footer: Price & Actions */}
-                    <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
+                    {/* Footer: Price & Subtle Actions */}
+                    <div className="pt-2.5 border-t border-stone-100 flex items-center justify-between gap-2">
                       <div>
-                        <span className="text-[10px] text-stone-400 uppercase font-bold block">Τιμή</span>
-                        <span className="text-lg font-bold text-stone-900" style={{ fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
+                        <span className="text-base font-semibold text-stone-900 tracking-tight" style={{ fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
                           {item.price ? `${item.price}€` : '-'}
                         </span>
                       </div>
@@ -860,22 +833,22 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="px-2.5 py-2 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold hover:bg-teal-100 active:scale-[0.98] transition-all flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:outline-none"
+                            className="px-2 py-1.5 rounded-lg bg-teal-50/80 border border-teal-200/80 text-teal-800 text-[11px] font-semibold hover:bg-teal-100 transition-colors flex items-center gap-1"
                             title="Αγορά μέσω Vinted"
                           >
                             <span>Vinted</span>
-                            <ExternalLink className="w-3 h-3" />
+                            <ExternalLink className="w-2.5 h-2.5" />
                           </a>
                         )}
 
                         <button
                           disabled={!isAvailable}
                           onClick={(e) => handleAdd(item, e)}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                             !isAvailable
-                              ? 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed'
+                              ? 'bg-stone-100 text-stone-400 border border-stone-200/80 cursor-not-allowed'
                               : isAdded
-                              ? 'bg-emerald-600 text-white font-bold'
+                              ? 'bg-emerald-700 text-white font-semibold'
                               : 'bg-stone-900 hover:bg-stone-800 active:scale-[0.98] text-white focus-visible:ring-2 focus-visible:ring-stone-900 focus-visible:outline-none'
                           }`}
                         >
@@ -887,7 +860,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                           ) : (
                             <>
                               <ShoppingBag className="w-3.5 h-3.5" />
-                              <span>{!isAvailable ? (isSold ? 'Πουλήθηκε' : item.status || 'Μη διαθέσιμο') : 'Καλάθι'}</span>
+                              <span>{!isAvailable ? (isSold ? 'Πουλήθηκε' : 'Μη διαθέσιμο') : 'Καλάθι'}</span>
                             </>
                           )}
                         </button>

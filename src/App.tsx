@@ -15,6 +15,7 @@ const BackOfficeView = React.lazy(() =>
 import { CartDrawer } from './components/CartDrawer';
 import { ContactModal } from './components/ContactModal';
 import { PaymentSuccessModal } from './components/PaymentSuccessModal';
+import { LegalModal, LegalPolicyType } from './components/LegalModal';
 import { ShieldCheck, Mail, MapPin, ExternalLink, Lock, X } from 'lucide-react';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from './firebase';
@@ -45,6 +46,7 @@ export const App: React.FC = () => {
     }
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [legalModalType, setLegalModalType] = useState<LegalPolicyType>(null);
   // This listener is intentionally presentation-only: the existing shop settings
   // document remains the single source of truth and no commerce data is touched.
   useEffect(() => onSnapshot(doc(db, 'settings', 'shop'), snapshot => {
@@ -265,12 +267,20 @@ export const App: React.FC = () => {
 
       {/* Cart Drawer Slide-over */}
       <CartDrawer
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-            items={cartItems}
-            onRemoveItem={handleRemoveItem}
-            onCompleted={handleClearCart}
-          />
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        items={cartItems}
+        onRemoveItem={handleRemoveItem}
+        onCompleted={handleClearCart}
+        onOpenLegal={(type) => setLegalModalType(type)}
+      />
+
+      {/* Legal Policies Modal (Terms, Privacy, Returns) */}
+      <LegalModal
+        type={legalModalType}
+        onClose={() => setLegalModalType(null)}
+        onSelectType={setLegalModalType}
+      />
 
       {/* Contact Artist Modal */}
       <ContactModal
@@ -341,6 +351,23 @@ export const App: React.FC = () => {
                 Portfolio Έργων (Wix Archive)
               </button>
             </div>
+            <div className="pt-2 border-t border-stone-200/60 space-y-1.5 text-[11px] text-stone-500">
+              <div>
+                <button onClick={() => setLegalModalType('terms')} className="hover:text-stone-900 transition text-left cursor-pointer">
+                  Όροι Χρήσης & Συναλλαγών
+                </button>
+              </div>
+              <div>
+                <button onClick={() => setLegalModalType('privacy')} className="hover:text-stone-900 transition text-left cursor-pointer">
+                  Πολιτική Απορρήτου (GDPR)
+                </button>
+              </div>
+              <div>
+                <button onClick={() => setLegalModalType('returns')} className="hover:text-stone-900 transition text-left cursor-pointer">
+                  Αποστολές & Επιστροφές
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Contact Atelier */}
@@ -387,9 +414,30 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto pt-8 mt-8 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between text-[11px] text-stone-500 gap-4">
-          <div>
-            © {new Date().getFullYear()} Aram Creations. Με επιφύλαξη παντός δικαιώματος.
+        <div className="max-w-7xl mx-auto pt-8 mt-8 border-t border-stone-200 flex flex-col md:flex-row items-center justify-between text-[11px] text-stone-500 gap-4">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+            <span>© {new Date().getFullYear()} Aram Creations.</span>
+            <span>•</span>
+            <button 
+              onClick={() => setLegalModalType('terms')} 
+              className="hover:text-stone-900 transition underline underline-offset-2 cursor-pointer"
+            >
+              Όροι Χρήσης
+            </button>
+            <span>•</span>
+            <button 
+              onClick={() => setLegalModalType('privacy')} 
+              className="hover:text-stone-900 transition underline underline-offset-2 cursor-pointer"
+            >
+              Πολιτική Απορρήτου
+            </button>
+            <span>•</span>
+            <button 
+              onClick={() => setLegalModalType('returns')} 
+              className="hover:text-stone-900 transition underline underline-offset-2 cursor-pointer"
+            >
+              Αποστολές & Επιστροφές
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <span>Χειροποίητα Ελληνικά Κοσμήματα</span>

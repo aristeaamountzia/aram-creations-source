@@ -82,12 +82,12 @@ interface BackOfficeViewProps {
         };
         const DEFAULT_SHOP_SETTINGS = {
             fontFamily: 'Jura',
-            primaryColor: '#1c1917',
-            bgColor: '#fafafa',
-            textColor: '#1c1917',
-            heroBgColor: '#1c1917',
+            primaryColor: '#18181b',
+            bgColor: '#fafaf9',
+            textColor: '#18181b',
+            heroBgColor: '#0c0a09',
             heroTitleColor: '#ffffff',
-            heroSubtitleColor: '#a8a29e',
+            heroSubtitleColor: '#a1a1aa',
             heroTitleSize: 'text-3xl md:text-4xl',
             borderRadius: '0.75rem',
             heroTitle: 'Χειροποίητες Δημιουργίες',
@@ -4544,13 +4544,13 @@ interface BackOfficeViewProps {
                                 {videoProgress && <div className="px-5 py-2 shrink-0"><VideoUploadStatus value={videoProgress} busy={videoCompressing} onCancel={() => videoAbort.current?.abort()} /></div>}
                                 <div className="overflow-y-auto p-6 flex-1">
                                     <form id="jewelry-form" onSubmit={handleSaveItem} className="flex flex-col gap-8">
-                                        <section id="form-ai" className="order-last scroll-mt-4 rounded-2xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm">
+                                        <section id="form-ai" className="order-last scroll-mt-4 rounded-2xl border border-stone-200 bg-stone-50/60 p-4 shadow-xs">
                                             <div className="flex flex-col lg:flex-row lg:items-start gap-4">
                                                 <div className="flex-1">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-violet-100 pb-3 mb-4">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-stone-200 pb-3 mb-4">
                                                         <div>
-                                                            <h3 className="text-sm font-black text-violet-700 uppercase tracking-wider">AI Studio Back-office</h3>
-                                                            <p className="text-xs text-violet-700/70 font-medium">Δημιουργεί τίτλους, περιγραφές, χρώματα, υλικά, tags και captions από τα στοιχεία της φόρμας.</p>
+                                                            <h3 className="text-sm font-black text-stone-900 uppercase tracking-wider">AI Studio Back-office</h3>
+                                                            <p className="text-xs text-stone-500 font-medium">Δημιουργεί τίτλους, περιγραφές, χρώματα, υλικά, tags και captions από τα στοιχεία της φόρμας.</p>
                                                         </div>
                                                         <span className={`text-[10px] font-black px-2 py-1 rounded-full ${getBackofficeAiEndpoint() ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                                             {getBackofficeAiEndpoint() ? 'Endpoint ορισμένο' : 'Λείπει endpoint'}
@@ -4559,7 +4559,7 @@ interface BackOfficeViewProps {
 
                                                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-3 mb-3">
                                                         <textarea
-                                                            className="w-full border border-violet-200 rounded-lg px-4 py-3 h-24 bg-white focus:bg-white outline-none resize-none text-sm"
+                                                            className="w-full border border-stone-200 rounded-lg px-4 py-3 h-24 bg-white focus:border-stone-400 outline-none resize-none text-sm"
                                                             value={aiProductPrompt}
                                                             onChange={e => setAiProductPrompt(e.target.value)}
                                                             placeholder="Προαιρετική οδηγία: π.χ. πιο minimal ύφος, ιδέα για δώρο, περιγραφή για Instagram, πιο luxury τόνος..."
@@ -4568,7 +4568,7 @@ interface BackOfficeViewProps {
                                                             <div className="relative">
                                                                 <input
                                                                     type={showAiAccessCode ? 'text' : 'password'}
-                                                                    className="w-full border border-violet-200 rounded-lg pl-3 pr-10 py-2 bg-white outline-none text-sm"
+                                                                    className="w-full border border-stone-200 rounded-lg pl-3 pr-10 py-2 bg-white focus:border-stone-400 outline-none text-sm"
                                                                     value={aiAccessCode}
                                                                     onChange={e => handleAiAccessCodeChange(e.target.value)}
                                                                     placeholder="AI access code"
@@ -4576,34 +4576,34 @@ interface BackOfficeViewProps {
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setShowAiAccessCode(prev => !prev)}
-                                                                    className="absolute inset-y-0 right-0 px-3 text-violet-700/70 hover:text-violet-900"
+                                                                    className="absolute inset-y-0 right-0 px-3 text-stone-400 hover:text-stone-700"
                                                                     title={showAiAccessCode ? 'Κρύψε τον κωδικό' : 'Δείξε τον κωδικό'}
                                                                     aria-label={showAiAccessCode ? 'Κρύψε τον κωδικό AI' : 'Δείξε τον κωδικό AI'}
                                                                 >
                                                                     <IconEye />
                                                                 </button>
                                                             </div>
-                                                            <p className="text-[10px] leading-relaxed text-violet-700/70">Ο κωδικός μένει σε αυτό το browser session και δεν γράφεται στο HTML ή στο Firebase.</p>
+                                                            <p className="text-[10px] leading-relaxed text-stone-500">Ο κωδικός μένει σε αυτό το browser session και δεν γράφεται στο HTML ή στο Firebase.</p>
                                                         </div>
                                                     </div>
 
                                                     <div className="space-y-3">
                                                         <div className="flex flex-wrap items-center gap-2">
-                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('full')} disabled={isAiProductWorking} className="px-4 py-2 bg-violet-700 text-white rounded-lg text-xs font-bold hover:bg-violet-800 disabled:opacity-50 transition shadow-sm">Πλήρης πρόταση</button>
-                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('title')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-violet-200 text-violet-800 rounded-lg text-xs font-bold hover:bg-violet-100 disabled:opacity-50 transition">Τίτλος</button>
-                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('description')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-violet-200 text-violet-800 rounded-lg text-xs font-bold hover:bg-violet-100 disabled:opacity-50 transition">Περιγραφή</button>
-                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('tags')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-violet-200 text-violet-800 rounded-lg text-xs font-bold hover:bg-violet-100 disabled:opacity-50 transition">Χρώματα / Υλικά</button>
+                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('full')} disabled={isAiProductWorking} className="px-4 py-2 bg-stone-900 text-white rounded-lg text-xs font-bold hover:bg-stone-800 disabled:opacity-50 transition shadow-xs">Πλήρης πρόταση</button>
+                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('title')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-stone-200 text-stone-800 rounded-lg text-xs font-bold hover:bg-stone-100 disabled:opacity-50 transition">Τίτλος</button>
+                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('description')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-stone-200 text-stone-800 rounded-lg text-xs font-bold hover:bg-stone-100 disabled:opacity-50 transition">Περιγραφή</button>
+                                                            <button type="button" onClick={() => handleBackofficeAiGenerate('tags')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-stone-200 text-stone-800 rounded-lg text-xs font-bold hover:bg-stone-100 disabled:opacity-50 transition">Χρώματα / Υλικά</button>
                                                             
                                                         </div>
 
                                                         {isAiProductWorking && (
-                                                            <div className="space-y-1 bg-violet-100/70 p-2.5 rounded-lg border border-violet-200">
-                                                                <div className="flex items-center justify-between text-xs font-bold text-violet-800">
+                                                            <div className="space-y-1 bg-stone-100 p-2.5 rounded-lg border border-stone-200">
+                                                                <div className="flex items-center justify-between text-xs font-bold text-stone-700">
                                                                     <span>Το AI επεξεργάζεται τα στοιχεία της δημιουργίας...</span>
                                                                     
                                                                 </div>
-                                                                <div className="w-full bg-violet-200 rounded-full h-1.5 overflow-hidden">
-                                                                    <div className="bg-violet-600 h-1.5 rounded-full animate-pulse w-full"></div>
+                                                                <div className="w-full bg-stone-200 rounded-full h-1.5 overflow-hidden">
+                                                                    <div className="bg-stone-900 h-1.5 rounded-full animate-pulse w-full"></div>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -4618,7 +4618,7 @@ interface BackOfficeViewProps {
                                                             <div className="p-2.5 bg-white/80 rounded-lg border border-rose-100 text-stone-700 space-y-1.5">
                                                                 <p className="font-bold text-stone-800">Οδηγός Ενεργοποίησης Google Gemini AI:</p>
                                                                 <ol className="list-decimal list-inside space-y-1 text-stone-600">
-                                                                    <li>Αποκτήστε δωρεάν κλειδί API από το <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline font-bold text-violet-700">Google AI Studio</a>.</li>
+                                                                    <li>Αποκτήστε δωρεάν κλειδί API από το <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline font-bold text-stone-900">Google AI Studio</a>.</li>
                                                                     <li>Προσθέστε στο αρχείο <code>.env</code> της εφαρμογής τη γραμμή: <code>GEMINI_API_KEY=το_κλειδί_σας</code>.</li>
                                                                     <li>Εναλλακτικά πατήστε το παρακάτω κουμπί για άμεση δοκιμή χωρίς κλειδί!</li>
                                                                 </ol>
@@ -4628,13 +4628,13 @@ interface BackOfficeViewProps {
                                                     )}
                                                 </div>
 
-                                                <div className="lg:w-80 bg-white border border-violet-100 rounded-xl p-3 min-h-[160px]">
+                                                <div className="lg:w-80 bg-white border border-stone-200 rounded-xl p-3 min-h-[160px]">
                                                     <div className="flex items-center justify-between gap-2 mb-3">
-                                                        <h4 className="text-xs font-black text-violet-700 uppercase tracking-wider">Πρόταση AI</h4>
+                                                        <h4 className="text-xs font-black text-stone-900 uppercase tracking-wider">Πρόταση AI</h4>
                                                         {aiProductDraft && (
                                                             <div className="flex gap-1">
-                                                                <button type="button" onClick={() => applyAiProductDraft(true)} className="px-2 py-1 bg-violet-50 text-violet-700 border border-violet-100 rounded text-[10px] font-bold">Κενά</button>
-                                                                <button type="button" onClick={() => applyAiProductDraft(false)} className="px-2 py-1 bg-violet-700 text-white rounded text-[10px] font-bold">Εφαρμογή</button>
+                                                                <button type="button" onClick={() => applyAiProductDraft(true)} className="px-2 py-1 bg-stone-100 text-stone-800 border border-stone-200 rounded text-[10px] font-bold">Κενά</button>
+                                                                <button type="button" onClick={() => applyAiProductDraft(false)} className="px-2 py-1 bg-stone-900 text-white rounded text-[10px] font-bold">Εφαρμογή</button>
                                                             </div>
                                                         )}
                                                     </div>
@@ -5503,20 +5503,20 @@ interface BackOfficeViewProps {
                                             <div className="rounded-2xl border border-violet-200 bg-linear-to-r from-violet-50 to-purple-50 p-4.5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="w-2 h-2 rounded-full bg-violet-600"></span>
-                                                        <h3 className="text-sm font-black text-violet-950 uppercase tracking-wider">Ενιαία Οπτική Ταυτότητα (Global Identity)</h3>
+                                                        <span className="w-2 h-2 rounded-full bg-stone-900"></span>
+                                                        <h3 className="text-sm font-black text-stone-900 uppercase tracking-wider">Ενιαία Οπτική Ταυτότητα (Global Identity)</h3>
                                                     </div>
-                                                    <p className="text-xs text-violet-800 leading-relaxed max-w-2xl">
+                                                    <p className="text-xs text-stone-600 leading-relaxed max-w-2xl">
                                                         Τα θέματα, η παλέτα χρωμάτων, οι γραμματοσειρές και οι στρογγυλάδες που ρυθμίζονται παρακάτω εφαρμόζονται αυτόματα σε ολόκληρο το κατάστημα: <strong>τόσο στο Shop (#shop) όσο και στο Portfolio (#portfolio)</strong>.
                                                     </p>
                                                 </div>
-                                                <div className="flex items-center gap-2 shrink-0 bg-white/80 backdrop-blur-xs px-3 py-2 rounded-xl border border-violet-200 shadow-2xs">
+                                                <div className="flex items-center gap-2 shrink-0 bg-white px-3 py-2 rounded-xl border border-stone-200 shadow-2xs">
                                                     <span className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Ενεργό:</span>
                                                     <div className="flex items-center gap-1.5">
-                                                        <span className="w-4 h-4 rounded-full border border-stone-300 shadow-2xs" style={{ backgroundColor: shopSettings.designStudio?.pageBackground || '#f7f4ed' }} title={`Φόντο: ${shopSettings.designStudio?.pageBackground || '#f7f4ed'}`} />
-                                                        <span className="w-4 h-4 rounded-full border border-stone-300 shadow-2xs" style={{ backgroundColor: shopSettings.designStudio?.accent || '#c9a35e' }} title={`Accent: ${shopSettings.designStudio?.accent || '#c9a35e'}`} />
-                                                        <span className="w-4 h-4 rounded-full border border-stone-300 shadow-2xs" style={{ backgroundColor: shopSettings.designStudio?.ink || '#292524' }} title={`Κείμενο: ${shopSettings.designStudio?.ink || '#292524'}`} />
-                                                        <span className="text-xs font-bold text-stone-700 ml-1">{shopSettings.designStudio?.fontFamily?.split(',')[0]?.replace(/'/g, '') || 'Playfair'}</span>
+                                                        <span className="w-4 h-4 rounded-full border border-stone-300 shadow-2xs" style={{ backgroundColor: shopSettings.designStudio?.pageBackground || '#fafaf9' }} title={`Φόντο: ${shopSettings.designStudio?.pageBackground || '#fafaf9'}`} />
+                                                        <span className="w-4 h-4 rounded-full border border-stone-300 shadow-2xs" style={{ backgroundColor: shopSettings.designStudio?.accent || '#18181b' }} title={`Accent: ${shopSettings.designStudio?.accent || '#18181b'}`} />
+                                                        <span className="w-4 h-4 rounded-full border border-stone-300 shadow-2xs" style={{ backgroundColor: shopSettings.designStudio?.ink || '#18181b' }} title={`Κείμενο: ${shopSettings.designStudio?.ink || '#18181b'}`} />
+                                                        <span className="text-xs font-bold text-stone-700 ml-1">{shopSettings.designStudio?.fontFamily?.split(',')[0]?.replace(/'/g, '') || 'Jura'}</span>
                                                     </div>
                                                 </div>
                                             </div>

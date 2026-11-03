@@ -24,6 +24,7 @@ interface CartDrawerProps {
   items: CartItem[];
   onRemoveItem: (itemId: string) => void;
   onCompleted: () => void;
+  onOpenLegal?: (type: 'terms' | 'privacy' | 'returns') => void;
 }
 
 const SHIPPING_OPTIONS = [
@@ -37,6 +38,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   items,
   onRemoveItem,
   onCompleted,
+  onOpenLegal,
 }) => {
   const [selectedShipping, setSelectedShipping] = useState(SHIPPING_OPTIONS[0].id);
   const [isCheckoutStep, setIsCheckoutStep] = useState(false);
@@ -647,6 +649,35 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       <div className="bg-emerald-600 h-1.5 rounded-full animate-pulse w-full"></div>
                     </div>
                   </div>
+                )}
+                {onOpenLegal && (
+                  <p className="text-[10px] text-stone-500 text-center leading-relaxed">
+                    Με την παραγγελία αποδέχεστε τους{' '}
+                    <button
+                      type="button"
+                      onClick={() => onOpenLegal('terms')}
+                      className="underline text-stone-700 hover:text-stone-900 font-medium cursor-pointer"
+                    >
+                      Όρους Χρήσης
+                    </button>
+                    {', '}
+                    <button
+                      type="button"
+                      onClick={() => onOpenLegal('privacy')}
+                      className="underline text-stone-700 hover:text-stone-900 font-medium cursor-pointer"
+                    >
+                      Πολιτική Απορρήτου
+                    </button>
+                    {' & '}
+                    <button
+                      type="button"
+                      onClick={() => onOpenLegal('returns')}
+                      className="underline text-stone-700 hover:text-stone-900 font-medium cursor-pointer"
+                    >
+                      Επιστροφών
+                    </button>
+                    .
+                  </p>
                 )}
                 <button
                   type="submit"

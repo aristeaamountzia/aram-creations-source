@@ -268,7 +268,12 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     const totalVideoCount = items.filter(itemHasVideo).length;
     const zoomImages = (selectedItem ? getItemMediaList(selectedItem) : [])
         .map((media, index) => ({ ...media, mediaIndex: index }));
-    return (<div className={`portfolio-view min-h-screen pb-24 font-sans transition-colors duration-300 ${'bg-[#faf9ff] text-[#252134] selection:bg-[#e4dcfa]'}`} style={{ backgroundColor: designStudio.pageBackground || '#faf9ff', color: designStudio.ink || '#252134', fontFamily: designStudio.fontFamily || "'Jura', sans-serif" }}>
+    return (<div className="portfolio-view min-h-screen pb-24 font-sans transition-colors duration-300 bg-[#fafaf9] text-[#18181b]"
+      style={{
+        backgroundColor: designStudio.pageBackground || '#fafaf9',
+        color: designStudio.ink || '#18181b',
+        fontFamily: designStudio.fontFamily || "'Jura', sans-serif"
+      }}>
       
       {/* Toast Notification */}
       {copiedToast && (<div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-xs animate-in fade-in slide-in-from-bottom-2 border ${'bg-stone-900 text-white border-stone-800'}`}>
@@ -302,24 +307,24 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Results Header */}
-        <div className={`flex items-center justify-between text-xs mb-6 font-sans ${'text-[#675f79]'}`}>
+        <div className="flex items-center justify-between text-xs mb-6 font-sans text-stone-500">
           <span>Εμφάνιση {filteredAndSortedItems.length} έργων</span>
           {searchTerm && (<button onClick={() => setSearchTerm('')} className={`underline underline-offset-4 ${'hover:text-stone-950'}`}>
               Καθαρισμός αναζήτησης
             </button>)}
         </div>
 
-        {filteredAndSortedItems.length === 0 ? (<div className={`py-24 text-center border border-dashed rounded-2xl p-8 ${'border-[#d8cfea] bg-white'}`}>
-            <Palette className="w-12 h-12 text-[#675f79] mx-auto mb-4"/>
-            <h3 className={`text-lg font-sans ${'text-[#252134]'}`}>Δεν βρέθηκαν έργα</h3>
-            <p className={`text-xs mt-1 max-w-sm mx-auto ${'text-[#675f79]'}`}>
+        {filteredAndSortedItems.length === 0 ? (<div className="py-24 text-center border border-stone-200 bg-white rounded-2xl p-8">
+            <Palette className="w-12 h-12 text-stone-400 mx-auto mb-4"/>
+            <h3 className="text-lg font-sans font-semibold text-stone-900">Δεν βρέθηκαν έργα</h3>
+            <p className="text-xs mt-1 max-w-sm mx-auto text-stone-500">
               Δοκιμάστε να αλλάξετε τα φίλτρα, την αναζήτηση ή να επιλέξετε άλλη κατηγορία.
             </p>
             <button onClick={() => {
                 setSelectedCatId('all');
                 setSearchTerm('');
                 setFilterMode('all');
-            }} className={`mt-4 px-4 py-2 rounded-lg text-xs transition-colors ${'bg-stone-200 hover:bg-stone-300 text-stone-800'}`}>
+            }} className="mt-4 px-4 py-2 rounded-lg text-xs font-semibold transition-colors bg-stone-900 hover:bg-stone-800 text-white">
               Επαναφορά Όλων
             </button>
           </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -346,11 +351,11 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                     role="group"
                     tabIndex={0}
                     aria-label={`${item.title}. Πατήστε Enter για άνοιγμα έργου.`}
-                    className="catalog-card group cursor-pointer bg-white border border-stone-200/90 rounded-2xl overflow-hidden hover:border-stone-400 hover:shadow-sm transition-all duration-300 flex flex-col justify-between"
+                    className="catalog-card group cursor-pointer bg-white border border-stone-200/80 rounded-xl overflow-hidden hover:border-stone-400/80 hover:shadow-xs transition-all duration-300 flex flex-col justify-between"
                     style={{
-                      borderRadius: designStudio.cardRadius || '16px',
+                      borderRadius: designStudio.cardRadius || '12px',
                       backgroundColor: designStudio.surface || '#ffffff',
-                      borderColor: designStudio.line || '#e7e5e4'
+                      borderColor: designStudio.line || '#e4e4e7'
                     }}
                   >
                     {/* Media Container aspect-[4/5] identical to Shop */}
@@ -369,96 +374,67 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                         />
                       )}
 
-                      {/* Top Badges */}
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
-                        <span className="bg-white/90 backdrop-blur-md text-stone-700 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-stone-200 shadow-xs">
-                          {cat?.title || item.category}
-                        </span>
-                        {item.year && (
-                          <span className="bg-white/90 backdrop-blur-md text-stone-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-stone-200 shadow-xs">
-                            {item.year}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Top Right: Favorite button */}
+                      {/* Top Right: Minimal Heart / Favorite Button */}
                       <button
+                        type="button"
                         onClick={(e) => toggleFavorite(item.id, e)}
                         aria-label={isFav ? `Αφαίρεση ${item.title} από τα αγαπημένα` : `Προσθήκη ${item.title} στα αγαπημένα`}
                         aria-pressed={isFav}
-                        className={`absolute top-3 right-3 z-10 p-2 rounded-full backdrop-blur-md transition-transform active:scale-90 border shadow-xs ${
-                          isFav ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-white/90 text-stone-600 hover:text-stone-900 border-stone-200'
+                        className={`absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full backdrop-blur-xs transition-transform active:scale-90 flex items-center justify-center border shadow-xs ${
+                          isFav ? 'bg-rose-50/95 text-rose-600 border-rose-200' : 'bg-white/80 text-stone-600 hover:text-stone-900 border-stone-200/80 hover:bg-white'
                         }`}
                         title={isFav ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
                       >
                         <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
                       </button>
 
-                      {/* Bottom Media Indicators */}
-                      <div className="absolute bottom-3 left-3 flex items-center gap-1.5 z-10">
-                        {hasVideo && (
-                          <span className="px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1 shadow-sm">
-                            <Play className="w-2.5 h-2.5 fill-white" />
-                            <span>Βίντεο</span>
-                          </span>
-                        )}
-                        {mediaList.length > 1 && (
-                          <span className="px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-white text-[10px] font-bold shadow-sm">
-                            {mediaList.length} φωτό
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Status badge bottom right */}
+                      {/* Discreet status badge if present */}
                       {item.status && (
-                        <div className="absolute bottom-3 right-3 z-10">
-                          <span className="px-2.5 py-0.5 rounded-lg bg-white/90 backdrop-blur-md text-stone-800 text-[10px] font-black uppercase tracking-wider shadow-sm border border-stone-200">
+                        <div className="absolute top-2.5 left-2.5 z-10">
+                          <span className="px-2.5 py-0.5 rounded-full bg-stone-900/90 text-stone-100 text-[10px] font-semibold tracking-wider uppercase shadow-xs backdrop-blur-xs">
                             {portfolioStatusLabel(design, item.status)}
                           </span>
                         </div>
                       )}
                     </div>
 
-                    {/* Artwork Content Info */}
-                    <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+                    {/* Artwork Content Info (Clean MONÉ-style Layout) */}
+                    <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between space-y-2.5">
                       <div>
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                        {/* Micro-header: Category + Year / Dimension */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.16em]">
                             {cat?.title || 'Έργο Τέχνης'}
                           </span>
-                          {item.dimensions && (
-                            <span className="text-[10px] font-medium text-stone-400">
-                              {item.dimensions}
+                          {(item.year || item.dimensions) && (
+                            <span className="text-[11px] font-medium text-stone-400">
+                              {item.year || item.dimensions}
                             </span>
                           )}
                         </div>
 
-                        <h3 className="text-sm sm:text-base font-bold text-stone-900 line-clamp-2 group-hover:text-stone-700 transition-colors">
+                        {/* Title */}
+                        <h3 className="text-sm font-semibold text-stone-900 line-clamp-1 group-hover:text-stone-600 transition-colors tracking-tight mt-1">
                           {item.title}
                         </h3>
 
+                        {/* Medium subtitle */}
                         {item.medium && (
-                          <p className="text-xs text-stone-500 line-clamp-1 mt-1 leading-relaxed">
+                          <p className="text-xs text-stone-500 line-clamp-1 mt-0.5">
                             {item.medium}
-                          </p>
-                        )}
-
-                        {item.description && (
-                          <p className="text-xs text-stone-400 line-clamp-2 mt-1 leading-relaxed font-sans">
-                            {sanitizeVintedDescription(item.description)}
                           </p>
                         )}
                       </div>
 
                       {/* Footer Row */}
-                      <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-stone-500">
+                      <div className="pt-2.5 border-t border-stone-100 flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-stone-400">
                           {item.year || 'Portfolio'}
                         </span>
                         <button
                           type="button"
                           onClick={() => { setSelectedItem(item); setActiveMediaIdx(0); }}
-                          className="px-3.5 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1.5"
+                          className="px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-semibold transition shadow-xs flex items-center gap-1.5 active:scale-98"
                         >
                           <span>Προβολή</span>
                           <ArrowUpRight className="w-3.5 h-3.5" />
@@ -511,25 +487,25 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                         </>)}
 
                       {/* Media Counter Pill */}
-                      <div className="absolute top-3 left-3 bg-stone-900/85 backdrop-blur-md px-2.5 py-1 rounded-md text-[11px] font-sans text-stone-300 border border-[#e2dcf0]">
+                      <div className="absolute top-3 left-3 bg-stone-900/85 backdrop-blur-md px-2.5 py-1 rounded-md text-[11px] font-sans text-stone-300 border border-stone-700/80">
                         {isVideo ? 'Βίντεο' : `Εικόνα ${activeMediaIdx + 1} / ${mediaList.length}`}
                       </div>
                     </div>
 
                     {isVideo && <button type="button" onClick={() => setIsZoomOpen(true)} className="mt-2 rounded-lg border px-3 py-2 text-sm">Προβολή βίντεο σε πλήρη οθόνη</button>}
                     {/* Thumbnails Gallery Strip */}
-                    {mediaList.length > 1 && (<div className={`mt-3 pt-3 border-t ${'border-[#d8cfea]'}`}>
-                        <div className={`text-[11px] font-sans mb-2 flex items-center justify-between ${'text-[#675f79]'}`}>
+                    {mediaList.length > 1 && (<div className={`mt-3 pt-3 border-t 'border-stone-200'`}>
+                        <div className={`text-[11px] font-sans mb-2 flex items-center justify-between 'text-stone-500'`}>
                           <span>Διαθέσιμα Media ({mediaList.length})</span>
-                          <span className={`text-[10px] ${'text-[#675f79]'}`}>Κάντε κλικ για εναλλαγή</span>
+                          <span className={`text-[10px] 'text-stone-500'`}>Κάντε κλικ για εναλλαγή</span>
                         </div>
                         <div className="flex items-center gap-2 overflow-x-auto pb-1 horizontal-scrollbar">
                           {mediaList.map((media, idx) => {
                             const isThumbVideo = media.type === 'video';
                             const isActive = idx === activeMediaIdx;
                             return (<button key={idx} type="button" onClick={() => setActiveMediaIdx(idx)} aria-label={`Εμφάνιση ${media.type === 'video' ? 'βίντεο' : 'εικόνας'} ${idx + 1}`} aria-pressed={isActive} className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border transition-all ${isActive
-                                    ? 'border-[#7067d6] ring-2 ring-[#7067d6]/20 scale-105'
-                                    : 'border-[#d8cfea] hover:border-stone-500 opacity-80 hover:opacity-100'}`}>
+                                    ? 'border-stone-900 ring-2 ring-stone-900/20 scale-105'
+                                    : 'border-stone-200 hover:border-stone-400 opacity-80 hover:opacity-100'}`}>
                                 {isThumbVideo ? (<div className="w-full h-full bg-stone-900 flex flex-col items-center justify-center text-red-400">
                                     <Play className="w-4 h-4 fill-current"/>
                                     <span className="text-[8px] font-sans mt-0.5">VIDEO</span>
@@ -548,10 +524,10 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 {/* Header Strip with Close button */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-xs font-sans uppercase px-2.5 py-1 rounded ${'text-[#5b516d] bg-stone-100'}`}>
+                    <span className={`text-xs font-sans uppercase px-2.5 py-1 rounded 'text-stone-700 bg-stone-100'`}>
                       {artCategories.find((c) => c.id === selectedItem.category)?.title}
                     </span>
-                    {selectedItem.year && (<span className={`text-xs font-sans px-2 py-1 rounded ${'text-[#675f79] bg-stone-100'}`}>
+                    {selectedItem.year && (<span className={`text-xs font-sans px-2 py-1 rounded 'text-stone-600 bg-stone-100'`}>
                         {selectedItem.year}
                       </span>)}
                     {selectedItem.status && (<span className={`text-xs font-sans px-2.5 py-1 rounded ${'text-emerald-800 bg-emerald-50 border border-emerald-200'}`}>
@@ -559,43 +535,43 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                       </span>)}
                   </div>
 
-                  <button onClick={closeItemDetail} className={`p-1.5 rounded-full transition ${'bg-stone-100 hover:bg-stone-200 text-[#675f79] hover:text-stone-950'}`} title="Κλείσιμο (Esc)">
+                  <button onClick={closeItemDetail} className={`p-1.5 rounded-full transition 'bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900'`} title="Κλείσιμο (Esc)">
                     <X className="w-5 h-5"/>
                   </button>
                 </div>
 
                 {/* Title & Medium */}
-                <h2 className={`mt-4 text-2xl sm:text-3xl font-sans leading-snug ${'text-[#252134]'}`}>
+                <h2 className={`mt-4 text-2xl sm:text-3xl font-sans leading-snug 'text-stone-900'`}>
                   {selectedItem.title}
                 </h2>
 
-                <div className={`mt-2 text-xs font-sans flex items-center gap-1.5 ${'text-[#6253ae]'}`}>
+                <div className={`mt-2 text-xs font-sans flex items-center gap-1.5 'text-stone-700'`}>
                   <Palette className="w-3.5 h-3.5"/>
                   <span>{design.labels.medium}: {selectedItem.medium}</span>
                 </div>
 
-                {selectedItem.dimensions && (<div className={`mt-1 text-xs font-sans flex items-center gap-1.5 ${'text-[#675f79]'}`}>
+                {selectedItem.dimensions && (<div className={`mt-1 text-xs font-sans flex items-center gap-1.5 'text-stone-500'`}>
                     <Compass className="w-3.5 h-3.5"/>
                     <span>{design.labels.dimensions}: {selectedItem.dimensions}</span>
                   </div>)}
 
                 {/* Curatorial Description */}
                 <div className="mt-5">
-                  <h4 className={`text-[11px] font-sans uppercase tracking-wider mb-1 ${'text-[#675f79]'}`}>
+                  <h4 className={`text-[11px] font-sans uppercase tracking-wider mb-1 'text-stone-500'`}>
                     Επιμελητική Περιγραφή
                   </h4>
-                  <p className={`text-sm leading-relaxed ${'text-[#5b516d]'}`}>
+                  <p className={`text-sm leading-relaxed 'text-stone-600'`}>
                     {sanitizeVintedDescription(selectedItem.description)}
                   </p>
                 </div>
 
                 {/* Curatorial Highlights / Details */}
                 {selectedItem.details && selectedItem.details.length > 0 && (<div className="mt-5">
-                    <h4 className={`text-[11px] font-sans uppercase tracking-wider mb-2 ${'text-[#675f79]'}`}>
+                    <h4 className={`text-[11px] font-sans uppercase tracking-wider mb-2 'text-stone-500'`}>
                       Χαρακτηριστικά & Τεχνική
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedItem.details.map((detail, idx) => (<span key={idx} className={`text-[11px] px-2.5 py-1 rounded font-sans ${'bg-stone-100 text-[#5b516d] border border-[#e5def3]'}`}>
+                      {selectedItem.details.map((detail, idx) => (<span key={idx} className={`text-[11px] px-2.5 py-1 rounded font-sans 'bg-stone-100 text-stone-700 border border-stone-200'`}>
                           • {detail}
                         </span>))}
                     </div>
@@ -605,16 +581,16 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
               </div>
 
               {/* Bottom Actions Bar */}
-              <div className={`mt-8 pt-5 border-t flex flex-wrap items-center justify-between gap-3 ${'border-[#e5def3]'}`}>
+              <div className={`mt-8 pt-5 border-t flex flex-wrap items-center justify-between gap-3 'border-stone-200'`}>
                 <div className="flex items-center gap-2">
                   <button onClick={() => toggleFavorite(selectedItem.id)} aria-pressed={favorites.includes(selectedItem.id)} aria-label={favorites.includes(selectedItem.id) ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'} className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition ${favorites.includes(selectedItem.id)
                 ? 'bg-rose-50 border-rose-200 text-rose-700'
-                : 'bg-white border-[#d8cfea] text-[#5b516d] hover:text-stone-950'}`}>
+                : 'bg-white border-stone-200 text-stone-700 hover:text-stone-900'}`}>
                     <Heart className={`w-3.5 h-3.5 ${favorites.includes(selectedItem.id) ? 'fill-current' : ''}`}/>
                     <span>{favorites.includes(selectedItem.id) ? 'Στα Αγαπημένα' : 'Αγαπημένο'}</span>
                   </button>
 
-                  <button onClick={() => handleShare(selectedItem)} className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition ${'bg-white hover:bg-stone-100 border-[#d8cfea] text-[#5b516d] hover:text-stone-950'}`} title="Κοινοποίηση">
+                  <button onClick={() => handleShare(selectedItem)} className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition 'bg-white hover:bg-stone-100 border-stone-200 text-stone-700 hover:text-stone-900'`} title="Κοινοποίηση">
                     <Share2 className="w-3.5 h-3.5"/>
                     <span>Κοινοποίηση</span>
                   </button>
@@ -624,7 +600,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 const it = selectedItem;
                 closeItemDetail();
                 onContactArtist(it);
-            }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 transition shadow-md ${'bg-[#6253ae] hover:bg-[#544695] text-white'}`}>
+            }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 transition shadow-md 'bg-stone-900 hover:bg-stone-800 text-white'`}>
                   <Mail className="w-4 h-4"/>
                   <span>Εκδήλωση Ενδιαφέροντος</span>
                 </button>
