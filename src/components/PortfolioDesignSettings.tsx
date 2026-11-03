@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
 import { PortfolioDesign, normalizePortfolioDesign } from '../lib/portfolio-settings';
 
 export function PortfolioDesignSettings({
@@ -178,9 +179,7 @@ export function PortfolioDesignSettings({
                     }
                     className="h-8 px-2 rounded-lg border border-rose-200 bg-rose-50 font-bold text-rose-700 hover:bg-rose-100 text-xs"
                     title="Διαγραφή κατηγορίας"
-                  >
-                    ✕
-                  </button>
+                  ><X className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
               <div className="mt-2 pl-7">
@@ -256,9 +255,7 @@ export function PortfolioDesignSettings({
                 }
                 className="text-stone-400 hover:text-rose-600 p-1"
                 title="Διαγραφή κατάστασης"
-              >
-                ✕
-              </button>
+              ><X className="w-3.5 h-3.5" /></button>
             </div>
           ))}
         </div>
@@ -286,9 +283,7 @@ export function PortfolioDesignSettings({
                 onClick={() => handleRemoveMaterial(mat)}
                 className="text-stone-400 hover:text-rose-600 font-bold"
                 title="Αφαίρεση"
-              >
-                ✕
-              </button>
+              ><X className="w-3.5 h-3.5" /></button>
             </span>
           ))}
         </div>

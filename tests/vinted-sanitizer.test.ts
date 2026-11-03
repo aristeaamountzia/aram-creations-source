@@ -31,5 +31,11 @@ test('Vinted Content Sanitization (GEMINI.md Rule 5)', async (t) => {
     assert.strictEqual(sanitizeVintedDescription(null), '');
     assert.strictEqual(sanitizeVintedDescription(undefined), '');
   });
+
+  await t.test('strips raw emojis from descriptions (GEMINI.md Rule 9)', () => {
+    const input = '✨ Χαρακτηριστικά:\nΥλικό: Ρητίνη 🎬\nΙδανικό για layering ✨';
+    const result = sanitizeVintedDescription(input);
+    assert.strictEqual(result, 'Χαρακτηριστικά:\nΥλικό: Ρητίνη\nΙδανικό για layering');
+  });
 });
 

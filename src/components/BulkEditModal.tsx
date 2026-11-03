@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 
 export interface BulkEditModalProps {
   open: boolean;
@@ -104,7 +105,7 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({
             aria-label="Κλείσιμο"
             className="p-1.5 text-stone-400 hover:text-stone-800 rounded-lg hover:bg-stone-200 transition"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
 

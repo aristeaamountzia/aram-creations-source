@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { applyVintedRefresh } from '../lib/vinted-storage';
 import { db } from '../firebase';
 import { vintedRefreshPatch, chooseRefreshPatch, RefreshChoice } from '../lib/vinted-refresh';
@@ -275,9 +276,7 @@ export function VintedRefresh({
                 onClick={() => setOpen(false)}
                 className="p-1.5 text-stone-400 hover:text-stone-800 bg-white border border-stone-200 rounded-lg hover:bg-stone-100 transition disabled:opacity-40"
                 title="Κλείσιμο (Escape)"
-              >
-                ✕
-              </button>
+              ><X className="w-4 h-4" /></button>
             </div>
 
             {/* Filter Tabs Bar */}

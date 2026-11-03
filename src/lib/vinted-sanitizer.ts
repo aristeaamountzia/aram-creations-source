@@ -1,9 +1,11 @@
 /**
  * Vinted Content Sanitizer
- * Implements GEMINI.md Rule 5:
- * "Boilerplate condition phrases from Vinted (such as 'Καινούργιο με ετικέτα',
- * 'Very good', 'New with tags') must be completely stripped out and never appear
- * in public descriptions, notes, or product cards."
+ * Implements GEMINI.md Rule 5 & Rule 9:
+ * - Rule 5: "Boilerplate condition phrases from Vinted (such as 'Καινούργιο με ετικέτα',
+ *   'Very good', 'New with tags') must be completely stripped out and never appear
+ *   in public descriptions, notes, or product cards."
+ * - Rule 9: "Zero-Emoji Luxury UI Policy: Absolutely no raw Unicode emojis anywhere in the UI,
+ *   customer views, back office, buttons, tabs, modal dialogs, or alerts."
  */
 
 const VINTED_BOILERPLATE_PATTERNS = [
@@ -19,6 +21,8 @@ const VINTED_BOILERPLATE_PATTERNS = [
   /κατάσταση(?:\s+προϊόντος)?\s*[:\-–]\s*(?:καινούργιο|πολύ καλή|καλή|ικανοποιητική|new|good|very good)/gi
 ];
 
+const EMOJI_PATTERN = /[\p{Extended_Pictographic}\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+
 export function sanitizeVintedDescription(text: string | null | undefined): string {
   if (!text) return '';
 
@@ -29,6 +33,7 @@ export function sanitizeVintedDescription(text: string | null | undefined): stri
       for (const pattern of VINTED_BOILERPLATE_PATTERNS) {
         cleaned = cleaned.replace(pattern, '').trim();
       }
+      cleaned = cleaned.replace(EMOJI_PATTERN, '').trim();
       return cleaned;
     })
     .filter((line, idx, arr) => {

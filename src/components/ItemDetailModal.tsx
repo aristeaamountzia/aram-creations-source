@@ -1,5 +1,6 @@
 import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 
 export interface ItemDetailModalProps {
   open: boolean;
@@ -84,9 +85,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
             onClick={onClose}
             aria-label="Κλείσιμο"
             className="p-1.5 text-stone-400 hover:text-stone-800 rounded-lg hover:bg-stone-200 transition"
-          >
-            ✕
-          </button>
+          ><X className="w-4 h-4" /></button>
         </div>
 
         {/* Content Body */}

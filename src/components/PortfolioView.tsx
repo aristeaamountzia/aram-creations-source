@@ -6,6 +6,7 @@ import { VideoPlayer } from './VideoPlayer';
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
+import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import React, { useState, useEffect, useMemo } from 'react';
 import { CategoryId, ArtItem, ArtMediaItem } from '../types';
 import { CATEGORIES, ART_ITEMS } from '../data';
@@ -444,7 +445,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
                         {item.description && (
                           <p className="text-xs text-stone-400 line-clamp-2 mt-1 leading-relaxed font-sans">
-                            {item.description}
+                            {sanitizeVintedDescription(item.description)}
                           </p>
                         )}
                       </div>
@@ -584,7 +585,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                     Επιμελητική Περιγραφή
                   </h4>
                   <p className={`text-sm leading-relaxed ${'text-[#5b516d]'}`}>
-                    {selectedItem.description}
+                    {sanitizeVintedDescription(selectedItem.description)}
                   </p>
                 </div>
 

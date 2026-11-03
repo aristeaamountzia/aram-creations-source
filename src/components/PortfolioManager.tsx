@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { X } from 'lucide-react';
 import { usePortfolioDesign } from '../lib/use-portfolio-design';
 import { WixProjectExport } from './WixProjectExport';
 import { portfolioStatusLabel } from '../lib/portfolio-settings';
@@ -1511,9 +1512,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 onClick={() => setForm(null)}
                 aria-label="Κλείσιμο"
                 className="p-2 text-stone-400 hover:text-stone-800 rounded-lg hover:bg-stone-200 transition"
-              >
-                ✕
-              </button>
+              ><X className="w-4 h-4" /></button>
             </div>
 
             {/* Form Tabs */}
@@ -1857,9 +1856,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                               )
                             }
                             className="px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded font-bold ml-auto"
-                          >
-                            ✕
-                          </button>
+                          ><X className="w-4 h-4" /></button>
                         </div>
                       </div>
                     ))}

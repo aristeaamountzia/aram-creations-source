@@ -4297,7 +4297,7 @@ interface BackOfficeViewProps {
                                                         const isSelected = bulkColors.includes(col);
                                                         return (
                                                             <button key={col} type="button" onClick={() => toggleBulkTag('colors', col)} className={`text-[11px] px-2.5 py-1 rounded-md border font-bold transition ${isSelected ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-indigo-100 text-indigo-700 hover:bg-indigo-100'}`}>
-                                                                {isSelected ? '✓ ' : '+ '}{col}
+                                                                <span className="inline-flex items-center gap-1">{isSelected ? <Check className="w-3 h-3 stroke-[2.5]" /> : '+ '}{col}</span>
                                                             </button>
                                                         );
                                                     })}
@@ -4316,7 +4316,7 @@ interface BackOfficeViewProps {
                                                         const isSelected = bulkMaterials.includes(mat);
                                                         return (
                                                             <button key={mat} type="button" onClick={() => toggleBulkTag('materials', mat)} className={`text-[11px] px-2.5 py-1 rounded-md border font-bold transition ${isSelected ? 'bg-stone-900 border-stone-900 text-white shadow-sm' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'}`}>
-                                                                {isSelected ? '✓ ' : '+ '}{mat}
+                                                                <span className="inline-flex items-center gap-1">{isSelected ? <Check className="w-3 h-3 stroke-[2.5]" /> : '+ '}{mat}</span>
                                                             </button>
                                                         );
                                                     })}
@@ -5397,10 +5397,10 @@ interface BackOfficeViewProps {
                                     {settingsSuccessMessage && (
                                         <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-between shadow-xs animate-fade-in">
                                             <div className="flex items-center gap-2">
-                                                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs">✓</span>
+                                                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs"><Check className="w-3 h-3 stroke-[2.5]" /></span>
                                                 <span>{settingsSuccessMessage}</span>
                                             </div>
-                                            <button onClick={() => setSettingsSuccessMessage(null)} className="text-emerald-600 hover:text-emerald-900 font-bold text-xs p-1">✕</button>
+                                            <button onClick={() => setSettingsSuccessMessage(null)} aria-label="Κλείσιμο" className="text-emerald-600 hover:text-emerald-900 font-bold text-xs p-1"><X className="w-3.5 h-3.5" /></button>
                                         </div>
                                     )}
 

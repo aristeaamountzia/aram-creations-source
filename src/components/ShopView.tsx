@@ -6,6 +6,7 @@ import { JEWELRY_CATALOG } from '../data';
 import { db } from '../firebase';
 import { DEFAULT_SHOP_SETTINGS, normalizeShopSettings, ShopSettings } from '../shopSettings';
 import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
+import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import {
   collection,
   doc,
@@ -823,7 +824,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
                       {item.description && (
                         <p className="text-xs text-stone-500 line-clamp-2 mt-1.5 leading-relaxed font-sans">
-                          {item.description}
+                          {sanitizeVintedDescription(item.description)}
                         </p>
                       )}
                     </div>
@@ -1106,7 +1107,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 {/* Description */}
                 {selectedItem.description && (
                   <p className="text-xs sm:text-sm text-stone-600 leading-relaxed font-sans whitespace-pre-wrap pt-2">
-                    {selectedItem.description}
+                    {sanitizeVintedDescription(selectedItem.description)}
                   </p>
                 )}
 

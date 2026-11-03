@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { X } from 'lucide-react';
 
 export interface ImageEditorModalProps {
   open: boolean;
@@ -156,9 +157,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             onClick={onClose}
             aria-label="Κλείσιμο"
             className="p-2 text-stone-400 hover:text-stone-800 hover:bg-stone-200 rounded-lg transition"
-          >
-            ✕
-          </button>
+          ><X className="w-4 h-4" /></button>
         </div>
 
         {errorMessage && (
