@@ -1,55 +1,43 @@
-import type { Handler } from '@netlify/functions';
 import { getVintedReviews, fetchLiveVintedReviews, persistVintedReviewsToFirestore } from '../../server/vinted-reviews';
 
-export const handler: Handler = async (event) => {
+export default async function handler(request: Request): Promise<Response> {
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Cache-Control': 'no-store'
   };
 
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers });
   }
 
   try {
-    const isSync = event.httpMethod === 'POST' && (event.path.endsWith('/sync') || event.queryStringParameters?.sync === '1');
-    const memberId = event.queryStringParameters?.member_id || undefined;
+    const url = new URL(request.url);
+    const isSync = request.method === 'POST' && (url.pathname.endsWith('/sync') || url.searchParams.get('sync') === '1');
+    const memberId = url.searchParams.get('member_id') || undefined;
 
     if (isSync) {
       const live = await fetchLiveVintedReviews(memberId);
       await persistVintedReviewsToFirestore(live.stats, live.reviews);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          ok: true,
-          stats: live.stats,
-          reviews: live.reviews,
-          source: 'live',
-          cachedAt: new Date().toISOString()
-        })
-      };
+      return Response.json({
+        ok: true,
+        stats: live.stats,
+        reviews: live.reviews,
+        source: 'live',
+        cachedAt: new Date().toISOString()
+      }, { headers });
     }
 
-    const forceRefresh = event.queryStringParameters?.refresh === '1';
+    const forceRefresh = url.searchParams.get('refresh') === '1';
     const payload = await getVintedReviews({ forceRefresh, memberId });
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify(payload)
-    };
+    return Response.json(payload, { headers });
   } catch (error: any) {
-    return {
-      statusCode: 502,
-      headers,
-      body: JSON.stringify({
-        ok: false,
-        error: error.message || 'Αποτυχία φόρτωσης αξιολογήσεων Vinted',
-        code: 'VINTED_REVIEWS_ERROR'
-      })
-    };
+    return Response.json({
+      ok: false,
+      error: error.message || 'Αποτυχία φόρτωσης αξιολογήσεων Vinted',
+      code: 'VINTED_REVIEWS_ERROR'
+    }, { status: 502, headers });
   }
-};
-
+}
