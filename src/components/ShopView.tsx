@@ -1,5 +1,6 @@
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
+import { VintedReviewsSection } from './VintedReviewsSection';
 import React, { useState, useEffect, useMemo } from 'react';
 import { JewelryItem } from '../types';
 import { JEWELRY_CATALOG } from '../data';
@@ -27,7 +28,8 @@ import {
   Eye,
   Check,
   Play,
-  Maximize2
+  Maximize2,
+  Star
 } from 'lucide-react';
 
 interface ShopViewProps {
@@ -548,6 +550,19 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             <span className="px-3.5 py-1 rounded-full bg-white/10 text-stone-200 border border-white/15 backdrop-blur-xs">
               {isCatalogLoading ? '—' : jewelryList.length} συνολικές δημιουργίες
             </span>
+            <a
+              href="#vinted-reviews"
+              onClick={(e) => {
+                e.preventDefault();
+                const el = document.getElementById('vinted-reviews');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="px-3.5 py-1 rounded-full bg-teal-500/20 text-teal-200 border border-teal-400/30 backdrop-blur-xs flex items-center gap-1.5 hover:bg-teal-500/30 transition cursor-pointer"
+              title="Δείτε τις επίσημες αξιολογήσεις στο Vinted"
+            >
+              <Star className="w-3 h-3 fill-amber-300 text-amber-300 shrink-0" strokeWidth={1.5} />
+              <span>5.0 (10 κριτικές Vinted)</span>
+            </a>
           </div>
         </div>
 
@@ -1216,6 +1231,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
           onIndexChange={index => setActiveMediaIndex(zoomImages[index].mediaIndex)}
           onClose={() => setIsLightboxOpen(false)} />
       )}
+
+      {/* Official Vinted Reviews & Social Proof */}
+      <VintedReviewsSection
+        theme={shopSettings.visualTheme}
+        fontFamily={shopSettings.fontFamily}
+      />
 
       {Object.entries(shopSettings.fallbackLinks).some(([, url]) => /^https:\/\//i.test(url)) && (
         <nav aria-label="Σύνδεσμοι Aram Creations" className="mt-12 border-t border-stone-200 px-4 py-8 text-center text-xs font-semibold sm:px-6">

@@ -1,4 +1,5 @@
 import { extractListingState, classifyVintedCategory } from './server/vinted-listing';
+import { getVintedReviews, fetchLiveVintedReviews, persistVintedReviewsToFirestore } from './server/vinted-reviews';
 import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
@@ -654,6 +655,50 @@ async function handleImageProxy(req: Request, res: Response) {
 app.get("/api/vinted-image-proxy", handleImageProxy);
 app.get("/.netlify/functions/vinted-image-proxy", handleImageProxy);
 app.get("/api/image-proxy", handleImageProxy);
+
+// 4b. Vinted Reviews Endpoints
+async function handleVintedReviews(req: Request, res: Response) {
+  try {
+    const forceRefresh = req.query.refresh === '1' || req.query.refresh === 'true';
+    const memberId = (req.query.member_id as string) || undefined;
+    const data = await getVintedReviews({ forceRefresh, memberId });
+    return res.json(data);
+  } catch (err: any) {
+    console.error("Error in handleVintedReviews:", err);
+    return res.status(502).json({
+      ok: false,
+      error: err.message || "Αποτυχία ανάκτησης κριτικών Vinted",
+      code: "VINTED_REVIEWS_ERROR"
+    });
+  }
+}
+
+async function handleVintedReviewsSync(req: Request, res: Response) {
+  try {
+    const memberId = (req.body?.memberId as string) || (req.query.member_id as string) || undefined;
+    const live = await fetchLiveVintedReviews(memberId);
+    await persistVintedReviewsToFirestore(live.stats, live.reviews);
+    return res.json({
+      ok: true,
+      stats: live.stats,
+      reviews: live.reviews,
+      source: "live",
+      cachedAt: new Date().toISOString()
+    });
+  } catch (err: any) {
+    console.error("Error in handleVintedReviewsSync:", err);
+    return res.status(502).json({
+      ok: false,
+      error: err.message || "Αποτυχία συγχρονισμού κριτικών Vinted",
+      code: "VINTED_SYNC_ERROR"
+    });
+  }
+}
+
+app.get("/api/vinted-reviews", handleVintedReviews);
+app.get("/.netlify/functions/vinted-reviews", handleVintedReviews);
+app.post("/api/vinted-reviews/sync", handleVintedReviewsSync);
+app.post("/.netlify/functions/vinted-reviews/sync", handleVintedReviewsSync);
 
 // In-memory dev orders store for local testing
 const localDevOrders: any[] = [];

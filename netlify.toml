@@ -63,6 +63,18 @@
   force = true
 
 [[redirects]]
+  from = "/api/vinted-reviews"
+  to = "/.netlify/functions/vinted-reviews"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/vinted-reviews/*"
+  to = "/.netlify/functions/vinted-reviews"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200

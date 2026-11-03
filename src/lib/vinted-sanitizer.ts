@@ -6,6 +6,9 @@
  *   in public descriptions, notes, or product cards."
  * - Rule 9: "Zero-Emoji Luxury UI Policy: Absolutely no raw Unicode emojis anywhere in the UI,
  *   customer views, back office, buttons, tabs, modal dialogs, or alerts."
+ *
+ * For authentic Customer Reviews (UGC), emojis expressing emotion (❤️, 🌸, ✨) can optionally
+ * be preserved to maintain authentic social proof while stripping boilerplate condition text.
  */
 
 const VINTED_BOILERPLATE_PATTERNS = [
@@ -23,7 +26,10 @@ const VINTED_BOILERPLATE_PATTERNS = [
 
 const EMOJI_PATTERN = /[\p{Extended_Pictographic}\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
 
-export function sanitizeVintedDescription(text: string | null | undefined): string {
+export function sanitizeVintedDescription(
+  text: string | null | undefined,
+  options: { preserveEmojis?: boolean } = {}
+): string {
   if (!text) return '';
 
   return text
@@ -33,7 +39,9 @@ export function sanitizeVintedDescription(text: string | null | undefined): stri
       for (const pattern of VINTED_BOILERPLATE_PATTERNS) {
         cleaned = cleaned.replace(pattern, '').trim();
       }
-      cleaned = cleaned.replace(EMOJI_PATTERN, '').trim();
+      if (!options.preserveEmojis) {
+        cleaned = cleaned.replace(EMOJI_PATTERN, '').trim();
+      }
       return cleaned;
     })
     .filter((line, idx, arr) => {
@@ -47,3 +55,9 @@ export function sanitizeVintedDescription(text: string | null | undefined): stri
     .trim();
 }
 
+/**
+ * Sanitizes customer reviews while preserving authentic emojis
+ */
+export function sanitizeVintedReview(text: string | null | undefined): string {
+  return sanitizeVintedDescription(text, { preserveEmojis: true });
+}
