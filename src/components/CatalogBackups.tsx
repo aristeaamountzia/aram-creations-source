@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { auth } from '../firebase';
+import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 export function CatalogBackups() {
   const [list, setList] = useState<any[]>([]), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   async function request(method = 'GET', name = '') {
@@ -12,11 +13,11 @@ export function CatalogBackups() {
   useEffect(() => { void refresh(); }, []);
   async function create() {
     setBusy(true); setMessage('Δημιουργία backup…');
-    try { await request('POST'); setMessage('Το backup αποθηκεύτηκε.'); await refresh(); } catch (err: any) { setMessage(err.message); } finally { setBusy(false); }
+    try { await request('POST'); setMessage('Το backup αποθηκεύτηκε.'); notifyOperationSuccess('Αντίγραφο Ασφαλείας', 'Το backup δημιουργήθηκε και αποθηκεύτηκε επιτυχώς.'); await refresh(); } catch (err: any) { setMessage(err.message); notifyOperationError('Σφάλμα Backup', err.message); } finally { setBusy(false); }
   }
   async function download(name: string) {
     setBusy(true);
-    try { const blob = await (await request('GET', name)).blob(); const href = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = href; a.download = `aram-${name.replace('.gz','')}`; a.click(); setTimeout(() => URL.revokeObjectURL(href), 60000); } catch (err: any) { setMessage(err.message); } finally { setBusy(false); }
+    try { const blob = await (await request('GET', name)).blob(); const href = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = href; a.download = `aram-${name.replace('.gz','')}`; a.click(); setTimeout(() => URL.revokeObjectURL(href), 60000); notifyOperationSuccess('Λήψη Backup', 'Το αρχείο backup κατέβηκε επιτυχώς.'); } catch (err: any) { setMessage(err.message); notifyOperationError('Σφάλμα Λήψης Backup', err.message); } finally { setBusy(false); }
   }
   return <section className="my-3 rounded-xl border border-teal-200 bg-teal-50 p-4"><h3 className="font-bold">Αντίγραφα ασφαλείας</h3><p className="my-2 text-xs">Αυτόματα κάθε 30 λεπτά. Διατηρούνται 24 ώρες και 7 ημερήσια αντίγραφα. Περιλαμβάνονται κατάλογοι, ρυθμίσεις και παραγγελίες, με συνδέσμους media. Τα αρχεία εικόνων και βίντεο δεν αντιγράφονται.</p><button disabled={busy} onClick={create} className="rounded-lg border bg-white px-3 py-2 text-sm disabled:opacity-50">Backup τώρα</button><label className="ml-2 inline-flex gap-2 text-sm">Λήψη<select disabled={busy} value="" onChange={e => e.target.value && download(e.target.value)} className="min-w-0 max-w-full rounded border bg-white p-2"><option value="">Επιλογή αντιγράφου ({list.length})</option>{list.map(row => <option key={row.name} value={row.name}>{new Date(row.createdAt).toLocaleString('el-GR')} · {row.name.startsWith('daily') ? 'Ημερήσιο' : '30 λεπτών'}</option>)}</select></label><p role="status" className="mt-2 text-xs">{message}</p></section>;
 }

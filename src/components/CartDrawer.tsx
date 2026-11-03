@@ -134,12 +134,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
       setSubmittingStep('3/3 Επιβεβαίωση παραγγελίας...');
       setCompletedOrderNumber(result.order.number);
+      notifyOperationSuccess('Ολοκλήρωση Παραγγελίας', `Η παραγγελία σας #${result.order.number} καταχωρήθηκε επιτυχώς!`);
       setSavedTotal(result.order.total);
       onCompleted();
       setCustomer({ name: '', email: '', phone: '', address: '', city: '', postalCode: '', notes: '' });
       try { localStorage.removeItem('aram_checkout_request'); } catch { /* Optional storage. */ }
     } catch (error) {
-      setOrderError(error instanceof Error ? error.message : 'Η σύνδεση διακόπηκε. Δοκιμάστε ξανά.');
+      const errMsg = error instanceof Error ? error.message : 'Η σύνδεση διακόπηκε. Δοκιμάστε ξανά.';
+      setOrderError(errMsg);
+      notifyOperationError('Σφάλμα Παραγγελίας', errMsg);
     } finally {
       setIsSubmitting(false);
       setSubmittingStep('');

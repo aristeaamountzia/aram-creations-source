@@ -29,7 +29,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο για Έκθεση",
     "details": [
       "Μινιμαλιστική κυκλαδική φόρμα",
@@ -70,7 +70,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Ιδιωτική Συλλογή",
     "details": [
       "Συνδυασμός μοντέρνου και αρχαϊκού στυλ",
@@ -111,7 +111,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Κατόπιν Παραγγελίας",
     "details": [
       "Συνεργασία με wood_laser_cut_gr",
@@ -152,7 +152,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο",
     "details": [
       "Συλλογή από την Πάρο",
@@ -193,7 +193,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Κατόπιν Παραγγελίας",
     "details": [
       "Μοναδικό ζωγραφικό σχέδιο",
@@ -234,7 +234,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Κατόπιν Παραγγελίας",
     "details": [
       "Προστασία & αισθητική",
@@ -275,7 +275,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Ιδιωτική Συλλογή",
     "details": [
       "Μοναδικό custom όργανο",
@@ -316,7 +316,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο",
     "details": [
       "Συνεργασία με wood_laser_cut_gr",
@@ -352,7 +352,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο",
     "details": [
       "Parametric 3D print",
@@ -393,7 +393,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο για Έκθεση",
     "details": [
       "Χαρτί Schoeller 50x70 cm",
@@ -434,7 +434,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο",
     "details": [
       "Χαρτί Schoeller 50x70 cm",
@@ -475,7 +475,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Σε εξέλιξη (WIP)",
     "details": [
       "Work in progress",
@@ -516,7 +516,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο για Έκθεση",
     "details": [
       "Φύλλα χρυσού & ακρυλικά",
@@ -557,7 +557,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο",
     "details": [
       "Μικτή τεχνική & υγρό γυαλί",
@@ -598,7 +598,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο για Έκθεση",
     "details": [
       "Επιτελεστική τέχνη (Performance art)",
@@ -639,7 +639,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο για Έκθεση",
     "details": [
       "Έντονο κοντράστ κόκκινου & μαύρου",
@@ -680,7 +680,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο για Έκθεση",
     "details": [
       "Αφηγηματική φωτογραφία",
@@ -721,7 +721,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Πανεπιστημιακό Έργο",
     "details": [
       "Εργαστήριο i-Thea (40 ώρες)",
@@ -762,7 +762,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Editorial Portfolio",
     "details": [
       "Editorial design",
@@ -803,7 +803,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Editorial Portfolio",
     "details": [
       "Radical design aesthetics",
@@ -844,7 +844,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Visual Identity",
     "details": [
       "Ολοκληρωμένο visual identity",
@@ -885,7 +885,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Έκθεση Bauhaus",
     "details": [
       "100 χρόνια Bauhaus",
@@ -926,7 +926,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Editorial & Art",
     "details": [
       "Fanzine & typography",
@@ -967,7 +967,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο για Έκθεση",
     "details": [
       "Γλυπτικός λαβύρινθος ψυχής",
@@ -1014,7 +1014,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο για Έκθεση",
     "details": [
       "Stop-motion βίντεο & κατασκευή",
@@ -1061,7 +1061,7 @@ export const WIX_MIGRATED_ART_ITEMS: ArtItem[] = [
       }
     ],
     "inquiryOnly": true,
-    "origin": "Wix Portfolio",
+    "origin": "Aram Archive",
     "status": "Διαθέσιμο για Έκθεση",
     "details": [
       "Site-specific εγκατάσταση στη φύση",

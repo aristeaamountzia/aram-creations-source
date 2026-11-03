@@ -21,13 +21,39 @@ import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from './firebase';
 import { normalizeShopSettings } from './shopSettings';
 import { designStudioCss } from './lib/design-studio';
-import { DEFAULT_DESIGN_STUDIO, DesignStudio } from './lib/design-studio';
+import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from './lib/design-studio';
+import { GlobalNotificationToast } from './components/GlobalNotificationToast';
+import { notifyOperationSuccess } from './lib/sound-notifications';
+
+// Synchronous theme cache resolver to eliminate FOUC (Flash of Unstyled/Old Theme)
+const getInitialThemeState = () => {
+  try {
+    const saved = localStorage.getItem('aram_theme_cache');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.designStudio) {
+        const ds = normalizeDesignStudio(parsed.designStudio);
+        return {
+          visualTheme: (parsed.visualTheme === 'classic' ? 'classic' : 'atelier') as 'atelier' | 'classic',
+          designStudioContent: ds,
+          designStudioCss: designStudioCss(ds)
+        };
+      }
+    }
+  } catch {}
+  return {
+    visualTheme: 'atelier' as const,
+    designStudioContent: DEFAULT_DESIGN_STUDIO,
+    designStudioCss: designStudioCss(DEFAULT_DESIGN_STUDIO)
+  };
+};
 
 export const App: React.FC = () => {
   const [currentMode, setCurrentMode] = useState<SectionMode>('shop');
-  const [visualTheme, setVisualTheme] = useState<'atelier' | 'classic'>('atelier');
-  const [designStudio, setDesignStudio] = useState<Record<string, string>>({});
-  const [designStudioContent, setDesignStudioContent] = useState<DesignStudio>(DEFAULT_DESIGN_STUDIO);
+  const [initialTheme] = useState(getInitialThemeState);
+  const [visualTheme, setVisualTheme] = useState<'atelier' | 'classic'>(initialTheme.visualTheme);
+  const [designStudio, setDesignStudio] = useState<Record<string, string>>(initialTheme.designStudioCss);
+  const [designStudioContent, setDesignStudioContent] = useState<DesignStudio>(initialTheme.designStudioContent);
   const hasInitializedHistory = useRef(false);
   const selectMode = useCallback((mode: SectionMode) => {
     const hash = mode === 'shop' ? '#shop' : mode === 'portfolio' ? '#portfolio' : '#admin';
@@ -50,10 +76,19 @@ export const App: React.FC = () => {
   // This listener is intentionally presentation-only: the existing shop settings
   // document remains the single source of truth and no commerce data is touched.
   useEffect(() => onSnapshot(doc(db, 'settings', 'shop'), snapshot => {
+    if (!snapshot.exists()) return;
     const settings = normalizeShopSettings(snapshot.data());
+    const ds = normalizeDesignStudio(settings.designStudio);
+    const css = designStudioCss(ds);
     setVisualTheme(settings.visualTheme);
-    setDesignStudio(designStudioCss(settings.designStudio));
-    setDesignStudioContent(settings.designStudio);
+    setDesignStudio(css);
+    setDesignStudioContent(ds);
+    try {
+      localStorage.setItem('aram_theme_cache', JSON.stringify({
+        visualTheme: settings.visualTheme,
+        designStudio: ds
+      }));
+    } catch {}
   }, () => {}), []);
   const cartIds = cartItems.map(entry => entry.item.id).sort().join(',');
   useEffect(() => {
@@ -174,11 +209,13 @@ export const App: React.FC = () => {
         return [...prev, { item, quantity: 1, customInscription }];
       }
     });
+    notifyOperationSuccess('Προσθήκη στο Καλάθι', `Το '${item.name || item.title || 'κόσμημα'}' προστέθηκε επιτυχώς.`);
     setIsCartOpen(true);
   };
 
   const handleRemoveItem = (itemId: string) => {
     setCartItems((prev) => prev.filter((ci) => ci.item.id !== itemId));
+    notifyOperationSuccess('Ενημέρωση Καλαθιού', 'Το είδος αφαιρέθηκε από το καλάθι.');
   };
 
   const handleClearCart = () => {
@@ -194,6 +231,8 @@ export const App: React.FC = () => {
 
   return (
     <div style={designStudio as React.CSSProperties} data-section={currentMode} data-visual-theme={visualTheme} className={`aram-site ${visualTheme === 'atelier' ? 'atelier-theme' : ''} min-h-screen w-full min-w-0 flex flex-col bg-white text-[#1c1917]`}>
+      {/* Prominent Global Notification Toast with Luxury Audio Feedback */}
+      <GlobalNotificationToast />
       {/* Discreet owner banner when admin view is active */}
       {currentMode === 'admin' && (
         <div className="bg-stone-900 text-stone-200 border-b border-stone-800 px-4 py-2.5 flex flex-wrap gap-3 items-center justify-between text-xs z-50">
@@ -348,7 +387,7 @@ export const App: React.FC = () => {
             </div>
             <div>
               <button onClick={() => selectMode('portfolio')} className="hover:text-stone-900 transition font-medium">
-                Portfolio Έργων (Wix Archive)
+                Portfolio Έργων & Δημιουργιών
               </button>
             </div>
             <div className="pt-2 border-t border-stone-200/60 space-y-1.5 text-[11px] text-stone-500">

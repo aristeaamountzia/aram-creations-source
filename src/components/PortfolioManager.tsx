@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X, SlidersHorizontal } from 'lucide-react';
 import { usePortfolioDesign } from '../lib/use-portfolio-design';
 import { WixProjectExport } from './WixProjectExport';
 import { portfolioStatusLabel } from '../lib/portfolio-settings';
@@ -364,7 +364,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         if (inspectItem) { setInspectItem(null); return; }
         if (isBulkEditOpen) { setIsBulkEditOpen(false); return; }
         if (imageEditorTarget) { setImageEditorTarget(null); return; }
-        if (form && !saving && !uploading) { setForm(null); return; }
+        if (form && !saving && !uploading) { notifyOperationSuccess(form.id ? 'Ενημέρωση Έργου' : 'Νέο Έργο', `Το έργο «${form.title.trim()}» αποθηκεύτηκε επιτυχώς.`);
+      setForm(null); return; }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -474,8 +475,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         after: record
       });
       setOrderMessage(`Το έργο «${newTitle}» δημιουργήθηκε με επιτυχία!`);
+      notifyOperationSuccess('Κλωνοποίηση Έργου', `Το έργο «${newTitle}» δημιουργήθηκε με επιτυχία!`);
     } catch (err: any) {
       setError(`Αποτυχία αντιγραφής: ${err.message}`);
+      notifyOperationError('Σφάλμα Αντιγραφής', err.message);
     }
   };
 
@@ -600,6 +603,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       setForm(null);
     } catch (err: any) {
       setError(`Δεν αποθηκεύτηκε: ${err.message}`);
+      notifyOperationError('Σφάλμα Αποθήκευσης', err.message);
     } finally {
       setSaving(false);
     }
@@ -625,8 +629,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         before: item,
         after: { ...item, ...(await getDoc(itemRef)).data() }
       });
+      notifyOperationSuccess('Αρχειοθέτηση Έργου', `Το έργο «${item.title || item.name}» αρχειοθετήθηκε.`);
     } catch (err: any) {
       setError(`Δεν αφαιρέθηκε: ${err.message}`);
+      notifyOperationError('Σφάλμα Αρχειοθέτησης', err.message);
     }
   };
 
@@ -647,8 +653,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         before: item,
         after: { ...item, isDeleted: false, deletedAt: null }
       });
+      notifyOperationSuccess('Επαναφορά Έργου', `Το έργο «${item.title || item.name}» επανήλθε στην ενεργή έκθεση.`);
     } catch (err: any) {
       setError(`Δεν έγινε επαναφορά: ${err.message}`);
+      notifyOperationError('Σφάλμα Επαναφοράς', err.message);
     }
   };
 
@@ -667,8 +675,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       await batch.commit();
       setSelectedIds([]);
       setOrderMessage(`Αρχειοθετήθηκαν ${selectedItems.length} έργα.`);
+      notifyOperationSuccess('Μαζική Αρχειοθέτηση', `Αρχειοθετήθηκαν ${selectedItems.length} έργα.`);
     } catch (err: any) {
       setError(`Δεν ολοκληρώθηκε η μαζική αρχειοθέτηση: ${err.message}`);
+      notifyOperationError('Σφάλμα Μαζικής Αρχειοθέτησης', err.message);
     }
   };
 
@@ -687,8 +697,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       await batch.commit();
       setSelectedIds([]);
       setOrderMessage(`Επαναφέρθηκαν ${selectedItems.length} έργα.`);
+      notifyOperationSuccess('Μαζική Επαναφορά', `Επαναφέρθηκαν ${selectedItems.length} έργα.`);
     } catch (err: any) {
       setError(`Δεν ολοκληρώθηκε η μαζική επαναφορά: ${err.message}`);
+      notifyOperationError('Σφάλμα Μαζικής Επαναφοράς', err.message);
     }
   };
 
@@ -705,8 +717,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       await batch.commit();
       setSelectedIds([]);
       setOrderMessage(`Ενημερώθηκαν ${selectedItems.length} έργα με επιτυχία!`);
+      notifyOperationSuccess('Μαζική Επεξεργασία', `Ενημερώθηκαν ${selectedItems.length} έργα με επιτυχία!`);
     } catch (err: any) {
       setError(`Αποτυχία μαζικής επεξεργασίας: ${err.message}`);
+      notifyOperationError('Σφάλμα Μαζικής Επεξεργασίας', err.message);
     }
   };
 
@@ -736,6 +750,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     link.download = 'aram-portfolio.csv';
     link.click();
     URL.revokeObjectURL(href);
+    notifyOperationSuccess('Εξαγωγή CSV', 'Το αρχείο aram-portfolio.csv δημιουργήθηκε και ξεκίνησε η λήψη.');
   };
 
   const generateAiSuggestion = async (task: 'full' | 'title' | 'description') => {
@@ -1252,7 +1267,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                     </h3>
                     <p className="text-xs text-stone-500 mb-2">
                       {item.year && <span>{item.year} · </span>}
-                      {item.origin && <span>{item.origin} · </span>}
+                      {item.origin && !item.origin.includes('Wix') && <span>{item.origin} · </span>}
                       {item.medium || 'Χειροποίητο'}
                     </p>
 
@@ -1305,16 +1320,16 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                             });
                           }}
                           className="p-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 rounded transition"
-                          title="Επεξεργασία Εικόνας"
+                          title="Επεξεργασία Φωτογραφίας (Studio)"
                         >
-                          <IconEdit />
+                          <SlidersHorizontal className="w-4 h-4" />
                         </button>
                       )}
                       <button
                         type="button"
                         onClick={() => edit(item)}
                         className="p-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 rounded transition"
-                        title="Επεξεργασία Έργου"
+                        title="Επεξεργασία Στοιχείων Έργου"
                       >
                         <IconEdit />
                       </button>

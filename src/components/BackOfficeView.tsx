@@ -10,6 +10,7 @@ import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
 import { Check, X, Star, BadgeCheck, RefreshCw, MessageSquare, ExternalLink, CornerDownRight } from 'lucide-react';
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
+import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 import { CatalogBackups } from './CatalogBackups';
 import { CatalogExcelExport } from './CatalogExcelExport';
 import { OrdersManager } from './OrdersManager';
@@ -410,8 +411,10 @@ interface BackOfficeViewProps {
                     setVintedSyncPercent(100);
                     setVintedSyncStep('Ολοκληρώθηκε επιτυχώς!');
                     setVintedSyncSuccess(`Συγχρονίστηκαν ${payload.reviews.length} αξιολογήσεις με βαθμολογία ${payload.stats.ratingScore || 5.0}!`);
+                    notifyOperationSuccess('Συγχρονισμός Vinted', `Συγχρονίστηκαν ${payload.reviews.length} αξιολογήσεις με βαθμολογία ${payload.stats.ratingScore || 5.0}!`);
                 } catch (err) {
                     setVintedSyncError(err.message || 'Αποτυχία συγχρονισμού αξιολογήσεων Vinted');
+                    notifyOperationError('Σφάλμα Συγχρονισμού Vinted', err.message || 'Αποτυχία συγχρονισμού αξιολογήσεων Vinted');
                 } finally {
                     setIsSyncingVintedReviews(false);
                 }
@@ -472,6 +475,7 @@ interface BackOfficeViewProps {
             const [formStatus, setFormStatus] = useState('Διαθέσιμο');
             const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
             const [formPrice, setFormPrice] = useState('');
+            const [formOriginalPrice, setFormOriginalPrice] = useState('');
             const [formCost, setFormCost] = useState('');
             const [formStock, setFormStock] = useState(1);
             const [formShopOrder, setFormShopOrder] = useState(0);
@@ -851,8 +855,10 @@ interface BackOfficeViewProps {
                         after: { ...beforeSettings, ...savedSettings }
                     });
                     setSettingsSuccessMessage('Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς! Οι αλλαγές εφαρμόστηκαν άμεσα.');
+                    notifyOperationSuccess('Αποθήκευση Ρυθμίσεων', 'Οι ρυθμίσεις του καταστήματος αποθηκεύτηκαν επιτυχώς.');
                     setTimeout(() => setSettingsSuccessMessage(''), 5000);
                 } catch (err) {
+                    notifyOperationError('Σφάλμα Ρυθμίσεων', err.message || String(err));
                     alert("Σφάλμα κατά την αποθήκευση των ρυθμίσεων: " + (err.message || err));
                 } finally {
                     setIsSavingSettings(false);
@@ -876,8 +882,10 @@ interface BackOfficeViewProps {
                     const url = await getDownloadURL(task.snapshot.ref);
                     setShopSettings(prev => ({ ...prev, [isPortfolioHero ? 'portfolioHeroVideoUrl' : 'heroVideoUrl']: url }));
                     setStatus(`Το βίντεο ανέβηκε. Πάτησε Αποθήκευση ρυθμίσεων για να εμφανιστεί στο ${isPortfolioHero ? 'Portfolio' : 'Shop'}.`);
+                    notifyOperationSuccess('Βίντεο Hero', `Το βίντεο ανέβηκε επιτυχώς για το ${isPortfolioHero ? 'Portfolio' : 'Shop'}.`);
                 } catch (error) {
                     setStatus(`Αποτυχία ανεβάσματος: ${error.message}`);
+                    notifyOperationError('Σφάλμα Ανεβάσματος Βίντεο', error.message);
                 } finally { setMediaPreparing(false); }
             };
 
@@ -2168,7 +2176,7 @@ interface BackOfficeViewProps {
                 setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
 
                 setFormName(''); setFormCategory('Κολιέ'); setFormCollection(''); setFormStatus('Διαθέσιμο'); setFormDate(new Date().toISOString().split('T')[0]);
-                setFormPrice(''); setFormCost(''); setFormStock(1); setFormShopOrder(0); setFormManualLikes(0); setFormManualViews(0); setFormWeight(''); setFormDimensions(''); setFormStorage('');
+                setFormPrice(''); setFormOriginalPrice(''); setFormCost(''); setFormStock(1); setFormShopOrder(0); setFormManualLikes(0); setFormManualViews(0); setFormWeight(''); setFormDimensions(''); setFormStorage('');
                 setFormMaterials([]); setFormColorsArr([]); setNewMaterialInput(''); setNewColorInput('');
 
                 setFormPurchaseLinks([]); setNewPurchaseSite('Vinted'); setNewPurchaseUrl(''); setIsCustomPurchaseSite(false);
@@ -2218,7 +2226,7 @@ interface BackOfficeViewProps {
                 setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
 
                 setFormName(item.name || ''); setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status || 'Διαθέσιμο'); setFormDate(item.creationDate || '');
-                setFormPrice(item.price ? item.price.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
+                setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
                 setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
                 setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(stripVintedCondition(item.notes || ''));
 
@@ -2250,7 +2258,7 @@ interface BackOfficeViewProps {
 
                 setFormName(item.name ? item.name + ' (Αντίγραφο)' : '');
                 setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status || 'Διαθέσιμο'); setFormDate(item.creationDate || new Date().toISOString().split('T')[0]);
-                setFormPrice(item.price ? item.price.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(0);
+                setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(0);
                 setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
                 setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(item.notes || '');
 
@@ -2329,6 +2337,7 @@ interface BackOfficeViewProps {
                 link.href = URL.createObjectURL(blob);
                 link.download = `katalogos_aram_creations_${new Date().toISOString().split('T')[0]}.csv`;
                 link.click();
+                notifyOperationSuccess('Εξαγωγή CSV', `Ο κατάλογος (${jewelryList.length} προϊόντα) εξήχθη επιτυχώς σε CSV.`);
             };
 
             const splitVintedList = (value) => String(value || '')
@@ -2678,8 +2687,10 @@ interface BackOfficeViewProps {
                     setVintedImportStatus(`Έτοιμο. Περάστηκαν ${imported} προϊόντα στο Back Office.`);
                     setVintedImportItems([]);
                     setVintedLinksText('');
+                    notifyOperationSuccess('Εισαγωγή από Vinted', `Περάστηκαν ${imported} προϊόντα στο Back Office επιτυχώς!`);
                 } catch (err) {
                     setVintedImportError(`Σφάλμα import μετά από ${imported} προϊόντα: ${err.message}`);
+                    notifyOperationError('Σφάλμα Εισαγωγής Vinted', err.message);
                 } finally {
                     setIsVintedImportWorking(false);
                 }
@@ -2694,6 +2705,7 @@ interface BackOfficeViewProps {
                 if (!formName.trim() || isSaving || mediaPreparing) return;
 
                 const parsedPrice = formPrice === '' ? 0 : Number(formPrice);
+                const parsedOriginalPrice = formOriginalPrice === '' ? null : Number(formOriginalPrice);
                 const parsedCost = formCost === '' ? 0 : Number(formCost);
                 const parsedStock = formStock === '' ? 1 : parseInt(formStock, 10);
                 const parsedShopOrder = isEditMode && currentItem ? parseInt(formShopOrder || currentItem.shopOrder || 0, 10) : 0;
@@ -2805,6 +2817,7 @@ interface BackOfficeViewProps {
                         status: statTrimmed,
                         creationDate: formDate,
                         price: parsedPrice,
+                        originalPrice: parsedOriginalPrice && parsedOriginalPrice > parsedPrice ? parsedOriginalPrice : null,
                         cost: parsedCost,
                         stock: parsedStock,
                         shopOrder: parsedShopOrder,
@@ -2865,7 +2878,12 @@ interface BackOfficeViewProps {
 
                     localStorage.removeItem('aram_draft');
                     setIsAddOpen(false);
+                    notifyOperationSuccess(
+                        isEditMode ? 'Ενημέρωση Προϊόντος' : 'Νέο Προϊόν',
+                        `Το προϊόν «${formName.trim()}» αποθηκεύτηκε επιτυχώς.`
+                    );
                 } catch (err) {
+                    notifyOperationError('Σφάλμα Αποθήκευσης', err.message);
                     alert("Σφάλμα κατά την αποθήκευση: " + err.message);
                 } finally {
                     setIsSaving(false);
@@ -2905,7 +2923,9 @@ interface BackOfficeViewProps {
                         }
                     }
                     if (isDetailOpen && currentItem && currentItem.id === id) setIsDetailOpen(false);
+                    notifyOperationSuccess('Διαγραφή Προϊόντος', `Το προϊόν ${itemForUndo?.name ? `«${itemForUndo.name}» ` : ''}διαγράφηκε επιτυχώς.`);
                 } catch (err) {
+                    notifyOperationError('Σφάλμα Διαγραφής', err.message);
                     alert("Αποτυχία διαγραφής: " + err.message);
                 }
             };
@@ -3294,8 +3314,10 @@ interface BackOfficeViewProps {
                     });
 
                     alert(`Ολοκληρώθηκε: Έγιναν ${matchCount} αλλαγές σε ${updatesList.length} προϊόντα.`);
+                    notifyOperationSuccess('Αντικατάσταση Κειμένου', `Ολοκληρώθηκε: Έγιναν ${matchCount} αλλαγές σε ${updatesList.length} προϊόντα.`);
                     clearBulkSelection();
                 } catch (err) {
+                    notifyOperationError('Σφάλμα Αντικατάστασης', err.message || String(err));
                     alert('Σφάλμα κατά την αντικατάσταση: ' + (err.message || err));
                 }
             };
@@ -3419,8 +3441,10 @@ interface BackOfficeViewProps {
                         if (material && !BASE_MATERIALS.includes(material) && !customMaterials.includes(material)) setCustomMaterials(prev => [...prev, material]);
                     });
                     if (shopOrderUpdates.length) setSortBy('shop_order');
+                    notifyOperationSuccess('Μαζική Ενημέρωση', `Ενημερώθηκαν ${selectedItems.length} προϊόντα επιτυχώς!`);
                     clearBulkSelection();
                 } catch (err) {
+                    notifyOperationError('Σφάλμα Μαζικής Ενημέρωσης', err.message);
                     alert("Αποτυχία μαζικής ενημέρωσης: " + err.message);
                 }
             };
@@ -3435,8 +3459,10 @@ interface BackOfficeViewProps {
                     itemsForUndo.forEach(item => batch.delete(doc(db, "jewelry", item.id)));
                     await batch.commit();
                     pushUndoAction({ type: 'BULK_DELETE', items: itemsForUndo, message: 'Διαγράφηκαν ' + selectedItems.length + ' προϊόντα.' });
+                    notifyOperationSuccess('Μαζική Διαγραφή', `Διαγράφηκαν ${selectedItems.length} προϊόντα επιτυχώς.`);
                     clearBulkSelection();
                 } catch (err) {
+                    notifyOperationError('Σφάλμα Μαζικής Διαγραφής', err.message);
                     alert("Αποτυχία μαζικής διαγραφής: " + err.message);
                 }
             };
@@ -3465,8 +3491,10 @@ interface BackOfficeViewProps {
                         before: selectedItems,
                         after: duplicates
                     });
+                    notifyOperationSuccess('Μαζική Αντιγραφή', `Αντιγράφηκαν ${selectedItems.length} προϊόντα επιτυχώς!`);
                     clearBulkSelection();
                 } catch (err) {
+                    notifyOperationError('Σφάλμα Μαζικής Αντιγραφής', err.message);
                     alert("Αποτυχία μαζικής αντιγραφής: " + err.message);
                 }
             };
@@ -3484,6 +3512,7 @@ interface BackOfficeViewProps {
                         ...buildHistoryEntryFromAction(lastAction, 'UNDO'), before: original.after || null, after: original.before || null,
                         message: 'Αναίρεση: ' + (lastAction.message || 'ενέργεια backoffice')
                     });
+                    notifyOperationSuccess('Αναίρεση', 'Η ενέργεια αναιρέθηκε επιτυχώς.');
                 } catch (err) {
                     alert("Σφάλμα αναίρεσης: " + err.message);
                 }
@@ -3502,6 +3531,7 @@ interface BackOfficeViewProps {
                         ...buildHistoryEntryFromAction(redoAction, 'REDO'),
                         message: 'Επαναφορά: ' + (redoAction.message || 'ενέργεια backoffice')
                     });
+                    notifyOperationSuccess('Επαναφορά', 'Η ενέργεια επανήλθε επιτυχώς.');
                 } catch (err) {
                     alert("Σφάλμα επαναφοράς: " + err.message);
                 }
@@ -4743,6 +4773,17 @@ interface BackOfficeViewProps {
                                                 <div>
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Τιμή Πώλησης (€)</label>
                                                     <input type="number" step="any" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formPrice} onChange={e => setFormPrice(e.target.value)} />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <label className="block text-xs font-bold text-stone-600">Αρχική Τιμή (€)</label>
+                                                        {Number(formOriginalPrice) > Number(formPrice) && Number(formPrice) > 0 && (
+                                                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
+                                                                -{Math.round(((Number(formOriginalPrice) - Number(formPrice)) / Number(formOriginalPrice)) * 100)}%
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <input type="number" step="any" placeholder="π.χ. 24.00 (προαιρετικό)" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formOriginalPrice} onChange={e => setFormOriginalPrice(e.target.value)} />
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Κόστος Υλικών (€)</label>
@@ -6173,11 +6214,11 @@ interface BackOfficeViewProps {
 
                                                 <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
                                                     {(vintedReviewsData.reviews.length > 0 ? vintedReviewsData.reviews : [
-                                                        { id: 1, userLogin: 'vasileiasefer', rating: 5, formattedDate: '27 Οκτωβρίου 2026', feedback: 'Τα προϊόντα έφτασαν σε τέλεια κατάσταση, η συσκευασία τους πολύ προσεγμένη και με οδηγίες χρήσης για το πώς να τα προσέξω ❤️', sellerReply: '❤️❤️❤️' },
-                                                        { id: 2, userLogin: 'piscesismysign', rating: 5, formattedDate: '26 Σεπτεμβρίου 2026', feedback: 'Το κολιέ είναι πραγματικά πανέμορφο! 🌸 Το λουλούδι  το κάνει πολύ ξεχωριστό και φαίνεται ακόμη πιο όμορφο από κοντά. Πολύ προσεγμένη δουλειά και λεπτομέρεια. ❤️', sellerReply: 'Ευχαριστώ πολύ!!! ❤️❤️❤️' },
-                                                        { id: 3, userLogin: 'zoioulia', rating: 5, formattedDate: '10 Σεπτεμβρίου 2026', feedback: 'Ολα τέλεια, ευχαριστώ!', sellerReply: 'Εγώ ευχαριστώ πολύ!! 🤗' },
-                                                        { id: 4, userLogin: 'alkistisgln', rating: 5, formattedDate: '7 Σεπτεμβρίου 2026', feedback: 'Τέλειο το κολιέ και πολύ καλή συσκευασία', sellerReply: 'Ευχαριστώ παρα πολύ!! 🤍🤍' },
-                                                        { id: 5, userLogin: 'dosdosss', rating: 5, formattedDate: '3 Σεπτεμβρίου 2026', feedback: 'Άμεση αποστολή, τέλειο κολιέ και μου έβαλε και δωράκι ένα μπρελόκ! θα ξαναπάρω σίγουρα ⭐', sellerReply: 'Ευχαριστώ πάρα πολύ!! ✨️🤍' }
+                                                        { id: 1, userLogin: 'vasileiasefer', rating: 5, formattedDate: '27 Οκτωβρίου 2026', feedback: 'Τα προϊόντα έφτασαν σε τέλεια κατάσταση, η συσκευασία τους πολύ προσεγμένη και με οδηγίες χρήσης για το πώς να τα προσέξω.', sellerReply: 'Σας ευχαριστώ πολύ!' },
+                                                        { id: 2, userLogin: 'piscesismysign', rating: 5, formattedDate: '26 Σεπτεμβρίου 2026', feedback: 'Το κολιέ είναι πραγματικά πανέμορφο! Το λουλούδι το κάνει πολύ ξεχωριστό και φαίνεται ακόμη πιο όμορφο από κοντά. Πολύ προσεγμένη δουλειά και λεπτομέρεια.', sellerReply: 'Ευχαριστώ πολύ!' },
+                                                        { id: 3, userLogin: 'zoioulia', rating: 5, formattedDate: '10 Σεπτεμβρίου 2026', feedback: 'Ολα τέλεια, ευχαριστώ!', sellerReply: 'Εγώ ευχαριστώ πολύ!' },
+                                                        { id: 4, userLogin: 'alkistisgln', rating: 5, formattedDate: '7 Σεπτεμβρίου 2026', feedback: 'Τέλειο το κολιέ και πολύ καλή συσκευασία', sellerReply: 'Ευχαριστώ πάρα πολύ!' },
+                                                        { id: 5, userLogin: 'dosdosss', rating: 5, formattedDate: '3 Σεπτεμβρίου 2026', feedback: 'Άμεση αποστολή, τέλειο κολιέ και μου έβαλε και δωράκι ένα μπρελόκ! θα ξαναπάρω σίγουρα.', sellerReply: 'Ευχαριστώ πάρα πολύ!' }
                                                     ]).map((rev, idx) => (
                                                         <div key={rev.id || idx} className="p-3.5 rounded-xl border border-stone-100 bg-stone-50/60 text-xs space-y-1.5">
                                                             <div className="flex items-center justify-between">

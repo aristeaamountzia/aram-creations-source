@@ -369,9 +369,20 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                           src={mediaList[0]?.url || item.image}
                           alt={item.title}
                           referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
+                            item.status && (item.status.trim().toLowerCase() === 'πουλήθηκε' || item.status.trim().toLowerCase() === 'sold') ? 'grayscale-[15%] opacity-90' : ''
+                          }`}
                           loading="lazy"
                         />
+                      )}
+
+                      {/* Discreet Luxury Sold Overlay for Portfolio */}
+                      {item.status && (item.status.trim().toLowerCase() === 'πουλήθηκε' || item.status.trim().toLowerCase() === 'sold') && (
+                        <div className="absolute inset-0 bg-stone-950/30 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none transition-all duration-300 group-hover:bg-stone-950/20">
+                          <span className="px-3.5 py-1.5 rounded-full bg-stone-900/85 backdrop-blur-md border border-white/20 text-stone-100 text-[10px] sm:text-[11px] font-bold tracking-[0.2em] uppercase shadow-md">
+                            Πουλήθηκε
+                          </span>
+                        </div>
                       )}
 
                       {/* Top Right: Minimal Heart / Favorite Button */}
@@ -388,8 +399,8 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                         <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
                       </button>
 
-                      {/* Discreet status badge if present */}
-                      {item.status && (
+                      {/* Discreet status badge if present and NOT sold */}
+                      {item.status && item.status.trim().toLowerCase() !== 'πουλήθηκε' && item.status.trim().toLowerCase() !== 'sold' && (
                         <div className="absolute top-2.5 left-2.5 z-10">
                           <span className="px-2.5 py-0.5 rounded-full bg-stone-900/90 text-stone-100 text-[10px] font-semibold tracking-wider uppercase shadow-xs backdrop-blur-xs">
                             {portfolioStatusLabel(design, item.status)}
@@ -494,10 +505,10 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
                     {isVideo && <button type="button" onClick={() => setIsZoomOpen(true)} className="mt-2 rounded-lg border px-3 py-2 text-sm">Προβολή βίντεο σε πλήρη οθόνη</button>}
                     {/* Thumbnails Gallery Strip */}
-                    {mediaList.length > 1 && (<div className={`mt-3 pt-3 border-t 'border-stone-200'`}>
-                        <div className={`text-[11px] font-sans mb-2 flex items-center justify-between 'text-stone-500'`}>
+                    {mediaList.length > 1 && (<div className="mt-3 pt-3 border-t border-stone-200">
+                        <div className="text-[11px] font-sans mb-2 flex items-center justify-between text-stone-500">
                           <span>Διαθέσιμα Media ({mediaList.length})</span>
-                          <span className={`text-[10px] 'text-stone-500'`}>Κάντε κλικ για εναλλαγή</span>
+                          <span className="text-[10px] text-stone-500">Κάντε κλικ για εναλλαγή</span>
                         </div>
                         <div className="flex items-center gap-2 overflow-x-auto pb-1 horizontal-scrollbar">
                           {mediaList.map((media, idx) => {
@@ -524,54 +535,54 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 {/* Header Strip with Close button */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-xs font-sans uppercase px-2.5 py-1 rounded 'text-stone-700 bg-stone-100'`}>
+                    <span className="text-xs font-sans uppercase px-2.5 py-1 rounded text-stone-700 bg-stone-100">
                       {artCategories.find((c) => c.id === selectedItem.category)?.title}
                     </span>
-                    {selectedItem.year && (<span className={`text-xs font-sans px-2 py-1 rounded 'text-stone-600 bg-stone-100'`}>
+                    {selectedItem.year && (<span className="text-xs font-sans px-2 py-1 rounded text-stone-600 bg-stone-100">
                         {selectedItem.year}
                       </span>)}
-                    {selectedItem.status && (<span className={`text-xs font-sans px-2.5 py-1 rounded ${'text-emerald-800 bg-emerald-50 border border-emerald-200'}`}>
+                    {selectedItem.status && (<span className="text-xs font-sans px-2.5 py-1 rounded text-emerald-800 bg-emerald-50 border border-emerald-200">
                         {portfolioStatusLabel(design, selectedItem.status)}
                       </span>)}
                   </div>
 
-                  <button onClick={closeItemDetail} className={`p-1.5 rounded-full transition 'bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900'`} title="Κλείσιμο (Esc)">
+                  <button onClick={closeItemDetail} className="p-1.5 rounded-full transition bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900" title="Κλείσιμο (Esc)">
                     <X className="w-5 h-5"/>
                   </button>
                 </div>
 
                 {/* Title & Medium */}
-                <h2 className={`mt-4 text-2xl sm:text-3xl font-sans leading-snug 'text-stone-900'`}>
+                <h2 className="mt-4 text-2xl sm:text-3xl font-sans leading-snug text-stone-900">
                   {selectedItem.title}
                 </h2>
 
-                <div className={`mt-2 text-xs font-sans flex items-center gap-1.5 'text-stone-700'`}>
+                <div className="mt-2 text-xs font-sans flex items-center gap-1.5 text-stone-700">
                   <Palette className="w-3.5 h-3.5"/>
                   <span>{design.labels.medium}: {selectedItem.medium}</span>
                 </div>
 
-                {selectedItem.dimensions && (<div className={`mt-1 text-xs font-sans flex items-center gap-1.5 'text-stone-500'`}>
+                {selectedItem.dimensions && (<div className="mt-1 text-xs font-sans flex items-center gap-1.5 text-stone-500">
                     <Compass className="w-3.5 h-3.5"/>
                     <span>{design.labels.dimensions}: {selectedItem.dimensions}</span>
                   </div>)}
 
                 {/* Curatorial Description */}
                 <div className="mt-5">
-                  <h4 className={`text-[11px] font-sans uppercase tracking-wider mb-1 'text-stone-500'`}>
+                  <h4 className="text-[11px] font-sans uppercase tracking-wider mb-1 text-stone-500">
                     Επιμελητική Περιγραφή
                   </h4>
-                  <p className={`text-sm leading-relaxed 'text-stone-600'`}>
+                  <p className="text-sm leading-relaxed text-stone-600">
                     {sanitizeVintedDescription(selectedItem.description)}
                   </p>
                 </div>
 
                 {/* Curatorial Highlights / Details */}
                 {selectedItem.details && selectedItem.details.length > 0 && (<div className="mt-5">
-                    <h4 className={`text-[11px] font-sans uppercase tracking-wider mb-2 'text-stone-500'`}>
+                    <h4 className="text-[11px] font-sans uppercase tracking-wider mb-2 text-stone-500">
                       Χαρακτηριστικά & Τεχνική
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedItem.details.map((detail, idx) => (<span key={idx} className={`text-[11px] px-2.5 py-1 rounded font-sans 'bg-stone-100 text-stone-700 border border-stone-200'`}>
+                      {selectedItem.details.map((detail, idx) => (<span key={idx} className="text-[11px] px-2.5 py-1 rounded font-sans bg-stone-100 text-stone-700 border border-stone-200">
                           • {detail}
                         </span>))}
                     </div>
@@ -581,7 +592,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
               </div>
 
               {/* Bottom Actions Bar */}
-              <div className={`mt-8 pt-5 border-t flex flex-wrap items-center justify-between gap-3 'border-stone-200'`}>
+              <div className="mt-8 pt-5 border-t flex flex-wrap items-center justify-between gap-3 border-stone-200">
                 <div className="flex items-center gap-2">
                   <button onClick={() => toggleFavorite(selectedItem.id)} aria-pressed={favorites.includes(selectedItem.id)} aria-label={favorites.includes(selectedItem.id) ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'} className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition ${favorites.includes(selectedItem.id)
                 ? 'bg-rose-50 border-rose-200 text-rose-700'
@@ -590,7 +601,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                     <span>{favorites.includes(selectedItem.id) ? 'Στα Αγαπημένα' : 'Αγαπημένο'}</span>
                   </button>
 
-                  <button onClick={() => handleShare(selectedItem)} className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition 'bg-white hover:bg-stone-100 border-stone-200 text-stone-700 hover:text-stone-900'`} title="Κοινοποίηση">
+                  <button onClick={() => handleShare(selectedItem)} className="px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition bg-white hover:bg-stone-100 border-stone-200 text-stone-700 hover:text-stone-900" title="Κοινοποίηση">
                     <Share2 className="w-3.5 h-3.5"/>
                     <span>Κοινοποίηση</span>
                   </button>

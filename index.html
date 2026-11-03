@@ -31,6 +31,24 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@400;600&family=Jura:wght@400;600;700&family=Montserrat:wght@400;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+
+    <!-- Instant Theme Pre-Hydration (Eliminates Flash of Old Theme) -->
+    <script>
+      (function() {
+        try {
+          var raw = localStorage.getItem('aram_theme_cache');
+          if (raw) {
+            var data = JSON.parse(raw);
+            if (data && data.designStudio) {
+              var bg = data.designStudio.pageBackground || '#fafaf9';
+              var ink = data.designStudio.ink || '#18181b';
+              document.documentElement.style.backgroundColor = bg;
+              document.documentElement.style.color = ink;
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-[#fafafa] text-[#1c1917] antialiased selection:bg-[#1c1917] selection:text-white">
     <div id="root"></div>

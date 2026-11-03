@@ -3,6 +3,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { ART_ITEMS, CATEGORIES } from '../data';
 import { sortPortfolio } from '../lib/portfolio-order';
+import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 
 export function CatalogExcelExport() {
   const [busy, setBusy] = useState(false), [progress, setProgress] = useState(''), [error, setError] = useState('');
@@ -33,7 +34,8 @@ export function CatalogExcelExport() {
       const filename = `aram-creations-${new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Athens' })}.xlsx`;
       setResult({ url, filename, total: output.total, embedded: output.embedded, missing: output.missing });
       const link = document.createElement('a'); link.href = url; link.download = filename; document.body.appendChild(link); link.click(); link.remove();
-    } catch (error: any) { setError(controller.signal.aborted ? 'Η εξαγωγή ακυρώθηκε.' : `Δεν δημιουργήθηκε το Excel: ${error.message}`); }
+      notifyOperationSuccess('Εξαγωγή Excel', `Ο κατάλογος εξήχθη επιτυχώς (${output.total} καταχωρήσεις, ${output.embedded} μικρογραφίες).`);
+    } catch (error: any) { setError(controller.signal.aborted ? 'Η εξαγωγή ακυρώθηκε.' : `Δεν δημιουργήθηκε το Excel: ${error.message}`); if (!controller.signal.aborted) { notifyOperationError('Σφάλμα Εξαγωγής Excel', error.message); } }
     finally { setBusy(false); setProgress(''); operation.current = null; }
   };
   return <div className="flex flex-col items-start gap-1 max-w-full">

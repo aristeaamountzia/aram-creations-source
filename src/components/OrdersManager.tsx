@@ -1,6 +1,7 @@
 import { CatalogControls } from './CatalogControls';
 import React, { useEffect, useState } from 'react';
 import { auth } from '../firebase';
+import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 import { ORDER_STATUSES } from '../../server/orders-core';
 import { ExternalLink, CreditCard, RefreshCw, Send, ArrowLeft } from 'lucide-react';
 
@@ -54,7 +55,8 @@ export function OrdersManager({ onBack }: { onBack: () => void }) {
       const value = tracking[order.id] ?? order.tracking ?? '';
       await request('/api/orders', { method: 'PATCH', body: JSON.stringify({ id: order.id, status, tracking: value }) });
       setOrders(current => current.map(entry => entry.id === order.id ? { ...entry, status, tracking: value } : entry));
-    } catch (error) { setError(error instanceof Error ? error.message : 'Η αλλαγή απέτυχε.'); }
+      notifyOperationSuccess('Ενημέρωση Παραγγελίας', `Η κατάσταση της παραγγελίας #${order.number} ενημερώθηκε σε «${status}».`);
+    } catch (error) { const msg = error instanceof Error ? error.message : 'Η αλλαγή απέτυχε.'; setError(msg); notifyOperationError('Σφάλμα Ενημέρωσης', msg); }
     finally { setBusy(''); }
   }
 

@@ -253,71 +253,71 @@
  * shopping and administration surfaces remain calm and legible.
  */
 .atelier-theme {
-  --atelier-ink: #18181b;
-  --atelier-paper: #fafaf9;
-  --atelier-surface: #ffffff;
-  --atelier-muted: #71717a;
-  --atelier-line: #e4e4e7;
-  --atelier-charcoal: #18181b;
-  background: var(--atelier-paper) !important;
-  color: var(--atelier-ink) !important;
+  --atelier-ink: var(--ds-ink, #18181b);
+  --atelier-paper: var(--ds-page-background, #fafaf9);
+  --atelier-surface: var(--ds-surface, #ffffff);
+  --atelier-muted: var(--ds-muted, #71717a);
+  --atelier-line: var(--ds-line, #e4e4e7);
+  --atelier-charcoal: var(--ds-accent, #18181b);
+  background: var(--ds-page-background, #fafaf9);
+  color: var(--ds-ink, #18181b);
 }
 .atelier-theme .site-header,
 .atelier-theme .site-header[data-section="portfolio"] {
-  background: rgba(255, 255, 255, .96);
-  border-color: var(--atelier-line);
-  color: var(--atelier-ink);
+  background: var(--ds-header-background, rgba(255, 255, 255, .96));
+  border-color: var(--ds-line, #e4e4e7);
+  color: var(--ds-header-ink, #18181b);
   backdrop-filter: blur(14px);
 }
 .atelier-theme .brand-caption,
-.atelier-theme .site-header[data-section="portfolio"] .header-action { color: var(--atelier-muted); }
+.atelier-theme .site-header[data-section="portfolio"] .header-action { color: var(--ds-header-muted, #71717a); }
 .atelier-theme .header-action,
 .atelier-theme .section-entrance,
 .atelier-theme .entrance-portfolio {
   background: #ffffff;
-  border-color: var(--atelier-line);
+  border-color: var(--ds-line, #e4e4e7);
   color: #52525b;
-  border-radius: 8px;
+  border-radius: var(--ds-radius, 8px);
 }
 .atelier-theme .header-action:hover,
 .atelier-theme .section-entrance:hover,
 .atelier-theme .entrance-portfolio:hover { background: #f4f4f5; color: #18181b; }
 .atelier-theme .entrance-shop[aria-pressed="true"],
-.atelier-theme .entrance-portfolio[aria-pressed="true"] { background: #18181b; border-color: #18181b; color: #ffffff; }
-.atelier-theme .portfolio-view { background: var(--atelier-paper) !important; color: var(--atelier-ink) !important; }
+.atelier-theme .entrance-portfolio[aria-pressed="true"] { background: var(--ds-nav-active-background, #18181b); border-color: var(--ds-nav-active-background, #18181b); color: var(--ds-nav-active-ink, #ffffff); }
+.atelier-theme .portfolio-view { background: var(--ds-page-background, #fafaf9); color: var(--ds-ink, #18181b); }
 /* Harmonized dark luxury hero banner */
 .atelier-theme .shop-hero,
-.atelier-theme .portfolio-hero { border-color: #27272a !important; }
-.atelier-theme .portfolio-hero h1 { color: #ffffff !important; font-weight: 700; letter-spacing: -0.02em; }
-.atelier-theme .portfolio-hero p { color: #d4d4d8 !important; }
-.atelier-theme .shop-hero h1 { font-family: var(--font-serif); font-weight: 500; letter-spacing: .025em; }
+.atelier-theme .portfolio-hero { border-color: #27272a; }
+.atelier-theme .portfolio-hero h1 { color: var(--ds-hero-title-ink, #ffffff); font-weight: 700; letter-spacing: -0.02em; }
+.atelier-theme .portfolio-hero p { color: var(--ds-hero-body-ink, #d4d4d8); }
+.atelier-theme .shop-hero h1 { font-family: var(--ds-font-family, var(--font-serif)); font-weight: 500; letter-spacing: .025em; }
 .atelier-theme .catalog-filter-panel,
-.atelier-theme .catalog-category-note { background: var(--atelier-surface); border-color: var(--atelier-line); color: var(--atelier-ink); }
+.atelier-theme .catalog-category-note { background: var(--ds-surface, #ffffff); border-color: var(--ds-line, #e4e4e7); color: var(--ds-ink, #18181b); }
 .atelier-theme .catalog-search input,
-.atelier-theme .catalog-sort { background: var(--atelier-surface); border-color: var(--atelier-line); color: var(--atelier-ink); }
+.atelier-theme .catalog-sort { background: var(--ds-surface, #ffffff); border-color: var(--ds-line, #e4e4e7); color: var(--ds-ink, #18181b); }
 .atelier-theme .catalog-search input::placeholder,
 .atelier-theme .catalog-search > svg,
-.atelier-theme .catalog-sort > span { color: var(--atelier-muted); }
-.atelier-theme .catalog-sort select { color: var(--atelier-ink); }
-.atelier-theme .catalog-categories { border-color: var(--atelier-line); }
+.atelier-theme .catalog-sort > span { color: var(--ds-muted, #71717a); }
+.atelier-theme .catalog-sort select { color: var(--ds-ink, #18181b); }
+.atelier-theme .catalog-categories { border-color: var(--ds-line, #e4e4e7); }
 .atelier-theme .catalog-categories button,
-.atelier-theme .catalog-filter-actions > button { background: transparent; border-color: var(--atelier-line); color: var(--atelier-ink); border-radius: 2px; }
-.atelier-theme .catalog-controls button[aria-pressed="true"] { background: var(--atelier-charcoal); border-color: var(--atelier-charcoal); color: #fffdf9; }
-.atelier-theme .catalog-card { background: var(--atelier-surface) !important; border-color: var(--atelier-line) !important; border-radius: 12px !important; color: var(--atelier-ink); box-shadow: none; }
-.atelier-theme .catalog-card:hover { border-color: #a1a1aa !important; box-shadow: 0 4px 12px rgba(0,0,0,.04); }
-.atelier-theme .catalog-card h3 { color: var(--atelier-ink) !important; }
-.atelier-theme .catalog-card img { transition: filter 650ms ease, transform 700ms ease !important; }
+.atelier-theme .catalog-filter-actions > button { background: transparent; border-color: var(--ds-line, #e4e4e7); color: var(--ds-ink, #18181b); border-radius: 6px; }
+.atelier-theme .catalog-controls button[aria-pressed="true"] { background: var(--ds-button-background, #18181b); border-color: var(--ds-button-background, #18181b); color: var(--ds-button-ink, #fffdf9); }
+.atelier-theme .catalog-card { background: var(--ds-surface, #ffffff); border-color: var(--ds-line, #e4e4e7); border-radius: var(--ds-card-radius, 12px); color: var(--ds-ink, #18181b); box-shadow: none; }
+.atelier-theme .catalog-card:hover { border-color: #a1a1aa; box-shadow: 0 4px 12px rgba(0,0,0,.04); }
+.atelier-theme .catalog-card h3 { color: var(--ds-ink, #18181b); }
+.atelier-theme .catalog-card img { transition: transform 700ms ease; }
 .atelier-theme .catalog-card .text-stone-400,
-.atelier-theme .catalog-card .text-stone-500 { color: var(--atelier-muted) !important; }
-.atelier-theme .catalog-card .border-t { border-color: var(--atelier-line) !important; }
+.atelier-theme .catalog-card .text-stone-500 { color: var(--ds-muted, #71717a); }
+.atelier-theme .catalog-card .border-t { border-color: var(--ds-line, #e4e4e7); }
 .atelier-theme .catalog-card .bg-white\/95,
-.atelier-theme .catalog-card .bg-white\/90 { background: rgba(255,253,250,.94) !important; border-color: var(--atelier-line) !important; color: var(--atelier-ink) !important; }
+.atelier-theme .catalog-card .bg-white\/90 { background: rgba(255,253,250,.94); border-color: var(--ds-line, #e4e4e7); color: var(--ds-ink, #18181b); }
 .atelier-theme .catalog-card .bg-stone-900,
 /* Clean buttons in portfolio hero handled by component */
-.atelier-theme .site-footer { background: var(--atelier-charcoal) !important; border-color: rgba(255,255,255,.16) !important; color: #c8c0b5; }
-.atelier-theme .site-footer :is(h4, .text-stone-900, .text-stone-800) { color: #fffdf9 !important; }
+.atelier-theme .site-footer { background: var(--ds-accent, #18181b); border-color: rgba(255,255,255,.16); color: #c8c0b5; }
+.atelier-theme .site-footer :is(h4, .text-stone-900, .text-stone-800) { color: #fffdf9; }
 .atelier-theme .site-footer .bg-white,
-.atelier-theme .site-footer .bg-teal-50 { background: transparent !important; border-color: rgba(255,255,255,.28) !important; color: #fffdf9 !important; border-radius: 2px; }
+.atelier-theme .site-footer .bg-teal-50 { background: transparent; border-color: rgba(255,255,255,.28); color: #fffdf9; border-radius: 6px; }
 .atelier-theme .image-lightbox { background: rgba(5, 5, 5, .985); }
 .atelier-theme .image-lightbox > button { border-radius: 2px; background: #292522; border-color: rgba(255,255,255,.3); color: #fffdf9; }
 .atelier-theme .image-lightbox > button:hover { background: #292929; }
@@ -359,11 +359,9 @@
 /* Portfolio refinements: art is color-first on touch devices; grayscale belongs to desktop hover. */
 .atelier-theme .portfolio-hero--video { background: #171411 !important; }
 .atelier-theme .portfolio-hero--video > div.absolute.inset-0.bg-black\/55 { background: rgba(0, 0, 0, .64) !important; }
-/* Grayscale is an intentional desktop discovery effect, never a readability rule. */
+/* Clean hover state on catalog cards */
 @media (hover: hover) and (pointer: fine) {
-  .atelier-theme .catalog-card img { filter: grayscale(1); }
-  .atelier-theme .catalog-card:hover img,
-  .atelier-theme .catalog-card:focus-within img { filter: grayscale(0); }
+  .atelier-theme .catalog-card img { filter: none; }
 }
 @media (max-width: 640px) {
   .portfolio-hero--video { min-height: 27rem; }

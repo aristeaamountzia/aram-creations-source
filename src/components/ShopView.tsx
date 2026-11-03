@@ -542,14 +542,14 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
           {/* Refined brand proof-point */}
           <div className="pt-2 flex items-center justify-center gap-2 text-xs text-stone-300 font-medium">
             <a
-              href="#vinted-reviews"
+              href="#customer-reviews"
               onClick={(e) => {
                 e.preventDefault();
-                const el = document.getElementById('vinted-reviews');
+                const el = document.getElementById('customer-reviews') || document.getElementById('vinted-reviews');
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-xs text-stone-200 transition"
-              title="Δείτε τις επίσημες αξιολογήσεις στο Vinted"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-xs text-stone-200 transition cursor-pointer"
+              title="Δείτε τις επίσημες αξιολογήσεις των πελατών"
             >
               <Star className="w-3 h-3 fill-amber-300 text-amber-300 shrink-0" strokeWidth={1.5} />
               <span>5.0 • 10 αξιολογήσεις στο Vinted</span>
@@ -723,7 +723,9 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     {activeCardMedia.type === 'video' ? (
                       <video
                         src={activeCardMedia.url}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                          isSold ? 'grayscale-[15%] opacity-90' : ''
+                        }`}
                         muted
                         loop
                         autoPlay
@@ -734,18 +736,36 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                         src={activeCardMedia.url}
                         alt={item.name || item.title || 'Κόσμημα Aram Creations'}
                         referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                          isSold ? 'grayscale-[15%] opacity-90' : ''
+                        }`}
                         loading="lazy"
                       />
                     )}
 
-                    {/* Discreet status badge if sold */}
-                    {!isAvailable && (
+                    {/* Discreet Luxury Sold Overlay */}
+                    {isSold && (
+                      <div className="absolute inset-0 bg-stone-950/30 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none transition-all duration-300 group-hover:bg-stone-950/20">
+                        <span className="px-3.5 py-1.5 rounded-full bg-stone-900/85 backdrop-blur-md border border-white/20 text-stone-100 text-[10px] sm:text-[11px] font-bold tracking-[0.2em] uppercase shadow-md">
+                          Πουλήθηκε
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Discount badge if has originalPrice */}
+                    {isAvailable && item.originalPrice && Number(item.originalPrice) > Number(item.price) && (
                       <div className="absolute top-2.5 left-2.5 z-10">
-                        <span className={`px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase rounded-full backdrop-blur-xs ${
-                          isSold ? 'bg-stone-900/90 text-stone-100 shadow-xs' : 'bg-stone-800/80 text-stone-200'
-                        }`}>
-                          {isSold ? 'Πουλήθηκε' : item.status || 'Μη διαθέσιμο'}
+                        <span className="px-2.5 py-0.5 text-[10px] font-black tracking-wider uppercase rounded-full bg-rose-600 text-white shadow-xs">
+                          -{Math.round(((Number(item.originalPrice) - Number(item.price)) / Number(item.originalPrice)) * 100)}%
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Discreet status badge if not available and NOT sold */}
+                    {!isAvailable && !isSold && (
+                      <div className="absolute top-2.5 left-2.5 z-10">
+                        <span className="px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase rounded-full backdrop-blur-xs bg-stone-800/80 text-stone-200">
+                          {item.status || 'Μη διαθέσιμο'}
                         </span>
                       </div>
                     )}
@@ -820,10 +840,21 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
                     {/* Footer: Price & Subtle Actions */}
                     <div className="pt-2.5 border-t border-stone-100 flex items-center justify-between gap-2">
-                      <div>
-                        <span className="text-base font-semibold text-stone-900 tracking-tight" style={{ fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
-                          {item.price ? `${item.price}€` : '-'}
-                        </span>
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        {item.originalPrice && Number(item.originalPrice) > Number(item.price) ? (
+                          <>
+                            <span className="text-base font-bold text-stone-900 tracking-tight" style={{ fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
+                              {item.price ? `${item.price}€` : '-'}
+                            </span>
+                            <span className="text-xs font-medium text-stone-400 line-through">
+                              {Number(item.originalPrice).toFixed(2)}€
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-base font-semibold text-stone-900 tracking-tight" style={{ fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
+                            {item.price ? `${item.price}€` : '-'}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5">
@@ -1067,10 +1098,20 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   <h2 className="text-2xl sm:text-3xl font-bold text-stone-900 leading-snug" style={{ fontFamily: 'Jura, sans-serif' }}>
                     {selectedItem.name || selectedItem.title}
                   </h2>
-                  <div className="mt-2 flex items-baseline gap-3">
+                  <div className="mt-2 flex items-baseline gap-3 flex-wrap">
                     <span className="text-2xl sm:text-3xl font-bold text-stone-900">
                       {selectedItem.price ? `${selectedItem.price}€` : '-'}
                     </span>
+                    {selectedItem.originalPrice && Number(selectedItem.originalPrice) > Number(selectedItem.price) && (
+                      <>
+                        <span className="text-lg text-stone-400 line-through font-medium">
+                          {Number(selectedItem.originalPrice).toFixed(2)}€
+                        </span>
+                        <span className="text-xs font-black px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-xs">
+                          -{Math.round(((Number(selectedItem.originalPrice) - Number(selectedItem.price)) / Number(selectedItem.originalPrice)) * 100)}%
+                        </span>
+                      </>
+                    )}
                     <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                       !isAvailableForSale(selectedItem)
                         ? selectedItem.status === 'Πουλήθηκε' || (selectedItem.status !== 'Κρατημένο' && selectedItem.stock !== undefined && selectedItem.stock !== null && Number(selectedItem.stock) <= 0)
@@ -1205,22 +1246,11 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
           onClose={() => setIsLightboxOpen(false)} />
       )}
 
-      {/* Official Vinted Reviews & Social Proof */}
+      {/* Official Customer Reviews & Social Proof */}
       <VintedReviewsSection
         theme={shopSettings.visualTheme}
         fontFamily={shopSettings.fontFamily}
       />
-
-      {Object.entries(shopSettings.fallbackLinks).some(([, url]) => /^https:\/\//i.test(url)) && (
-        <nav aria-label="Σύνδεσμοι Aram Creations" className="mt-12 border-t border-stone-200 px-4 py-8 text-center text-xs font-semibold sm:px-6">
-          <p className="mb-4 text-[11px] uppercase tracking-wider text-stone-500">Βρείτε μας και εδώ</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {Object.entries(shopSettings.fallbackLinks).filter(([, url]) => /^https:\/\//i.test(url)).map(([name, url]) => (
-              <a key={name} href={url} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-700 transition hover:border-stone-400 hover:text-stone-950">{name}</a>
-            ))}
-          </div>
-        </nav>
-      )}
     </div>
   );
 };
