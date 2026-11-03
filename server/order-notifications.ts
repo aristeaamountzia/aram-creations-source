@@ -3,10 +3,11 @@ export const OWNER_EMAIL = 'aristeaamnta@gmail.com';
 export async function sendOrderEmail(id: string, payload: { number: string; total: number }, send = fetch) {
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new Error('MAIL_NOT_CONFIGURED');
+  const adminUrl = (process.env.URL || 'https://aramcreationsofficial1.netlify.app').replace(/\/$/, '') + '/#admin';
   const response = await send('https://api.resend.com/emails', {
     method: 'POST', signal: AbortSignal.timeout(8000),
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'Idempotency-Key': `order-notification/${id}` },
-    body: JSON.stringify({ from: 'Aram Creations <onboarding@resend.dev>', to: [OWNER_EMAIL], subject: `Νέα παραγγελία ${payload.number}`, text: `Καταχωρήθηκε νέα παραγγελία στο Aram Creations.\n\nΚωδικός: ${payload.number}\nΣύνολο: ${Number(payload.total).toFixed(2)} €\n\nΔες τα στοιχεία και επιβεβαίωσε την πληρωμή στο Back Office:\nhttps://lovely-bienenstitch-b6079c.netlify.app/#admin\n\nΑυτόματη ειδοποίηση· δεν έχει γίνει αυτόματη χρέωση.` })
+    body: JSON.stringify({ from: 'Aram Creations <onboarding@resend.dev>', to: [OWNER_EMAIL], subject: `Νέα παραγγελία ${payload.number}`, text: `Καταχωρήθηκε νέα παραγγελία στο Aram Creations.\n\nΚωδικός: ${payload.number}\nΣύνολο: ${Number(payload.total).toFixed(2)} €\n\nΔες τα στοιχεία και διαχειρίσου την παραγγελία στο Back Office:\n${adminUrl}\n\nΑυτόματη ειδοποίηση Aram Creations.` })
   });
   if (!response.ok) throw new Error(`MAIL_HTTP_${response.status}`);
   const result = await response.json();

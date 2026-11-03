@@ -18,6 +18,7 @@ test('validate customer, honeypot and payment method', () => {
   assert.throws(() => normalizeOrder(makeInput({ website: 'spam' })));
   assert.throws(() => normalizeOrder(makeInput({ paymentMethod: 'cod' })));
   assert.throws(() => normalizeOrder(makeInput({ shippingMethod: 'courier', paymentMethod: 'cod' })));
+  assert.doesNotThrow(() => normalizeOrder(makeInput({ paymentMethod: 'stripe' })));
 });
 test('shipping threshold uses exact cents, and removed pickup is rejected', () => {
   assert.equal(priceOrder(normalizeOrder(makeInput()), [{ ...product, price: 45 }]).shippingCost, 0);

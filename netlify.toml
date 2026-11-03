@@ -39,6 +39,18 @@
   force = true
 
 [[redirects]]
+  from = "/api/stripe-confirm"
+  to = "/.netlify/functions/stripe-confirm"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/stripe-webhook"
+  to = "/.netlify/functions/stripe-webhook"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/backoffice-ai"
   to = "/.netlify/functions/backoffice-ai"
   status = 200

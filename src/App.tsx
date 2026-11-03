@@ -14,6 +14,7 @@ const BackOfficeView = React.lazy(() =>
 );
 import { CartDrawer } from './components/CartDrawer';
 import { ContactModal } from './components/ContactModal';
+import { PaymentSuccessModal } from './components/PaymentSuccessModal';
 import { ShieldCheck, Mail, MapPin, ExternalLink, Lock } from 'lucide-react';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from './firebase';
@@ -63,6 +64,50 @@ export const App: React.FC = () => {
   // Contact artist modal
   const [contactArtItem, setContactArtItem] = useState<ArtItem | null>(null);
   const [isContactOpen, setIsContactOpen] = useState(false);
+  const [paymentSuccessData, setPaymentSuccessData] = useState<{ number: string; total?: number } | null>(null);
+  const [paymentAlert, setPaymentAlert] = useState<string | null>(null);
+
+  // Check for Stripe Checkout return parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const orderId = params.get('order_id');
+    const cancelled = params.get('order_cancelled');
+
+    if (sessionId) {
+      setCartItems([]);
+      try {
+        localStorage.removeItem('aram_boutique_cart');
+        localStorage.removeItem('aram_checkout_request');
+      } catch { /* optional */ }
+
+      fetch('/api/stripe-confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, orderId })
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setPaymentSuccessData({
+            number: data?.orderNumber || orderId || 'ARAM-PAID',
+            total: data?.total
+          });
+        })
+        .catch((err) => {
+          console.error('Error confirming Stripe payment:', err);
+          setPaymentSuccessData({
+            number: orderId || 'ARAM-PAID'
+          });
+        });
+
+      const cleanUrl = window.location.pathname + (window.location.hash || '');
+      window.history.replaceState({}, '', cleanUrl);
+    } else if (cancelled) {
+      setPaymentAlert('Η διαδικασία πληρωμής ακυρώθηκε. Τα είδη παραμένουν στην τσάντα αγορών σας.');
+      const cleanUrl = window.location.pathname + (window.location.hash || '');
+      window.history.replaceState({}, '', cleanUrl);
+    }
+  }, []);
 
   // Sync cart to localStorage
   useEffect(() => {
@@ -227,6 +272,29 @@ export const App: React.FC = () => {
         artItem={contactArtItem}
       />
 
+      {/* Stripe Payment Success Modal */}
+      {paymentSuccessData && (
+        <PaymentSuccessModal
+          orderNumber={paymentSuccessData.number}
+          total={paymentSuccessData.total}
+          onClose={() => setPaymentSuccessData(null)}
+        />
+      )}
+
+      {/* Payment alert toast */}
+      {paymentAlert && (
+        <div className="fixed bottom-6 right-6 z-50 bg-stone-900 text-white text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-stone-700 animate-in slide-in-from-bottom duration-200">
+          <span>{paymentAlert}</span>
+          <button
+            onClick={() => setPaymentAlert(null)}
+            className="text-stone-400 hover:text-white font-bold ml-2"
+            aria-label="Κλείσιμο"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Footer (hidden in admin mode) */}
       {currentMode !== 'admin' && (
       <footer className="site-footer bg-[#fafafa] border-t border-stone-200/90 text-stone-600 py-12 px-4 sm:px-6 lg:px-8">
@@ -281,7 +349,7 @@ export const App: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 text-stone-600 pt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>BoxNow, ACS & IRIS Payments</span>
+              <span>Stripe (Κάρτες), IRIS Payments & BoxNow</span>
             </div>
           </div>
 

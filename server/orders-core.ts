@@ -9,7 +9,7 @@ const field = (value: unknown, max: number, required = false) => {
 export function normalizeOrder(raw: any) {
   if (!raw || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(raw.requestId || '') || raw.website) throw new OrderError('Μη έγκυρο αίτημα παραγγελίας.');
   if (typeof raw.expectedTotal !== 'number' || !Number.isFinite(raw.expectedTotal) || raw.expectedTotal <= 0) throw new OrderError('Μη έγκυρο σύνολο παραγγελίας.');
-  if (!Object.hasOwn(shipping, raw.shippingMethod) || !['iris', 'bank'].includes(raw.paymentMethod)) throw new OrderError('Επίλεξε BoxNow ή courier και πληρωμή με IRIS ή κατάθεση.');
+  if (!Object.hasOwn(shipping, raw.shippingMethod) || !['iris', 'bank', 'stripe'].includes(raw.paymentMethod)) throw new OrderError('Επίλεξε BoxNow ή courier και πληρωμή με κάρτα (Stripe), IRIS ή κατάθεση.');
   if (!Array.isArray(raw.items) || raw.items.length < 1 || raw.items.length > 20) throw new OrderError('Επίλεξε από 1 έως 20 διαφορετικά προϊόντα.');
   const ids = new Set<string>();
   const items = raw.items.map((item: any) => {

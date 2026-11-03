@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CartItem, OrderCustomerInfo } from '../types';
-import { X, Trash2, ArrowRight, ShieldCheck, CheckCircle2, Truck, CreditCard, ChevronLeft, AlertTriangle, Info } from 'lucide-react';
+import { X, Trash2, ArrowRight, ShieldCheck, CheckCircle2, Truck, CreditCard, ChevronLeft, AlertTriangle, Info, Loader2 } from 'lucide-react';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -41,7 +41,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     postalCode: '',
     notes: ''
   });
-  const [paymentMethod, setPaymentMethod] = useState('iris');
+  const [paymentMethod, setPaymentMethod] = useState('stripe');
 
   if (!isOpen) return null;
 
@@ -81,6 +81,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         throw new Error(`${errMessage}${errReason}`);
       }
       
+      if (result.checkoutUrl) {
+        setSubmittingStep('3/3 Μετάβαση στην ασφαλή πύλη πληρωμής (Stripe)...');
+        window.location.href = result.checkoutUrl;
+        return;
+      }
       setSubmittingStep('3/3 Επιβεβαίωση παραγγελίας...');
       setCompletedOrderNumber(result.order.number);
       setSavedTotal(result.order.total);
@@ -260,30 +265,56 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <CreditCard className="w-3.5 h-3.5 text-stone-800" />
                   <span>Τρόπος Πληρωμής</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('iris')}
-                    className={`p-2.5 rounded-xl border text-xs text-center transition ${
-                      paymentMethod === 'iris'
-                        ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
-                        : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                    onClick={() => setPaymentMethod('stripe')}
+                    className={`w-full p-3 rounded-xl border text-left transition flex items-center justify-between ${
+                      paymentMethod === 'stripe'
+                        ? 'border-stone-900 bg-stone-900 text-white shadow-sm'
+                        : 'border-stone-200 bg-white text-stone-700 hover:border-stone-400'
                     }`}
                   >
-                    IRIS Payments
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('bank')}
-                    className={`p-2.5 rounded-xl border text-xs text-center transition ${
-                      paymentMethod === 'bank'
-                        ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
-                        : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-                    }`}
-                  >
-                    Κατάθεση
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 shrink-0" />
+                        <span>Κάρτα / Apple Pay / Google Pay</span>
+                      </div>
+                      <div className={`text-[10px] mt-0.5 ${paymentMethod === 'stripe' ? 'text-stone-300' : 'text-stone-500'}`}>
+                        Visa, Mastercard, Revolut Pay μέσω Stripe
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                      paymentMethod === 'stripe' ? 'bg-stone-800 text-stone-200 border border-stone-700' : 'bg-stone-100 text-stone-600'
+                    }`}>
+                      Stripe
+                    </span>
                   </button>
 
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('iris')}
+                      className={`p-2.5 rounded-xl border text-xs text-center transition ${
+                        paymentMethod === 'iris'
+                          ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
+                          : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                      }`}
+                    >
+                      IRIS Payments
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('bank')}
+                      className={`p-2.5 rounded-xl border text-xs text-center transition ${
+                        paymentMethod === 'bank'
+                          ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
+                          : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                      }`}
+                    >
+                      Κατάθεση
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -433,7 +464,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <div className="space-y-1.5 bg-stone-100 p-2.5 rounded-xl border border-stone-200">
                     <div className="flex justify-between items-center text-[11px] font-bold text-stone-700">
                       <span>{submittingStep}</span>
-                      <span className="animate-spin text-xs">⏳</span>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-stone-700" />
                     </div>
                     <div className="w-full bg-stone-200 rounded-full h-1.5 overflow-hidden">
                       <div className="bg-emerald-600 h-1.5 rounded-full animate-pulse w-full"></div>
@@ -448,6 +479,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 >
                   {isSubmitting ? (
                     <span>Καταχώρηση παραγγελίας σε εξέλιξη...</span>
+                  ) : paymentMethod === 'stripe' ? (
+                    <>
+                      <span>Μετάβαση σε ασφαλή πληρωμή (Stripe)</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
                   ) : (
                     <>
                       <span>Καταχώρηση παραγγελίας</span>

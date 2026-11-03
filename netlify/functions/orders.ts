@@ -4,12 +4,14 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { normalizeOrder, priceOrder, nextStatus, OrderError } from '../../server/orders-core';
 import { notifyOrder } from '../../server/order-notifications';
+import { createStripeCheckoutSession } from '../../server/stripe-service';
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return true;
   const configured = [
     process.env.URL,
     process.env.DEPLOY_PRIME_URL,
+    'https://aramcreationsofficial1.netlify.app',
     'https://aramcreationss.netlify.app',
     'https://aram-creations.netlify.app',
     'http://localhost:5173',
@@ -141,12 +143,14 @@ export function createOrdersHandler(connect: typeof database = database, notify:
       const ipHash = createHash('sha256').update(context.ip || 'unknown').digest('hex');
       const rateRef = db.doc(`orderRateLimits/${ipHash}`);
 
+      let stripeCheckoutUrl: string | undefined;
       const receipt = await db.runTransaction(async transaction => {
         const previous = await transaction.get(ref);
         if (previous.exists) {
           const data = previous.data()!;
           if (data.requestHash !== requestHash) throw new OrderError('Το αίτημα έχει αλλάξει. Δοκίμασε ξανά.', 409);
-          return { id: ref.id, number: data.number, total: data.total, subtotal: data.subtotal, shippingCost: data.shippingCost, status: data.status };
+          stripeCheckoutUrl = data.stripeCheckoutUrl;
+          return { id: ref.id, number: data.number, total: data.total, subtotal: data.subtotal, shippingCost: data.shippingCost, status: data.status, items: data.items, checkoutUrl: data.stripeCheckoutUrl };
         }
         const rate = await transaction.get(rateRef);
         const rateData = rate.data();
@@ -168,8 +172,34 @@ export function createOrdersHandler(connect: typeof database = database, notify:
         transaction.set(rateRef, { count: freshWindow ? 1 : rateData!.count + 1, startedAt: freshWindow ? now.getTime() : rateData!.startedAt, expiresAt: new Date(now.getTime() + 86400000) });
         transaction.create(ref, { ...priced, customer: input.customer, shippingMethod: input.shippingMethod, paymentMethod: input.paymentMethod, number, status: 'pending', emailNotification: 'pending', createdAt: now.toISOString(), updatedAt: now.toISOString(), requestHash, history: [{ status: 'pending', at: now.toISOString() }] });
         transaction.create(db.doc(`orderNotifications/${ref.id}`), { state: 'pending', payload: { number, total: priced.total }, createdAt: now.toISOString() });
-        return { id: ref.id, number, total: priced.total, subtotal: priced.subtotal, shippingCost: priced.shippingCost, status: 'pending' };
+        return { id: ref.id, number, total: priced.total, subtotal: priced.subtotal, shippingCost: priced.shippingCost, status: 'pending', items: priced.items };
       });
+
+      if (input.paymentMethod === 'stripe') {
+        if (!stripeCheckoutUrl) {
+          const session = await createStripeCheckoutSession({
+            orderId: receipt.id,
+            orderNumber: receipt.number,
+            items: (receipt.items || []).map((it: any) => ({
+              name: it.name || 'Χειροποίητο κόσμημα',
+              price: it.price,
+              quantity: it.quantity,
+              imageUrl: it.imageUrl
+            })),
+            shippingMethod: input.shippingMethod,
+            shippingCost: receipt.shippingCost,
+            customerEmail: input.customer.email,
+            origin: origin || ''
+          });
+          stripeCheckoutUrl = session.url;
+          await db.doc(`orders/${receipt.id}`).update({
+            stripeSessionId: session.id,
+            stripeCheckoutUrl: session.url
+          });
+        }
+        return reply({ ok: true, order: receipt, checkoutUrl: stripeCheckoutUrl }, 201, origin);
+      }
+
       await notify(db, receipt.id).catch(() => console.error('Order email remains queued'));
       return reply({ ok: true, order: receipt }, 201, origin);
     } catch (error) {
