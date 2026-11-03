@@ -7,6 +7,7 @@ import { DesignStudioSettings } from './DesignStudioSettings';
 import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, validatePortfolioDesign } from '../lib/portfolio-settings';
 import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
+import { Check, X } from 'lucide-react';
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
 import { CatalogBackups } from './CatalogBackups';
