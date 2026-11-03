@@ -1,3 +1,4 @@
+import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Star,
@@ -257,17 +258,11 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
         </div>
 
         {/* Social Proof Hero Highlight Card */}
-        <div className="mb-12 rounded-3xl bg-linear-to-b from-stone-900 via-stone-900 to-stone-950 text-white p-6 sm:p-10 shadow-xl border border-stone-800 relative overflow-hidden">
-          {/* Subtle decorative glow */}
-          <div
-            className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-teal-500/10 blur-3xl pointer-events-none"
-            aria-hidden="true"
-          />
-
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="mb-12 rounded-2xl bg-white text-stone-900 p-6 sm:p-8 shadow-xs border border-stone-200/90 relative overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             {/* Rating Big Number */}
-            <div className="lg:col-span-5 flex flex-col sm:flex-row items-center sm:items-start lg:items-center gap-6 text-center sm:text-left border-b lg:border-b-0 lg:border-r border-stone-800 pb-8 lg:pb-0 lg:pr-8">
-              <div className="text-6xl sm:text-7xl font-bold tracking-tight text-white font-mono">
+            <div className="lg:col-span-5 flex flex-col sm:flex-row items-center sm:items-start lg:items-center gap-6 text-center sm:text-left border-b lg:border-b-0 lg:border-r border-stone-200 pb-6 lg:pb-0 lg:pr-8">
+              <div className="text-6xl sm:text-7xl font-bold tracking-tight text-stone-900 font-mono">
                 5.0
               </div>
 
@@ -281,43 +276,43 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
                     />
                   ))}
                 </div>
-                <div className="text-xs uppercase tracking-wider font-bold text-stone-300">
+                <div className="text-xs uppercase tracking-wider font-bold text-stone-700">
                   100% Θετική Φήμη
                 </div>
-                <div className="text-[11px] text-stone-400">
+                <div className="text-[11px] text-stone-500">
                   Βασισμένο σε {stats.feedbackCount} πιστοποιημένες αγορές
                 </div>
               </div>
             </div>
 
             {/* Trust Pillars */}
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl p-4 text-center sm:text-left space-y-1">
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-teal-400 text-xs font-bold">
-                  <ShieldCheck className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-3.5 text-center sm:text-left space-y-1">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-stone-800 text-xs font-bold">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={1.5} />
                   <span>Προστασία Vinted</span>
                 </div>
-                <p className="text-[11px] text-stone-300 leading-normal">
+                <p className="text-[11px] text-stone-600 leading-normal">
                   Αυθεντικές αγορές με ασφάλεια συναλλαγής και επίσημη παρακολούθηση.
                 </p>
               </div>
 
-              <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl p-4 text-center sm:text-left space-y-1">
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-amber-400 text-xs font-bold">
-                  <Sparkles className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+              <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-3.5 text-center sm:text-left space-y-1">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-stone-800 text-xs font-bold">
+                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0" strokeWidth={1.5} />
                   <span>Άψογη Συσκευασία</span>
                 </div>
-                <p className="text-[11px] text-stone-300 leading-normal">
+                <p className="text-[11px] text-stone-600 leading-normal">
                   Χειροποίητη συσκευασία δώρου με οδηγίες φροντίδας και ασφαλή αποστολή.
                 </p>
               </div>
 
-              <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl p-4 flex flex-col justify-between text-center sm:text-left">
-                <div className="space-y-1">
+              <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-3.5 flex flex-col justify-between text-center sm:text-left">
+                <div className="space-y-0.5">
                   <div className="text-[10px] uppercase font-bold text-stone-400 tracking-wider">
                     Επίσημη Παρουσία
                   </div>
-                  <div className="text-xs font-bold text-white">
+                  <div className="text-xs font-bold text-stone-900">
                     @{stats.login || 'aramcreations'}
                   </div>
                 </div>
@@ -326,10 +321,10 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
                   href={`https://www.vinted.gr/member/${stats.memberId || '231329281'}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-stone-950 font-bold text-xs transition shadow-sm"
+                  className="mt-2.5 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs transition shadow-xs"
                 >
                   <span>Προφίλ Vinted</span>
-                  <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <ExternalLink className="w-3 h-3 text-white" strokeWidth={1.5} />
                 </a>
               </div>
             </div>
@@ -449,7 +444,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
 
                   {/* Review Text */}
                   <p className="text-xs sm:text-sm text-stone-700 leading-relaxed font-sans font-normal italic">
-                    "{review.feedback}"
+                    "{sanitizeVintedDescription(review.feedback)}"
                   </p>
                 </div>
 
@@ -462,7 +457,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
                         Aram Creations
                       </div>
                       <p className="text-[11px] text-stone-700 font-sans italic">
-                        {review.sellerReply}
+                        {sanitizeVintedDescription(review.sellerReply)}
                       </p>
                     </div>
                   </div>

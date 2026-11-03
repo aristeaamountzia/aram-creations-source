@@ -596,13 +596,17 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                   </button>
                 </div>
 
-                <button onClick={() => {
-                const it = selectedItem;
-                closeItemDetail();
-                onContactArtist(it);
-            }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 transition shadow-md 'bg-stone-900 hover:bg-stone-800 text-white'`}>
-                  <Mail className="w-4 h-4"/>
-                  <span>Εκδήλωση Ενδιαφέροντος</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const it = selectedItem;
+                    closeItemDetail();
+                    onContactArtist(it);
+                  }}
+                  className="px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 transition shadow-sm bg-stone-900 hover:bg-stone-800 text-white cursor-pointer active:scale-95"
+                >
+                  <Mail className="w-4 h-4 text-white" />
+                  <span className="text-white font-semibold">Εκδήλωση Ενδιαφέροντος</span>
                 </button>
               </div>
             </div>

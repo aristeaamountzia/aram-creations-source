@@ -320,7 +320,7 @@ export const App: React.FC = () => {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <img
-                src={currentMode === 'portfolio' ? '/logo-portfolio.png' : '/logo.png'}
+                src="/logo.png"
                 alt="Aram Creations"
                 referrerPolicy="no-referrer"
                 className="w-8 h-8 object-contain"

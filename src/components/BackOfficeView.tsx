@@ -5404,80 +5404,90 @@ interface BackOfficeViewProps {
                                     </button>
                                 </div>
 
-                                <div className="flex flex-wrap border-b border-stone-200 bg-stone-100/80 px-4 pt-2 gap-1.5">
+                                <div className="flex flex-wrap border-b border-stone-200 bg-stone-50 px-4 pt-2 gap-1.5">
                                     <button
                                         type="button"
                                         onClick={() => setActiveSettingsTab('design')}
-                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-xl transition flex items-center gap-2 ${
+                                        className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                                             activeSettingsTab === 'design'
-                                                ? 'bg-white text-violet-950 border-t-2 border-x border-violet-600 shadow-sm'
-                                                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+                                                ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
+                                                : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'
                                         }`}
                                     >
-                                        Design Studio
-                                        <span className="text-[10px] bg-violet-100 text-violet-800 px-2 py-0.5 rounded-full font-bold">Όλο το Site</span>
+                                        <span>Design Studio</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                            activeSettingsTab === 'design' ? 'bg-stone-900 text-white' : 'bg-stone-200/70 text-stone-600'
+                                        }`}>Όλο το Site</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setActiveSettingsTab('shop')}
-                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-xl transition flex items-center gap-2 ${
+                                        className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                                             activeSettingsTab === 'shop'
-                                                ? 'bg-white text-emerald-950 border-t-2 border-x border-emerald-600 shadow-sm'
-                                                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+                                                ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
+                                                : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'
                                         }`}
                                     >
-                                        Βιτρίνα Shop
-                                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Σελίδα Shop</span>
+                                        <span>Βιτρίνα Shop</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                            activeSettingsTab === 'shop' ? 'bg-stone-900 text-white' : 'bg-stone-200/70 text-stone-600'
+                                        }`}>Σελίδα Shop</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setActiveSettingsTab('portfolio')}
-                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-xl transition flex items-center gap-2 ${
+                                        className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                                             activeSettingsTab === 'portfolio'
-                                                ? 'bg-white text-amber-950 border-t-2 border-x border-amber-600 shadow-sm'
-                                                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+                                                ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
+                                                : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'
                                         }`}
                                     >
-                                        Portfolio
-                                        <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Σελίδα Έργων</span>
+                                        <span>Portfolio</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                            activeSettingsTab === 'portfolio' ? 'bg-stone-900 text-white' : 'bg-stone-200/70 text-stone-600'
+                                        }`}>Σελίδα Έργων</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setActiveSettingsTab('fields')}
-                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-xl transition flex items-center gap-2 ${
+                                        className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                                             activeSettingsTab === 'fields'
-                                                ? 'bg-white text-sky-950 border-t-2 border-x border-sky-600 shadow-sm'
-                                                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+                                                ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
+                                                : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'
                                         }`}
                                     >
-                                        Προσαρμοσμένα Πεδία
-                                        <span className="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full font-bold">Φόρμες Προϊόντων</span>
+                                        <span>Προσαρμοσμένα Πεδία</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                            activeSettingsTab === 'fields' ? 'bg-stone-900 text-white' : 'bg-stone-200/70 text-stone-600'
+                                        }`}>Φόρμες</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setActiveSettingsTab('assistant')}
-                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-xl transition flex items-center gap-2 ${
+                                        className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                                             activeSettingsTab === 'assistant'
-                                                ? 'bg-white text-purple-950 border-t-2 border-x border-purple-600 shadow-sm'
-                                                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+                                                ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
+                                                : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'
                                         }`}
                                     >
-                                        AI Back Office
-                                        <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-bold">Βοηθός AI</span>
+                                        <span>AI Back Office</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                            activeSettingsTab === 'assistant' ? 'bg-stone-900 text-white' : 'bg-stone-200/70 text-stone-600'
+                                        }`}>Βοηθός AI</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setActiveSettingsTab('reviews')}
-                                        className={`px-4 py-2.5 font-black text-xs uppercase tracking-wider rounded-t-xl transition flex items-center gap-2 ${
+                                        className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                                             activeSettingsTab === 'reviews'
-                                                ? 'bg-white text-teal-950 border-t-2 border-x border-teal-600 shadow-sm'
-                                                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+                                                ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
+                                                : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'
                                         }`}
                                     >
-                                        Αξιολογήσεις Vinted
-                                        <span className="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-bold">
-                                            {vintedReviewsData.stats.feedbackCount || 10} Κριτικές
-                                        </span>
+                                        <span>Αξιολογήσεις Vinted</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                            activeSettingsTab === 'reviews' ? 'bg-stone-900 text-white' : 'bg-stone-200/70 text-stone-600'
+                                        }`}>${vintedReviewsData.stats.feedbackCount || 10} Κριτικές</span>
                                     </button>
                                 </div>
 

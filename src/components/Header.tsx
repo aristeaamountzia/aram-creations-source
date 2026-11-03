@@ -32,11 +32,11 @@ export const Header: React.FC<HeaderProps> = ({ currentMode, onSelectMode, cartC
         <div className="header-row">
           <button id="header-brand" type="button" onClick={() => onSelectMode(isPortfolio ? 'portfolio' : 'shop')}
             aria-label={`Aram Creations — ${isPortfolio ? 'Portfolio' : 'επιστροφή στο Shop'}`}
-            className="header-brand flex min-w-0 items-center gap-2.5 text-left">
-            <img src={isPortfolio ? '/logo-portfolio.png' : '/logo.png'} alt="Aram Creations"
+            className="header-brand flex min-w-0 items-center gap-2.5 text-left cursor-pointer">
+            <img src="/logo.png" alt="Aram Creations"
               referrerPolicy="no-referrer"
               width="36" height="48"
-              className="h-11 w-8 sm:h-12 sm:w-9 shrink-0 object-contain"
+              className="h-10 w-auto sm:h-11 shrink-0 object-contain"
               onError={(event) => { const img = event.currentTarget; if (!img.src.endsWith('/logo.svg')) img.src = '/logo.svg'; }} />
             <span className="min-w-0">
               <span className="brand-name block text-lg sm:text-xl font-semibold tracking-tight">{design?.brandName || 'aram.creations'}</span>
@@ -47,23 +47,23 @@ export const Header: React.FC<HeaderProps> = ({ currentMode, onSelectMode, cartC
           </button>
           <nav aria-label="Shop και Portfolio" className="section-entrances">
             <button id="nav-btn-shop" type="button" onClick={() => onSelectMode('shop')}
-              aria-pressed={currentMode === 'shop'} className="section-entrance entrance-shop">
+              aria-pressed={currentMode === 'shop'} className="section-entrance entrance-shop cursor-pointer">
               <ShoppingBag className="h-4 w-4 shrink-0" aria-hidden="true" /><span>{design?.shopNavLabel || 'Shop'}</span>
             </button>
             <button id="nav-btn-portfolio" type="button" onClick={() => onSelectMode('portfolio')}
-              aria-pressed={currentMode === 'portfolio'} className="section-entrance entrance-portfolio">
+              aria-pressed={currentMode === 'portfolio'} className="section-entrance entrance-portfolio cursor-pointer">
               <Palette className="h-4 w-4 shrink-0" aria-hidden="true" /><span>{design?.portfolioNavLabel || 'Portfolio'}</span>
             </button>
           </nav>
           {isPortfolio ? (
             <button type="button" onClick={onContactArtist} aria-label="Επικοινωνία με την Aram Creations"
-              className="header-action flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium">
+              className="header-action flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium cursor-pointer">
               <Mail className="h-4 w-4" /><span className="hidden sm:inline">{design?.contactLabel || 'Επικοινωνία'}</span>
             </button>
           ) : (
             <button type="button" onClick={onOpenCart}
               aria-label={`Προβολή καλαθιού${cartCount > 0 ? `, ${cartCount} προϊόντα` : ''}`}
-              className="header-action flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium">
+              className="header-action flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium cursor-pointer">
               <ShoppingBag className="h-4 w-4" /><span className="hidden sm:inline">{design?.cartLabel || 'Καλάθι'}</span>
               {cartCount > 0 && <span className="rounded-full bg-stone-900 text-white w-5 h-5 text-[10px] flex items-center justify-center">{cartCount}</span>}
             </button>

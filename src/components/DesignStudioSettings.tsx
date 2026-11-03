@@ -382,7 +382,7 @@ export function DesignStudioSettings({ value, onChange }: Props) {
         <button
           type="button"
           onClick={() => applyChanges(DEFAULT_DESIGN_STUDIO)}
-          className="shrink-0 px-3 py-1.5 bg-white border border-violet-200 text-violet-800 font-bold rounded-lg text-xs hover:bg-violet-100 transition shadow-xs"
+          className="shrink-0 px-3 py-1.5 bg-white border border-stone-200 text-stone-700 font-semibold rounded-lg text-xs hover:bg-stone-100 transition shadow-xs cursor-pointer"
         >
           Επαναφορά Αρχικών
         </button>
@@ -439,7 +439,7 @@ export function DesignStudioSettings({ value, onChange }: Props) {
             className="rounded-xl p-6 relative overflow-hidden flex flex-col justify-center shadow-sm"
             style={{
               minHeight: Math.min(Number.parseInt(d.heroMinHeight, 10) || 280, 240),
-              background: `linear-gradient(rgba(0, 0, 0, ${d.heroOverlay}), rgba(0, 0, 0, ${d.heroOverlay})), ${d.accent}`,
+              background: 'linear-gradient(135deg, #18181b 0%, #27272a 100%)',
               color: d.heroTitleInk
             }}
           >
@@ -481,7 +481,7 @@ export function DesignStudioSettings({ value, onChange }: Props) {
               borderRadius: d.cardRadius
             }}
           >
-            <div className="aspect-[4/3] bg-stone-200 rounded-lg overflow-hidden flex items-center justify-center relative mb-3">
+            <div className="aspect-[4/5] bg-stone-100 rounded-lg overflow-hidden flex items-center justify-center relative mb-3">
               <span className="text-xs text-stone-500 font-bold">Φωτογραφία Έργου</span>
               <span
                 className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 border"
