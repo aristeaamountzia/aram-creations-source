@@ -1,6 +1,22 @@
 import React, { useState } from 'react';
 import { CartItem, OrderCustomerInfo } from '../types';
-import { X, Trash2, ArrowRight, ShieldCheck, CheckCircle2, Truck, CreditCard, ChevronLeft, AlertTriangle, Info, Loader2 } from 'lucide-react';
+import {
+  X,
+  Trash2,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  Truck,
+  CreditCard,
+  ChevronLeft,
+  AlertTriangle,
+  Loader2,
+  Copy,
+  Check,
+  Smartphone,
+  Landmark,
+  Package
+} from 'lucide-react';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -26,10 +42,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [isCheckoutStep, setIsCheckoutStep] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittingStep, setSubmittingStep] = useState('');
-    const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
+  const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [orderError, setOrderError] = useState('');
   const [savedTotal, setSavedTotal] = useState<number | null>(null);
   const [website, setWebsite] = useState('');
+  const [copiedField, setCopiedField] = useState<'number' | 'phone' | null>(null);
 
   // Customer form state
   const [customer, setCustomer] = useState<OrderCustomerInfo>({
@@ -50,19 +67,41 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const shippingCost = (activeShippingObj.freeThreshold > 0 && subtotal >= activeShippingObj.freeThreshold) ? 0 : activeShippingObj.price;
   const total = subtotal + shippingCost;
 
+  const handleCopy = (text: string, field: 'number' | 'phone') => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2500);
+    } catch {
+      // Fallback
+    }
+  };
+
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || !items.length) return;
-    if (!customer.name || !customer.phone || !customer.email || (!customer.address || !customer.city)) {
-      alert('Παρακαλώ συμπληρώστε όλα τα απαιτούμενα πεδία αποστολής.');
+    if (!customer.name.trim() || !customer.phone.trim() || !customer.email.trim() || !customer.address.trim() || !customer.city.trim()) {
+      alert('Παρακαλώ συμπληρώστε όλα τα απαιτούμενα πεδία αποστολής (Ονοματεπώνυμο, Τηλέφωνο, Email, Διεύθυνση, Πόλη).');
       return;
     }
 
     setIsSubmitting(true);
     setOrderError('');
-    setSubmittingStep('1/3 Έλεγχος στοιχείων και αποθέματος...');
+    setSubmittingStep('1/3 Έλεγχος διαθεσιμότητας & στοιχείων...');
     try {
-      const payload = { customer, expectedTotal: Math.round(total * 100) / 100, shippingMethod: selectedShipping, paymentMethod, website, items: items.map(({ item, quantity, customInscription }) => ({ id: item.id, quantity, customInscription: customInscription || item.customInscription || '' })) };
+      const payload = {
+        customer,
+        expectedTotal: Math.round(total * 100) / 100,
+        shippingMethod: selectedShipping,
+        paymentMethod,
+        website,
+        items: items.map(({ item, quantity, customInscription }) => ({
+          id: item.id,
+          quantity,
+          customInscription: customInscription || item.customInscription || ''
+        }))
+      };
+
       const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(payload))))).map(n => n.toString(16).padStart(2, '0')).join('');
       let requestId = crypto.randomUUID();
       try {
@@ -70,30 +109,35 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         if (prior?.hash === hash && prior?.requestId) requestId = prior.requestId;
         localStorage.setItem('aram_checkout_request', JSON.stringify({ hash, requestId }));
       } catch { /* Browser storage is optional. */ }
-      
-      setSubmittingStep('2/3 Επικοινωνία με το σύστημα παραγγελιών...');
-      const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, requestId }) });
+
+      setSubmittingStep('2/3 Καταχώρηση παραγγελίας στο εργαστήριο...');
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, requestId })
+      });
       const result = await response.json().catch(() => ({ ok: false, error: 'Ο διακομιστής δεν επέστρεψε έγκυρη απάντηση JSON.' }));
-      
+
       if (!response.ok || !result.ok) {
         const errMessage = result.error || result.message || 'Η παραγγελία δεν μπόρεσε να καταχωρηθεί.';
         const errReason = result.reason ? ` (${result.reason})` : '';
         throw new Error(`${errMessage}${errReason}`);
       }
-      
+
       if (result.checkoutUrl) {
-        setSubmittingStep('3/3 Μετάβαση στην ασφαλή πύλη πληρωμής (Stripe)...');
+        setSubmittingStep('3/3 Μετάβαση στην ασφαλή πύλη Stripe (Apple Pay, Google Pay, Κάρτες)...');
         window.location.href = result.checkoutUrl;
         return;
       }
+
       setSubmittingStep('3/3 Επιβεβαίωση παραγγελίας...');
       setCompletedOrderNumber(result.order.number);
       setSavedTotal(result.order.total);
-            onCompleted();
+      onCompleted();
       setCustomer({ name: '', email: '', phone: '', address: '', city: '', postalCode: '', notes: '' });
       try { localStorage.removeItem('aram_checkout_request'); } catch { /* Optional storage. */ }
     } catch (error) {
-      setOrderError(error instanceof Error ? error.message : 'Η σύνδεση διακόπηκε. Δοκίμασε ξανά.');
+      setOrderError(error instanceof Error ? error.message : 'Η σύνδεση διακόπηκε. Δοκιμάστε ξανά.');
     } finally {
       setIsSubmitting(false);
       setSubmittingStep('');
@@ -131,7 +175,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   ? 'Επιβεβαίωση Παραγγελίας'
                   : isCheckoutStep
                   ? 'Στοιχεία Αποστολής'
-                  : 'Τσάντα Αγορών (Cart)'}
+                  : 'Τσάντα Αγορών'}
               </h2>
             </div>
           </div>
@@ -144,28 +188,142 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           </button>
         </div>
 
-        <p role="note" className="border-b-2 border-red-200 bg-red-50 px-6 py-3 text-xs font-bold leading-relaxed text-red-800">Σημαντικό: για περισσότερη προστασία κατά την πληρωμή, προτείνουμε οι αγορές να γίνονται μέσω Vinted, από τον σύνδεσμο κάθε προϊόντος. Η προστασία ισχύει σύμφωνα με τους όρους της πλατφόρμας.</p>{/* Drawer Content */}
+        {/* Reassuring Luxury Assurance Banner */}
+        <div className="bg-stone-50 border-b border-stone-200 px-6 py-2.5 flex items-center justify-between text-[11px] text-stone-600">
+          <div className="flex items-center gap-1.5 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 text-stone-800 shrink-0" />
+            <span>Ασφαλείς πληρωμές & πιστοποιημένο εργαστήριο</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-stone-500">
+            <Truck className="w-3.5 h-3.5 text-stone-700 shrink-0" />
+            <span>BoxNow 24/7 & Courier</span>
+          </div>
+        </div>
+
+        {/* Drawer Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {completedOrderNumber ? (
-            /* Success confirmation */
-            <div className="py-12 text-center space-y-4">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto border border-emerald-200">
+            /* Success confirmation view */
+            <div className="py-6 space-y-5">
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto border border-emerald-200 shadow-xs">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
-                Η παραγγελία καταχωρήθηκε
-              </h3>
-                            <p className="text-sm font-bold text-stone-700" style={{ fontFamily: 'Jura, sans-serif' }}>
-                Κωδικός αναφοράς: #{completedOrderNumber}
-              </p>
-              <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
-                Λάβαμε την παραγγελία και κρατήσαμε τα προϊόντα. Θα επικοινωνήσουμε μαζί σας για επιβεβαίωση και οδηγίες πληρωμής. Δεν έχει γίνει αυτόματη χρέωση. Κρατήστε τον κωδικό παραγγελίας σας.
-              </p>
-              <p className="font-bold">Σύνολο: €{savedTotal?.toFixed(2)}</p>
-              <div className="pt-6">
+              <div className="text-center space-y-1">
+                <h3 className="text-2xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
+                  Η παραγγελία καταχωρήθηκε!
+                </h3>
+                <p className="text-xs text-stone-500">
+                  Τα κοσμήματα δεσμεύτηκαν αποκλειστικά για εσάς στο εργαστήριό μας.
+                </p>
+              </div>
+
+              {/* Order reference box */}
+              <div className="bg-stone-50 rounded-2xl p-4 border border-stone-200 space-y-3">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-stone-500 font-medium">Κωδικός Παραγγελίας:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-stone-900 text-sm">#{completedOrderNumber}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(completedOrderNumber, 'number')}
+                      className="p-1 rounded-md hover:bg-stone-200 text-stone-600 transition"
+                      title="Αντιγραφή κωδικού"
+                    >
+                      {copiedField === 'number' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+                {savedTotal !== null && (
+                  <div className="flex justify-between items-center text-xs pt-2 border-t border-stone-200">
+                    <span className="text-stone-500 font-medium">Σύνολο Πληρωμής:</span>
+                    <span className="font-bold text-stone-900 text-base" style={{ fontFamily: 'Jura, sans-serif' }}>
+                      €{savedTotal.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Instructions depending on method */}
+              {paymentMethod === 'iris' ? (
+                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 space-y-3">
+                  <div className="flex items-center gap-2 font-bold text-xs text-stone-900">
+                    <Smartphone className="w-4 h-4 text-stone-800" />
+                    <span>Οδηγίες Πληρωμής μέσω IRIS Payments</span>
+                  </div>
+                  <div className="space-y-2 text-xs text-stone-700">
+                    <div className="p-3 bg-white rounded-xl border border-stone-200 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-stone-500">Αριθμός Κινητού IRIS:</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-stone-900">6946292685</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy('6946292685', 'phone')}
+                            className="p-1 rounded-md hover:bg-stone-100 text-stone-600 transition"
+                            title="Αντιγραφή αριθμού"
+                          >
+                            {copiedField === 'phone' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-stone-100">
+                        <span className="text-stone-500">Δικαιούχος:</span>
+                        <span className="font-bold text-stone-900">Αριστέα Μούντζια</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-stone-100">
+                        <span className="text-stone-500">Αιτιολογία Μεταφοράς:</span>
+                        <span className="font-mono font-bold text-stone-900">#{completedOrderNumber}</span>
+                      </div>
+                    </div>
+                    <ol className="list-decimal list-inside space-y-1 text-[11px] text-stone-500 leading-relaxed pt-1">
+                      <li>Ανοίξτε το mobile banking της τράπεζάς σας.</li>
+                      <li>Επιλέξτε μεταφορά μέσω IRIS Payments προς τον αριθμό <b>6946292685</b>.</li>
+                      <li>Συμπληρώστε ως αιτιολογία τον κωδικό <b>#{completedOrderNumber}</b>.</li>
+                    </ol>
+                  </div>
+                </div>
+              ) : paymentMethod === 'bank' ? (
+                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 space-y-3">
+                  <div className="flex items-center gap-2 font-bold text-xs text-stone-900">
+                    <Landmark className="w-4 h-4 text-stone-800" />
+                    <span>Οδηγίες Τραπεζικής Κατάθεσης</span>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-stone-200 space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-stone-500">Δικαιούχος:</span>
+                      <span className="font-bold text-stone-900">Αριστέα Μούντζια (Aram Creations)</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-stone-100">
+                      <span className="text-stone-500">Τηλέφωνο Επικοινωνίας:</span>
+                      <span className="font-mono font-bold text-stone-900">6946292685</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-stone-100">
+                      <span className="text-stone-500">Αιτιολογία Κατάθεσης:</span>
+                      <span className="font-mono font-bold text-stone-900">#{completedOrderNumber}</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-stone-500 leading-relaxed">
+                    Θα επικοινωνήσουμε άμεσα μαζί σας μέσω τηλεφώνου ή email για την παροχή του IBAN της τράπεζας της επιλογής σας (Εθνική, Eurobank, Alpha, Πειραιώς).
+                  </p>
+                </div>
+              ) : null}
+
+              {/* Workshop and packaging card */}
+              <div className="bg-stone-50 rounded-xl p-3.5 border border-stone-200 space-y-2 text-xs text-stone-600">
+                <div className="flex items-start gap-2">
+                  <Package className="w-4 h-4 text-stone-700 shrink-0 mt-0.5" />
+                  <span>Κάθε κόσμημα ετοιμάζεται σε πολυτελή χειροποίητη συσκευασία δώρου Aram Creations.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span>Θα λάβετε ενημέρωση με τον κωδικό αποστολής αμέσως μόλις παραδοθεί στην εταιρεία ταχυμεταφορών.</span>
+                </div>
+              </div>
+
+              <div className="pt-2">
                 <button
                   onClick={handleClose}
-                  className="px-6 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition shadow-sm"
+                  className="w-full py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition shadow-sm"
                 >
                   Συνέχεια Περιήγησης
                 </button>
@@ -226,9 +384,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   required
                   value={customer.address}
                   onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                  placeholder="Οδός και αριθμός ή σημείο BoxNow Locker"
+                  placeholder={selectedShipping === 'boxnow' ? 'Οδός/αριθμός ή σημείο BoxNow Locker' : 'Οδός και αριθμός κατοικίας ή γραφείου'}
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
                 />
+                {selectedShipping === 'boxnow' && (
+                  <p className="text-[11px] text-stone-500 mt-1">
+                    Για παραλαβή από BoxNow Locker, σημειώστε τη διεύθυνση ή το όνομα/αριθμό του επιθυμητού Locker.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -241,7 +404,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     required
                     value={customer.city}
                     onChange={(e) => setCustomer({ ...customer, city: e.target.value })}
-                    placeholder="π.χ. Αθήνα, Θεσσαλονίκη"
+                    placeholder="π.χ. Αθήνα, Βόλος, Θεσσαλονίκη"
                     className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
                   />
                 </div>
@@ -253,7 +416,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     type="text"
                     value={customer.postalCode}
                     onChange={(e) => setCustomer({ ...customer, postalCode: e.target.value })}
-                    placeholder="12345"
+                    placeholder="38500"
                     className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
                   />
                 </div>
@@ -278,10 +441,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <div>
                       <div className="text-xs font-bold flex items-center gap-2">
                         <CreditCard className="w-4 h-4 shrink-0" />
-                        <span>Κάρτα / Apple Pay / Google Pay</span>
+                        <span>Κάρτα / Apple Pay / Google Pay / Revolut</span>
                       </div>
                       <div className={`text-[10px] mt-0.5 ${paymentMethod === 'stripe' ? 'text-stone-300' : 'text-stone-500'}`}>
-                        Visa, Mastercard, Revolut Pay μέσω Stripe
+                        Άμεση & ασφαλής πληρωμή μέσω Stripe (Visa, Mastercard κ.α.)
                       </div>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
@@ -295,24 +458,32 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('iris')}
-                      className={`p-2.5 rounded-xl border text-xs text-center transition ${
+                      className={`p-2.5 rounded-xl border text-left transition flex items-center gap-2 ${
                         paymentMethod === 'iris'
                           ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
                           : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
                       }`}
                     >
-                      IRIS Payments
+                      <Smartphone className="w-3.5 h-3.5 shrink-0 text-stone-700" />
+                      <div>
+                        <div className="text-xs">IRIS Payments</div>
+                        <div className="text-[9px] text-stone-500 font-normal">Χωρίς προμήθεια</div>
+                      </div>
                     </button>
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('bank')}
-                      className={`p-2.5 rounded-xl border text-xs text-center transition ${
+                      className={`p-2.5 rounded-xl border text-left transition flex items-center gap-2 ${
                         paymentMethod === 'bank'
                           ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
                           : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
                       }`}
                     >
-                      Κατάθεση
+                      <Landmark className="w-3.5 h-3.5 shrink-0 text-stone-700" />
+                      <div>
+                        <div className="text-xs">Κατάθεση</div>
+                        <div className="text-[9px] text-stone-500 font-normal">Τραπεζικός λογαριασμός</div>
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -326,13 +497,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   maxLength={1000}
                   value={customer.notes}
                   onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
-                  placeholder="π.χ. Κουδούνι, όροφος, επιθυμητή ώρα"
+                  placeholder="π.χ. Κουδούνι, όροφος, επιθυμητή ώρα παράδοσης"
                   rows={2}
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-900 outline-none focus:border-stone-900"
                 />
               </div>
               <label className="hidden" aria-hidden="true">Website<input value={website} onChange={e => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" /></label>
-              <p className="text-xs text-stone-500">Τα στοιχεία σας αποθηκεύονται για την εξυπηρέτηση της παραγγελίας. Η πληρωμή επιβεβαιώνεται από το εργαστήριο.</p>
+              <p className="text-[11px] text-stone-500 leading-relaxed">
+                Τα στοιχεία σας χρησιμοποιούνται αποκλειστικά για την εκτέλεση της παραγγελίας σας.
+              </p>
             </form>
           ) : items.length === 0 ? (
             /* Empty Cart */
@@ -371,7 +544,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         €{item.price}
                       </div>
 
-                      <p className="mt-2 text-xs text-stone-500">Μοναδικό κομμάτι · 1 τεμάχιο</p>
+                      <p className="mt-1 text-[11px] text-stone-500">Μοναδικό κομμάτι · 1 τεμάχιο</p>
                     </div>
 
                     <button
@@ -406,7 +579,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                             : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
                         }`}
                       >
-                        <span>{opt.label}</span>
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-3.5 h-3.5 text-stone-600" />
+                          <span>{opt.label}</span>
+                        </div>
                         <span className={`font-bold ${isFree || opt.price === 0 ? 'text-emerald-700' : 'text-stone-900'}`}>
                           {priceLabel}
                         </span>
@@ -427,10 +603,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </div>
             <p className="text-xs text-rose-700 leading-relaxed font-medium">{orderError}</p>
             <p className="text-[11px] text-stone-500 pt-1 border-t border-rose-100">
-              Συμβουλή: Ελέγξτε τα στοιχεία παράδοσης (ονοματεπώνυμο, τηλέφωνο, διεύθυνση) ή επιλέξτε απευθείας αγορά μέσω Vinted.
+              Συμβουλή: Βεβαιωθείτε ότι όλα τα πεδία έχουν συμπληρωθεί σωστά (ονοματεπώνυμο, τηλέφωνο, διεύθυνση) ή επιλέξτε διαφορετικό τρόπο πληρωμής.
             </p>
           </div>
         )}
+
         {/* Drawer Footer */}
         {!completedOrderNumber && items.length > 0 && (
           <div className="sticky bottom-0 z-10 p-5 sm:p-6 border-t border-stone-200 bg-stone-50/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.06)] space-y-4">

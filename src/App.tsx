@@ -15,7 +15,7 @@ const BackOfficeView = React.lazy(() =>
 import { CartDrawer } from './components/CartDrawer';
 import { ContactModal } from './components/ContactModal';
 import { PaymentSuccessModal } from './components/PaymentSuccessModal';
-import { ShieldCheck, Mail, MapPin, ExternalLink, Lock } from 'lucide-react';
+import { ShieldCheck, Mail, MapPin, ExternalLink, Lock, X } from 'lucide-react';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from './firebase';
 import { normalizeShopSettings } from './shopSettings';
@@ -103,7 +103,14 @@ export const App: React.FC = () => {
       const cleanUrl = window.location.pathname + (window.location.hash || '');
       window.history.replaceState({}, '', cleanUrl);
     } else if (cancelled) {
-      setPaymentAlert('Η διαδικασία πληρωμής ακυρώθηκε. Τα είδη παραμένουν στην τσάντα αγορών σας.');
+      // Immediately cancel the pending order and restore item availability in Firestore
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel_unpaid', orderId: cancelled })
+      }).catch(err => console.error('Failed to cancel unpaid order:', err));
+
+      setPaymentAlert('Η πληρωμή μέσω Stripe δεν ολοκληρώθηκε. Τα είδη παραμένουν στην τσάντα αγορών σας.');
       const cleanUrl = window.location.pathname + (window.location.hash || '');
       window.history.replaceState({}, '', cleanUrl);
     }
@@ -287,10 +294,10 @@ export const App: React.FC = () => {
           <span>{paymentAlert}</span>
           <button
             onClick={() => setPaymentAlert(null)}
-            className="text-stone-400 hover:text-white font-bold ml-2"
+            className="text-stone-400 hover:text-white transition p-1"
             aria-label="Κλείσιμο"
           >
-            ✕
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}

@@ -27,7 +27,9 @@ export function priceOrder(input: ReturnType<typeof normalizeOrder>, catalog: Ar
   const items = input.items.map((requested, index) => {
     const product = catalog[index];
     const stock = Number(product?.stock ?? product?.stockCount ?? 1);
-    if (!product || product.isDeleted || product.deletedAt || product.status !== 'Διαθέσιμο' || Object.values(product.checkoutReservations || {}).some(q => Number(q) > 0) || !Number.isInteger(stock) || stock < requested.quantity) throw new OrderError(`Το προϊόν «${product?.name || product?.title || requested.id}» δεν είναι διαθέσιμο στην ποσότητα που επέλεξες.`, 409);
+    const isReservedByCurrent = Boolean(product?.checkoutReservations?.[input.requestId]);
+    const hasOtherReservation = Object.entries(product?.checkoutReservations || {}).some(([resId, q]) => resId !== input.requestId && Number(q) > 0);
+    if (!product || product.isDeleted || product.deletedAt || (!isReservedByCurrent && product.status !== 'Διαθέσιμο') || hasOtherReservation || !Number.isInteger(stock) || (!isReservedByCurrent && stock < requested.quantity)) throw new OrderError(`Το προϊόν «${product?.name || product?.title || requested.id}» δεν είναι διαθέσιμο στην ποσότητα που επέλεξες.`, 409);
     const cents = Math.round(Number(product.price) * 100);
     if (!Number.isFinite(cents) || cents <= 0) throw new OrderError('Ένα προϊόν δεν έχει έγκυρη τιμή. Επικοινώνησε μαζί μας.', 409);
     subtotalCents += cents * requested.quantity;

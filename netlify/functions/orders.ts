@@ -20,7 +20,7 @@ function isAllowedOrigin(origin: string | null): boolean {
   ].filter(Boolean) as string[];
 
   if (configured.some(allowed => origin === allowed || origin === allowed.replace(/\/$/, ''))) return true;
-  if (/^https:\/\/(?:[a-z0-9-]+--)?(?:aramcreationss|aram-creations)\.netlify\.app$/i.test(origin)) return true;
+  if (/^https:\/\/(?:[a-z0-9-]+--)?(?:aramcreationsofficial1|aramcreationss|aram-creations)\.netlify\.app$/i.test(origin)) return true;
   if (/^https:\/\/(?:[a-z0-9-]+--)?lovely-bienenstitch-b6079c\.netlify\.app$/i.test(origin)) return true;
   return false;
 }
@@ -136,7 +136,42 @@ export function createOrdersHandler(connect: typeof database = database, notify:
       }
       const text = await request.text();
       if (text.length > 16000) throw new OrderError('Το αίτημα είναι πολύ μεγάλο.');
-      const input = normalizeOrder(JSON.parse(text));
+      const parsedBody = JSON.parse(text);
+
+      // Handle cancel_unpaid action when customer cancels checkout or payment fails
+      if (parsedBody?.action === 'cancel_unpaid' && typeof parsedBody.orderId === 'string' && /^[a-f0-9-]{36}$/.test(parsedBody.orderId)) {
+        const targetId = parsedBody.orderId;
+        await db.runTransaction(async tx => {
+          const oRef = db.doc(`orders/${targetId}`);
+          const oSnap = await tx.get(oRef);
+          if (!oSnap.exists) return;
+          const order = oSnap.data()!;
+          if (order.status !== 'pending') return;
+
+          if (Array.isArray(order.items)) {
+            for (const it of order.items) {
+              const pRef = db.doc(`jewelry/${it.id}`);
+              const pSnap = await tx.get(pRef);
+              if (pSnap.exists) {
+                tx.update(pRef, {
+                  stock: 1,
+                  status: 'Διαθέσιμο',
+                  [`checkoutReservations.${targetId}`]: FieldValue.delete()
+                });
+              }
+            }
+          }
+          const nowIso = new Date().toISOString();
+          tx.update(oRef, {
+            status: 'cancelled',
+            updatedAt: nowIso,
+            history: [...(order.history || []), { status: 'cancelled', at: nowIso, reason: 'customer_checkout_cancelled' }]
+          });
+        });
+        return reply({ ok: true, cancelled: true }, 200, origin);
+      }
+
+      const input = normalizeOrder(parsedBody);
       const requestHash = createHash('sha256').update(JSON.stringify(input)).digest('hex');
       const now = new Date();
       const ref = db.doc(`orders/${input.requestId}`);
@@ -148,54 +183,155 @@ export function createOrdersHandler(connect: typeof database = database, notify:
         const previous = await transaction.get(ref);
         if (previous.exists) {
           const data = previous.data()!;
-          if (data.requestHash !== requestHash) throw new OrderError('Το αίτημα έχει αλλάξει. Δοκίμασε ξανά.', 409);
+          if (data.status === 'pending' && data.requestHash !== requestHash) {
+            // Pending order being retried with modified details: update it
+            const snapshots = await Promise.all(input.items.map(item => transaction.get(db.doc(`jewelry/${item.id}`))));
+            const priced = priceOrder(input, snapshots.map(doc => doc.exists ? { ...doc.data(), id: doc.id } : null));
+            if (Math.round(priced.total * 100) !== input.expectedTotalCents) {
+              throw new OrderError('Η τιμή ή τα μεταφορικά άλλαξαν. Έλεγξε το νέο σύνολο στο καλάθι και δοκίμασε ξανά.', 409);
+            }
+            transaction.update(ref, {
+              ...priced,
+              customer: input.customer,
+              shippingMethod: input.shippingMethod,
+              paymentMethod: input.paymentMethod,
+              requestHash,
+              updatedAt: now.toISOString()
+            });
+            return {
+              id: ref.id,
+              number: data.number,
+              total: priced.total,
+              subtotal: priced.subtotal,
+              shippingCost: priced.shippingCost,
+              status: 'pending',
+              items: priced.items,
+              checkoutUrl: undefined
+            };
+          }
+          if (data.requestHash !== requestHash) {
+            throw new OrderError('Το αίτημα έχει αλλάξει. Δοκίμασε ξανά.', 409);
+          }
           stripeCheckoutUrl = data.stripeCheckoutUrl;
-          return { id: ref.id, number: data.number, total: data.total, subtotal: data.subtotal, shippingCost: data.shippingCost, status: data.status, items: data.items, checkoutUrl: data.stripeCheckoutUrl };
+          return {
+            id: ref.id,
+            number: data.number,
+            total: data.total,
+            subtotal: data.subtotal,
+            shippingCost: data.shippingCost,
+            status: data.status,
+            items: data.items,
+            checkoutUrl: data.stripeCheckoutUrl
+          };
         }
+
         const rate = await transaction.get(rateRef);
         const rateData = rate.data();
         const freshWindow = !rateData || now.getTime() - rateData.startedAt > 3600000;
-        if (!freshWindow && rateData.count >= 8) throw new OrderError('Έγιναν πολλά αιτήματα. Δοκίμασε αργότερα ή επικοινώνησε μαζί μας.', 429);
+        if (!freshWindow && rateData.count >= 15) {
+          throw new OrderError('Έγιναν πολλά αιτήματα. Δοκίμασε αργότερα ή επικοινώνησε μαζί μας.', 429);
+        }
+
         const snapshots = await Promise.all(input.items.map(item => transaction.get(db.doc(`jewelry/${item.id}`))));
         const priced = priceOrder(input, snapshots.map(doc => doc.exists ? { ...doc.data(), id: doc.id } : null));
-        if (Math.round(priced.total * 100) !== input.expectedTotalCents) throw new OrderError('Η τιμή ή τα μεταφορικά άλλαξαν. Έλεγξε το νέο σύνολο στο καλάθι και δοκίμασε ξανά.', 409);
+        if (Math.round(priced.total * 100) !== input.expectedTotalCents) {
+          throw new OrderError('Η τιμή ή τα μεταφορικά άλλαξαν. Έλεγξε το νέο σύνολο στο καλάθι και δοκίμασε ξανά.', 409);
+        }
+
         const number = `ARAM-${now.toISOString().slice(0, 10).replaceAll('-', '')}-${input.requestId.slice(0, 8).toUpperCase()}`;
         for (let index = 0; index < snapshots.length; index++) {
           const product = snapshots[index];
-          const remaining = 0;
           transaction.update(product.ref, {
-            stock: remaining,
+            stock: 0,
             [`checkoutReservations.${ref.id}`]: input.items[index].quantity,
-            ...(remaining === 0 ? { status: 'Κρατημένο' } : {})
+            status: 'Κρατημένο'
           });
         }
-        transaction.set(rateRef, { count: freshWindow ? 1 : rateData!.count + 1, startedAt: freshWindow ? now.getTime() : rateData!.startedAt, expiresAt: new Date(now.getTime() + 86400000) });
-        transaction.create(ref, { ...priced, customer: input.customer, shippingMethod: input.shippingMethod, paymentMethod: input.paymentMethod, number, status: 'pending', emailNotification: 'pending', createdAt: now.toISOString(), updatedAt: now.toISOString(), requestHash, history: [{ status: 'pending', at: now.toISOString() }] });
-        transaction.create(db.doc(`orderNotifications/${ref.id}`), { state: 'pending', payload: { number, total: priced.total }, createdAt: now.toISOString() });
-        return { id: ref.id, number, total: priced.total, subtotal: priced.subtotal, shippingCost: priced.shippingCost, status: 'pending', items: priced.items };
+
+        transaction.set(rateRef, {
+          count: freshWindow ? 1 : rateData!.count + 1,
+          startedAt: freshWindow ? now.getTime() : rateData!.startedAt,
+          expiresAt: new Date(now.getTime() + 86400000)
+        });
+
+        const orderData = {
+          ...priced,
+          customer: input.customer,
+          shippingMethod: input.shippingMethod,
+          paymentMethod: input.paymentMethod,
+          number,
+          status: 'pending',
+          emailNotification: 'pending',
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+          requestHash,
+          history: [{ status: 'pending', at: now.toISOString() }]
+        };
+
+        transaction.create(ref, orderData);
+        transaction.create(db.doc(`orderNotifications/${ref.id}`), {
+          state: 'pending',
+          payload: {
+            ...orderData,
+            id: ref.id
+          },
+          createdAt: now.toISOString()
+        });
+
+        return {
+          id: ref.id,
+          number,
+          total: priced.total,
+          subtotal: priced.subtotal,
+          shippingCost: priced.shippingCost,
+          status: 'pending',
+          items: priced.items
+        };
       });
 
       if (input.paymentMethod === 'stripe') {
         if (!stripeCheckoutUrl) {
-          const session = await createStripeCheckoutSession({
-            orderId: receipt.id,
-            orderNumber: receipt.number,
-            items: (receipt.items || []).map((it: any) => ({
-              name: it.name || 'Χειροποίητο κόσμημα',
-              price: it.price,
-              quantity: it.quantity,
-              imageUrl: it.imageUrl
-            })),
-            shippingMethod: input.shippingMethod,
-            shippingCost: receipt.shippingCost,
-            customerEmail: input.customer.email,
-            origin: origin || ''
-          });
-          stripeCheckoutUrl = session.url;
-          await db.doc(`orders/${receipt.id}`).update({
-            stripeSessionId: session.id,
-            stripeCheckoutUrl: session.url
-          });
+          try {
+            const session = await createStripeCheckoutSession({
+              orderId: receipt.id,
+              orderNumber: receipt.number,
+              items: (receipt.items || []).map((it: any) => ({
+                name: it.name || 'Χειροποίητο κόσμημα',
+                price: it.price,
+                quantity: it.quantity,
+                imageUrl: it.imageUrl
+              })),
+              shippingMethod: input.shippingMethod,
+              shippingCost: receipt.shippingCost,
+              customerEmail: input.customer.email,
+              origin: origin || ''
+            });
+            stripeCheckoutUrl = session.url;
+            await db.doc(`orders/${receipt.id}`).update({
+              stripeSessionId: session.id,
+              stripeCheckoutUrl: session.url
+            });
+          } catch (stripeErr: any) {
+            console.error('Stripe session creation error, rolling back reservation:', stripeErr);
+            // Roll back the reservation immediately so products are not left locked!
+            await db.runTransaction(async tx => {
+              for (const it of receipt.items || []) {
+                const pRef = db.doc(`jewelry/${it.id}`);
+                const pSnap = await tx.get(pRef);
+                if (pSnap.exists) {
+                  tx.update(pRef, {
+                    stock: 1,
+                    status: 'Διαθέσιμο',
+                    [`checkoutReservations.${ref.id}`]: FieldValue.delete()
+                  });
+                }
+              }
+              tx.delete(ref);
+              tx.delete(db.doc(`orderNotifications/${ref.id}`));
+            }).catch(e => console.error('Rollback failed:', e));
+
+            throw new OrderError(stripeErr.message || 'Αποτυχία αρχικοποίησης πληρωμής στη Stripe. Δοκιμάστε ξανά.', 502);
+          }
         }
         return reply({ ok: true, order: receipt, checkoutUrl: stripeCheckoutUrl }, 201, origin);
       }
@@ -205,8 +341,8 @@ export function createOrdersHandler(connect: typeof database = database, notify:
     } catch (error) {
       if (error instanceof OrderError) return reply({ error: error.message }, error.status, origin);
       if (error instanceof SyntaxError) return reply({ error: 'Μη έγκυρα δεδομένα.' }, 400, origin);
-      console.error('Order processing failed', { name: error instanceof Error ? error.name : 'unknown' });
-      return reply({ error: 'Η καταχώρηση δεν ολοκληρώθηκε. Δοκίμασε ξανά· το καλάθι σου παραμένει αποθηκευμένο.' }, 503, origin);
+      console.error('Order processing failed', { name: error instanceof Error ? error.name : 'unknown', message: error instanceof Error ? error.message : '' });
+      return reply({ error: error instanceof Error ? error.message : 'Η καταχώρηση δεν ολοκληρώθηκε. Δοκίμασε ξανά· το καλάθι σου παραμένει αποθηκευμένο.' }, 503, origin);
     }
   };
 }

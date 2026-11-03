@@ -138,7 +138,7 @@ export function OrdersManager({ onBack }: { onBack: () => void }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="min-w-0 space-y-1 text-sm">
               <p className="font-bold text-stone-900">{order.customer.name}</p>
-              <p className="break-words text-stone-600">{order.customer.email} · {order.customer.phone}</p>
+              <p className="break-words text-stone-600"><a href={`mailto:${order.customer.email}`} className="hover:underline">{order.customer.email}</a> · <a href={`tel:${order.customer.phone}`} className="font-semibold text-stone-900 hover:underline">{order.customer.phone}</a></p>
               <p className="text-stone-600">{order.customer.address}, {order.customer.city} {order.customer.postalCode}</p>
               <p className="text-stone-700">Αποστολή: {({ boxnow: 'BoxNow', courier: 'Courier', pickup: 'Παραλαβή' } as Record<string, string>)[order.shippingMethod]}</p>
               <div className="flex items-center gap-1.5 flex-wrap">

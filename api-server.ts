@@ -1,5 +1,6 @@
 import { extractListingState, classifyVintedCategory } from './server/vinted-listing';
 import { getVintedReviews, fetchLiveVintedReviews, persistVintedReviewsToFirestore } from './server/vinted-reviews';
+import { createStripeCheckoutSession, retrieveStripeCheckoutSession } from './server/stripe-service';
 import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
@@ -126,8 +127,7 @@ ${task ? `Τύπος εργασίας: ${task}` : ""}
         ok: false,
         error: "Δεν έχει οριστεί GEMINI_API_KEY (ή OPENAI_API_KEY) στο αρχείο .env του server.",
         code: "AI_KEY_MISSING",
-        help: "Μπορείτε να πάρετε δωρεάν κλειδί από το https://aistudio.google.com/app/apikey και να το προσθέσετε στο αρχείο .env ως GEMINI_API_KEY=το_κλειδί_σας. Εναλλακτικά πατήστε το κουμπί '🧪 Δοκιμή Demo AI' για άμεση δοκιμή χωρίς κλειδί!",
-        canDemo: true,
+        help: "Ελέγξτε τις ρυθμίσεις στο αρχείο .env ή στις παραμέτρους περιβάλλοντος του Netlify."
       });
     }
     return res.status(502).json({
@@ -703,10 +703,20 @@ app.post("/.netlify/functions/vinted-reviews/sync", handleVintedReviewsSync);
 // In-memory dev orders store for local testing
 const localDevOrders: any[] = [];
 
-// 5. Orders endpoints with full local dev support and validation
-app.post("/api/orders", (req: Request, res: Response) => {
+// 5. Orders and Stripe endpoints with live payment gateway integration
+app.post("/api/orders", async (req: Request, res: Response) => {
   try {
-    const { customer, items, shippingMethod, paymentMethod, expectedTotal, website, requestId } = req.body || {};
+    const { customer, items, shippingMethod, paymentMethod, expectedTotal, website, requestId, action, orderId: targetOrderId } = req.body || {};
+
+    // Handle order cancellation from frontend
+    if (action === 'cancel_unpaid' && targetOrderId) {
+      const found = localDevOrders.find(o => o.id === targetOrderId);
+      if (found && found.status === 'pending') {
+        found.status = 'cancelled';
+        found.updatedAt = new Date().toISOString();
+      }
+      return res.json({ ok: true, cancelled: true });
+    }
 
     // Anti-spam honeypot
     if (website) return res.status(400).json({ ok: false, error: "Spam detected." });
@@ -727,20 +737,21 @@ app.post("/api/orders", (req: Request, res: Response) => {
       });
     }
 
-    const orderId = requestId || `ord_${Date.now()}`;
-    const orderNumber = `DEV-${Date.now().toString().slice(-6)}`;
+    const orderId = requestId || `ARAM-${Date.now()}`;
+    const orderNumber = `ARAM-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${orderId.slice(0, 8).toUpperCase()}`;
     const totalAmount = Number(expectedTotal) || 0;
+    const shippingCost = shippingMethod === 'boxnow' ? (totalAmount >= 45 ? 0 : 2.5) : (totalAmount >= 50 ? 0 : 4.0);
 
     const newOrder = {
       id: orderId,
       number: orderNumber,
       total: totalAmount,
-      subtotal: totalAmount,
-      shippingCost: 0,
+      subtotal: Math.max(0, totalAmount - shippingCost),
+      shippingCost,
       createdAt: new Date().toISOString(),
       status: "pending",
       shippingMethod: shippingMethod || "boxnow",
-      paymentMethod: paymentMethod || "iris",
+      paymentMethod: paymentMethod || "stripe",
       customer: {
         name: customer.name.trim(),
         email: customer.email.trim(),
@@ -750,18 +761,36 @@ app.post("/api/orders", (req: Request, res: Response) => {
         postalCode: customer.postalCode?.trim() || "",
         notes: customer.notes?.trim() || "",
       },
-      items,
-      isLocalDevTest: true
+      items
     };
 
+    let checkoutUrl: string | undefined;
+    if (paymentMethod === 'stripe') {
+      const session = await createStripeCheckoutSession({
+        orderId,
+        orderNumber,
+        items: items.map((it: any) => ({
+          name: it.name || it.title || 'Χειροποίητο κόσμημα',
+          price: Number(it.price) || 0,
+          quantity: it.quantity || 1,
+          imageUrl: it.imageUrl
+        })),
+        shippingMethod: shippingMethod || 'boxnow',
+        shippingCost,
+        customerEmail: customer.email.trim(),
+        origin: req.get('origin') || process.env.URL || 'https://aramcreationsofficial1.netlify.app'
+      });
+      checkoutUrl = session.url;
+      (newOrder as any).stripeSessionId = session.id;
+      (newOrder as any).stripeCheckoutUrl = session.url;
+    }
+
     localDevOrders.unshift(newOrder);
-    console.log(`[Dev Orders] Successfully registered order ${orderNumber} (€${totalAmount}) for ${customer.name}`);
 
     return res.status(201).json({
       ok: true,
       order: newOrder,
-      isLocalDevTest: true,
-      message: "Η παραγγελία καταχωρήθηκε επιτυχώς (Κατάσταση Τοπικής Δοκιμής / Dev Mode)!"
+      checkoutUrl
     });
   } catch (err: any) {
     return res.status(500).json({
@@ -769,6 +798,31 @@ app.post("/api/orders", (req: Request, res: Response) => {
       error: `Σφάλμα καταχώρησης παραγγελίας: ${err.message || 'Άγνωστο σφάλμα'}`,
       reason: err.message
     });
+  }
+});
+
+app.post("/api/stripe-confirm", async (req: Request, res: Response) => {
+  try {
+    const { sessionId, orderId } = req.body || {};
+    if (!sessionId) return res.status(400).json({ ok: false, error: "Missing sessionId" });
+
+    const session = await retrieveStripeCheckoutSession(sessionId);
+    const targetId = orderId || session.client_reference_id || session.metadata?.orderId;
+    const found = localDevOrders.find(o => o.id === targetId);
+    if (found) {
+      found.status = 'paid';
+      found.paidAt = new Date().toISOString();
+      found.stripePaymentIntent = session.payment_intent;
+    }
+
+    return res.json({
+      ok: true,
+      paid: session.payment_status === 'paid',
+      orderNumber: found?.number || targetId,
+      total: found?.total
+    });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
   }
 });
 

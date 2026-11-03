@@ -34,6 +34,7 @@ export async function createStripeCheckoutSession(params: CreateSessionParams): 
 
   const body = new URLSearchParams();
   body.append('mode', 'payment');
+  body.append('locale', 'el');
   body.append('success_url', successUrl);
   body.append('cancel_url', cancelUrl);
   body.append('client_reference_id', params.orderId);
@@ -56,7 +57,7 @@ export async function createStripeCheckoutSession(params: CreateSessionParams): 
   if (params.shippingCost > 0) {
     const sIndex = params.items.length;
     const shippingLabel = SHIPPING_LABELS[params.shippingMethod] || 'Μεταφορικά';
-    body.append(`line_items[sIndex][price_data][currency]`, 'eur');
+    body.append(`line_items[${sIndex}][price_data][currency]`, 'eur');
     body.append(`line_items[${sIndex}][price_data][unit_amount]`, String(Math.round(params.shippingCost * 100)));
     body.append(`line_items[${sIndex}][price_data][product_data][name]`, `Έξοδα Αποστολής (${shippingLabel})`);
     body.append(`line_items[${sIndex}][quantity]`, '1');
