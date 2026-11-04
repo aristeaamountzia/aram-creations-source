@@ -305,6 +305,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
 
       {/* 3. Artwork Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="sr-only">Συλλογή Έργων Portfolio</h2>
         
         {/* Results Header */}
         <div className="flex items-center justify-between text-xs mb-6 font-sans text-stone-500">
@@ -373,6 +374,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                             item.status && (item.status.trim().toLowerCase() === 'πουλήθηκε' || item.status.trim().toLowerCase() === 'sold') ? 'grayscale-[15%] opacity-90' : ''
                           }`}
                           loading="lazy"
+                          decoding="async"
                         />
                       )}
 

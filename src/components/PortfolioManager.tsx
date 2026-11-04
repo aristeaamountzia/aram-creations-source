@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 import { X, SlidersHorizontal } from 'lucide-react';
 import { usePortfolioDesign } from '../lib/use-portfolio-design';
 import { WixProjectExport } from './WixProjectExport';
@@ -167,6 +168,51 @@ export interface PortfolioManagerProps {
   onOpenSettings?: () => void;
   currentUser?: any;
   onSignOut?: () => void;
+}
+
+async function compressPortfolioImage(file: File): Promise<File> {
+  if (file.type === 'image/gif') return file;
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const max_size = 1600;
+        let { width, height } = img;
+        if (width <= max_size && height <= max_size && file.size < 1.5 * 1024 * 1024) {
+          resolve(file);
+          return;
+        }
+        if (width > height && width > max_size) {
+          height = Math.round(height * (max_size / width));
+          width = max_size;
+        } else if (height > max_size) {
+          width = Math.round(width * (max_size / height));
+          height = max_size;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(file); return; }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (!blob) { resolve(file); return; }
+          const compressed = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          });
+          resolve(compressed);
+        }, 'image/jpeg', 0.85);
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
 }
 
 export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
@@ -512,6 +558,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
             setVideoCompressing(false);
             videoAbort.current = null;
           }
+        } else if (file.type.startsWith('image/')) {
+          prepared = await compressPortfolioImage(file);
         } else if (file.size > VIDEO_UPLOAD_LIMIT) {
           throw new Error('Η εικόνα πρέπει να είναι έως 30 MB.');
         }

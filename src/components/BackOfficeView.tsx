@@ -200,6 +200,8 @@ interface BackOfficeViewProps {
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         if (!ctx) { reject(new Error('Δεν ξεκίνησε η επεξεργασία εικόνας.')); return; }
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, width, height);
                         ctx.drawImage(img, 0, 0, width, height);
 
                         canvas.toBlob((blob) => {
@@ -1025,7 +1027,12 @@ interface BackOfficeViewProps {
                     const ratio = Math.min(768 / img.width, 768 / img.height, 1);
                     canvas.width = Math.max(Math.round(img.width * ratio), 1);
                     canvas.height = Math.max(Math.round(img.height * ratio), 1);
-                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    }
                     return canvas.toDataURL('image/jpeg', 0.78);
                 } catch { return ''; }
                 finally { loaded?.cleanup?.(); }

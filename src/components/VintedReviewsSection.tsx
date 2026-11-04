@@ -193,6 +193,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
       aria-label="Εμπειρίες & Αξιολογήσεις Πελατών"
       className={`scroll-mt-20 py-14 sm:py-20 border-t border-stone-200/80 transition-colors ${className}`}
     >
+      <div id="reviews" className="sr-only" aria-hidden="true" />
       <div id="vinted-reviews" className="sr-only" aria-hidden="true" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Sleek Luxury Header & Trust Summary */}
@@ -279,7 +280,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
                             />
                           </span>
                         </div>
-                        <span className="text-[10px] text-stone-400 font-sans">
+                        <span className="text-[11px] text-stone-600 font-sans">
                           {review.formattedDate}
                         </span>
                       </div>

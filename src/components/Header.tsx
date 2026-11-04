@@ -33,11 +33,16 @@ export const Header: React.FC<HeaderProps> = ({ currentMode, onSelectMode, cartC
           <button id="header-brand" type="button" onClick={() => onSelectMode(isPortfolio ? 'portfolio' : 'shop')}
             aria-label={`Aram Creations — ${isPortfolio ? 'Portfolio' : 'επιστροφή στο Shop'}`}
             className="header-brand flex min-w-0 items-center gap-2.5 text-left cursor-pointer">
-            <img src="/logo.png" alt="Aram Creations"
+            <img src={isPortfolio ? "/logo-portfolio.png" : "/logo.png"} alt="Aram Creations"
               referrerPolicy="no-referrer"
+              decoding="async"
               width="36" height="48"
               className="h-10 w-auto sm:h-11 shrink-0 object-contain"
-              onError={(event) => { const img = event.currentTarget; if (!img.src.endsWith('/logo.svg')) img.src = '/logo.svg'; }} />
+              onError={(event) => {
+                const img = event.currentTarget;
+                const fallback = isPortfolio ? '/logo-portfolio.svg' : '/logo.svg';
+                if (!img.src.endsWith(fallback)) img.src = fallback;
+              }} />
             <span className="min-w-0">
               <span className="brand-name block text-lg sm:text-xl font-semibold tracking-tight">{design?.brandName || 'aram.creations'}</span>
               <span className="brand-caption block text-[9px] sm:text-[10px] uppercase tracking-wide mt-0.5">

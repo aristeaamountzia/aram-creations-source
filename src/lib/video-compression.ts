@@ -16,7 +16,18 @@ export async function prepareVideoUpload(file: File, onProgress: (value: VideoPr
     worker.onmessage = ({ data }) => {
       if (finished) return;
       if (data.type === 'progress') { onProgress({ text: `${data.attempt ? 'Δεύτερη συμπίεση' : 'Συμπίεση'} ${file.name}: ${data.progress}%`, percent: data.progress }); return; }
-      if (data.type === 'error') { fail(new Error(data.message)); return; }
+      if (data.type === 'error') {
+        // Safe fallback: if original file is already <= 30 MB and is a standard video, keep original file
+        if (file.size <= VIDEO_UPLOAD_LIMIT && (/^video\//.test(file.type) || /\.(mp4|webm|mov)$/i.test(file.name))) {
+          finished = true;
+          cleanup();
+          onProgress({ text: `Το αρχικό βίντεο είναι ήδη κάτω από 30 MB (${videoSize(file.size)}) και διατηρήθηκε.`, percent: 100 });
+          resolve(file);
+          return;
+        }
+        fail(new Error(data.message));
+        return;
+      }
       if (data.type === 'done') {
         if (!data.blob?.size || data.blob.size > VIDEO_UPLOAD_LIMIT) { fail(new Error('Το τελικό βίντεο πρέπει να είναι έως 30 MB.')); return; }
         const result = file.size <= VIDEO_UPLOAD_LIMIT && file.size < data.blob.size ? file : new File([data.blob], file.name.replace(/\.[^/.]+$/, '') + `-compressed.${data.extension}`, { type: data.blob.type, lastModified: Date.now() });

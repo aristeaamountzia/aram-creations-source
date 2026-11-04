@@ -353,56 +353,60 @@ export const App: React.FC = () => {
 
       {/* Footer (hidden in admin mode) */}
       {currentMode !== 'admin' && (
-      <footer className="site-footer bg-[#fafafa] border-t border-stone-200/90 text-stone-600 py-12 px-4 sm:px-6 lg:px-8">
+      <footer className="site-footer bg-[#fafafa] border-t border-stone-200/90 text-stone-700 py-12 px-4 sm:px-6 lg:px-8">
+        <h2 className="sr-only">Πληροφορίες & Σύνδεσμοι Υποσέλιδου</h2>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Col */}
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <img
-                src="/logo.png"
+                src={currentMode === 'portfolio' ? "/logo-portfolio.png" : "/logo.png"}
                 alt="Aram Creations"
                 referrerPolicy="no-referrer"
+                loading="lazy"
+                decoding="async"
                 className="w-8 h-8 object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  if (target.src.endsWith('/logo.png')) target.src = '/logo.svg';
+                  const fallback = currentMode === 'portfolio' ? '/logo-portfolio.svg' : '/logo.svg';
+                  if (!target.src.endsWith(fallback)) target.src = fallback;
                 }}
               />
               <span className="font-bold uppercase tracking-tight text-stone-900 text-base" style={{ fontFamily: 'Jura, sans-serif' }}>
                 aram.creations
               </span>
             </div>
-            <p className="text-xs text-stone-500 leading-relaxed font-sans">
+            <p className="text-xs text-stone-700 leading-relaxed font-sans">
               Χειροποίητες δημιουργίες, γλυπτά, κοσμήματα και ψηφιακό design. Κάθε έργο δημιουργείται με αγάπη και έμφαση στη διαχρονική αισθητική.
             </p>
           </div>
 
           {/* Quick links - Clean & Customer-focused */}
           <div className="space-y-2 text-xs">
-            <h4 className="font-bold uppercase tracking-wider text-stone-900 mb-3">Πλοήγηση</h4>
+            <h3 className="font-bold uppercase tracking-wider text-stone-900 mb-3 text-xs">Πλοήγηση</h3>
             <div>
-              <button onClick={() => selectMode('shop')} className="hover:text-stone-900 transition font-medium">
+              <button onClick={() => selectMode('shop')} className="text-stone-700 hover:text-stone-900 transition font-medium py-1">
                 Shop (Κοσμήματα)
               </button>
             </div>
             <div>
-              <button onClick={() => selectMode('portfolio')} className="hover:text-stone-900 transition font-medium">
+              <button onClick={() => selectMode('portfolio')} className="text-stone-700 hover:text-stone-900 transition font-medium py-1">
                 Portfolio Έργων & Δημιουργιών
               </button>
             </div>
-            <div className="pt-2 border-t border-stone-200/60 space-y-1.5 text-[11px] text-stone-500">
+            <div className="pt-2 border-t border-stone-200/60 space-y-1 text-xs text-stone-700">
               <div>
-                <button onClick={() => setLegalModalType('terms')} className="hover:text-stone-900 transition text-left cursor-pointer">
+                <button onClick={() => setLegalModalType('terms')} className="text-stone-700 hover:text-stone-900 transition text-left cursor-pointer py-1.5 block">
                   Όροι Χρήσης & Συναλλαγών
                 </button>
               </div>
               <div>
-                <button onClick={() => setLegalModalType('privacy')} className="hover:text-stone-900 transition text-left cursor-pointer">
+                <button onClick={() => setLegalModalType('privacy')} className="text-stone-700 hover:text-stone-900 transition text-left cursor-pointer py-1.5 block">
                   Πολιτική Απορρήτου (GDPR)
                 </button>
               </div>
               <div>
-                <button onClick={() => setLegalModalType('returns')} className="hover:text-stone-900 transition text-left cursor-pointer">
+                <button onClick={() => setLegalModalType('returns')} className="text-stone-700 hover:text-stone-900 transition text-left cursor-pointer py-1.5 block">
                   Αποστολές & Επιστροφές
                 </button>
               </div>
@@ -411,30 +415,30 @@ export const App: React.FC = () => {
 
           {/* Contact Atelier */}
           <div className="space-y-2 text-xs">
-            <h4 className="font-bold uppercase tracking-wider text-stone-900 mb-3">Επικοινωνία</h4>
-            <div className="flex items-center gap-2 text-stone-600">
-              <Mail className="w-3.5 h-3.5 text-stone-800" />
+            <h3 className="font-bold uppercase tracking-wider text-stone-900 mb-3 text-xs">Επικοινωνία</h3>
+            <div className="flex items-center gap-2 text-stone-800">
+              <Mail className="w-3.5 h-3.5 text-stone-900" />
               <span>aristeaamnta@gmail.com</span>
             </div>
-            <div className="flex items-center gap-2 text-stone-600">
-              <MapPin className="w-3.5 h-3.5 text-stone-800" />
+            <div className="flex items-center gap-2 text-stone-800">
+              <MapPin className="w-3.5 h-3.5 text-stone-900" />
               <span>Βόλος</span>
             </div>
-            <div className="flex items-center gap-2 text-stone-600 pt-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <div className="flex items-center gap-2 text-stone-800 pt-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
               <span>Stripe (Κάρτες), IRIS Payments & BoxNow</span>
             </div>
           </div>
 
           {/* External Shops */}
           <div className="space-y-3">
-            <h4 className="font-bold uppercase tracking-wider text-stone-900 mb-3">Επίσημα Κανάλια</h4>
+            <h3 className="font-bold uppercase tracking-wider text-stone-900 mb-3 text-xs">Επίσημα Κανάλια</h3>
             <div className="flex flex-col gap-2">
               <a
                 href="https://www.vinted.gr/member/231329281"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold hover:bg-teal-100 transition"
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold hover:bg-teal-100 transition"
               >
                 <span>Vinted Boutique</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -444,7 +448,7 @@ export const App: React.FC = () => {
                 href="https://www.instagram.com/aram.creations/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-white border border-stone-200 text-stone-800 text-xs font-bold hover:bg-stone-100 transition"
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white border border-stone-200 text-stone-800 text-xs font-bold hover:bg-stone-100 transition"
               >
                 <span>Instagram Profile</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -453,27 +457,27 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto pt-8 mt-8 border-t border-stone-200 flex flex-col md:flex-row items-center justify-between text-[11px] text-stone-500 gap-4">
+        <div className="max-w-7xl mx-auto pt-8 mt-8 border-t border-stone-200 flex flex-col md:flex-row items-center justify-between text-xs text-stone-700 gap-4">
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
             <span>© {new Date().getFullYear()} Aram Creations.</span>
             <span>•</span>
             <button 
               onClick={() => setLegalModalType('terms')} 
-              className="hover:text-stone-900 transition underline underline-offset-2 cursor-pointer"
+              className="text-stone-700 hover:text-stone-900 transition underline underline-offset-2 cursor-pointer py-1"
             >
               Όροι Χρήσης
             </button>
             <span>•</span>
             <button 
               onClick={() => setLegalModalType('privacy')} 
-              className="hover:text-stone-900 transition underline underline-offset-2 cursor-pointer"
+              className="text-stone-700 hover:text-stone-900 transition underline underline-offset-2 cursor-pointer py-1"
             >
               Πολιτική Απορρήτου
             </button>
             <span>•</span>
             <button 
               onClick={() => setLegalModalType('returns')} 
-              className="hover:text-stone-900 transition underline underline-offset-2 cursor-pointer"
+              className="text-stone-700 hover:text-stone-900 transition underline underline-offset-2 cursor-pointer py-1"
             >
               Αποστολές & Επιστροφές
             </button>

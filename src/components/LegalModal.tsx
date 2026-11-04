@@ -14,22 +14,29 @@ export const LegalModal: React.FC<LegalModalProps> = ({
   onClose,
   onSelectType,
 }) => {
-  // Prevent background scrolling when modal is open
+  // Prevent background scrolling and handle Escape key when modal is open
   useEffect(() => {
     if (type) {
       document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
     } else {
       document.body.style.overflow = '';
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [type]);
+  }, [type, onClose]);
 
   if (!type) return null;
 
   return (
     <div 
+      role="dialog"
+      aria-modal="true"
       className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
       onClick={onClose}
     >

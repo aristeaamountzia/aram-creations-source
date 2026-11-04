@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CartItem, OrderCustomerInfo } from '../types';
+import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 import {
   X,
   Trash2,

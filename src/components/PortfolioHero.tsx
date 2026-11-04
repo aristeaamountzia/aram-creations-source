@@ -50,7 +50,7 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="none"
               referrerPolicy="no-referrer"
               aria-hidden="true"
               className="absolute inset-0 h-full w-full object-cover"
@@ -89,7 +89,7 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }}
         className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 cursor-pointer transition group bg-transparent border-0 p-0 text-white hover:text-stone-200 focus:outline-hidden"
-        aria-label="Κύλιση προς τα κάτω για προβολή έργων"
+        aria-label="Κύλιση για δημιουργίες — προβολή έργων"
       >
         <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-widest text-stone-300 drop-shadow-sm group-hover:scale-105 transition-transform">
           Κύλιση για δημιουργίες

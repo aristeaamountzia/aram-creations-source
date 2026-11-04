@@ -513,7 +513,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             referrerPolicy="no-referrer"
             onError={() => setHeroVideoFailed(true)}
             aria-hidden="true"
@@ -565,7 +565,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }}
           className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 cursor-pointer transition group focus:outline-hidden text-white/90 hover:text-white"
-          aria-label="Κύλιση προς τα κάτω για προβολή δημιουργιών"
+          aria-label="Κύλιση για δημιουργίες — προβολή καταλόγου"
         >
           <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest drop-shadow-md group-hover:scale-105 transition-transform">
             Κύλιση για δημιουργίες
@@ -617,8 +617,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
             {/* Sort Select */}
             <div className="catalog-sort flex max-w-full min-w-0 items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-700">
-              <span className="text-[11px] text-stone-400 uppercase font-bold">Ταξινόμηση:</span>
+              <label htmlFor="catalog-sort-select" className="text-[11px] text-stone-500 uppercase font-bold cursor-pointer">
+                Ταξινόμηση:
+              </label>
               <select
+                id="catalog-sort-select"
+                aria-label="Ταξινόμηση δημιουργιών"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="min-w-0 max-w-full bg-transparent font-bold text-stone-800 focus:outline-none cursor-pointer text-xs"
@@ -631,6 +635,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
               </select>
             </div>
           </>} />
+
+        <h2 className="sr-only">Συλλογή Κοσμημάτων & Δημιουργιών</h2>
 
         {/* Catalog Results Header */}
         <div className="flex items-center justify-between text-xs font-bold text-stone-500 px-1">
@@ -740,6 +746,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                           isSold ? 'grayscale-[15%] opacity-90' : ''
                         }`}
                         loading="lazy"
+                        decoding="async"
                       />
                     )}
 

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import fs from "fs";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { app } from "./api-server";
@@ -14,7 +15,13 @@ async function start() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const candidatePaths = [
+      path.join(process.cwd(), "dist"),
+      path.join(__dirname, "dist"),
+      path.join(__dirname, "../dist"),
+      path.join(process.cwd(), "01_GITHUB/aram-creations-source/dist")
+    ];
+    const distPath = candidatePaths.find(p => fs.existsSync(p)) || candidatePaths[0];
     app.use(express.static(distPath));
     app.get("*", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
