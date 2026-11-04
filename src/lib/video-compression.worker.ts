@@ -1,8 +1,16 @@
 import { Input, Output, ALL_FORMATS, BlobSource, BufferTarget, Mp4OutputFormat, WebMOutputFormat, Conversion, Quality, getFirstEncodableVideoCodec, getFirstEncodableAudioCodec } from 'mediabunny';
 import { validateVideoInput, videoEncodingPlan, VIDEO_UPLOAD_LIMIT } from './video-policy';
 
-const scope = self as unknown as { onmessage: (event: MessageEvent<File>) => void; postMessage: (message: unknown) => void };
-scope.onmessage = async ({ data: file }) => {
+interface WorkerPayload {
+  file: File;
+  stripAudio?: boolean;
+}
+
+const scope = self as unknown as { onmessage: (event: MessageEvent<File | WorkerPayload>) => void; postMessage: (message: unknown) => void };
+scope.onmessage = async ({ data }) => {
+  const file = data instanceof File ? data : data.file;
+  const stripAudioRequested = data instanceof File ? false : Boolean(data.stripAudio);
+
   let input: Input | undefined;
   try {
     validateVideoInput(file);
@@ -10,51 +18,85 @@ scope.onmessage = async ({ data: file }) => {
     const video = await input.getPrimaryVideoTrack();
     const audio = await input.getPrimaryAudioTrack();
     if (!video) throw new Error('Το αρχείο δεν περιέχει αναγνώσιμο βίντεο.');
-    
+
     const duration = await input.computeDuration();
     const originalWidth = await video.getDisplayWidth();
     const originalHeight = await video.getDisplayHeight();
-    
-    const canDecodeAudio = audio ? await audio.canDecode().catch(() => false) : false;
-    let keepAudio = Boolean(audio && canDecodeAudio);
+
+    const canDecodeAudio = !stripAudioRequested && audio ? await audio.canDecode().catch(() => false) : false;
+    let keepAudio = Boolean(audio && canDecodeAudio && !stripAudioRequested);
 
     for (let attempt = 0; attempt < 2; attempt++) {
       const plan = videoEncodingPlan(originalWidth, originalHeight, duration, keepAudio, attempt > 0);
+
+      // 1. Prioritize standard MP4 (AVC / H.264)
       let videoCodec = await getFirstEncodableVideoCodec(['avc'], { width: plan.width, height: plan.height, bitrate: plan.bitrate, frameRate: 30 });
-      let audioCodec = keepAudio ? await getFirstEncodableAudioCodec(['aac'], { numberOfChannels: 2, sampleRate: 48000, bitrate: plan.audioBitrate }) : null;
-      let mp4 = Boolean(videoCodec && (!keepAudio || audioCodec));
-      
-      if (!mp4) {
-        videoCodec = await getFirstEncodableVideoCodec(['vp9', 'vp8'], { width: plan.width, height: plan.height, bitrate: plan.bitrate, frameRate: 30 });
-        audioCodec = keepAudio ? await getFirstEncodableAudioCodec(['opus'], { numberOfChannels: 2, sampleRate: 48000, bitrate: plan.audioBitrate }) : null;
+      let mp4 = Boolean(videoCodec);
+      let audioCodec: 'aac' | 'opus' | null = null;
+
+      if (mp4 && keepAudio) {
+        audioCodec = (await getFirstEncodableAudioCodec(['aac'], { numberOfChannels: 2, sampleRate: 48000, bitrate: plan.audioBitrate })) as 'aac' | null;
+        if (!audioCodec) {
+          // AAC encoding not available in WebCodecs environment; gracefully drop audio and keep MP4 video
+          keepAudio = false;
+        }
       }
-      
+
+      // 2. If AVC is not encodable, fallback to WebM (VP9/VP8)
       if (!videoCodec) {
-        throw new Error('Ο browser δεν υποστηρίζει τη συμπίεση αυτού του βίντεο. Δοκιμάστε πρόσφατο Chrome ή Edge.');
-      }
-      
-      // If audio cannot be encoded, gracefully continue with video only
-      if (keepAudio && !audioCodec) {
-        keepAudio = false;
+        videoCodec = await getFirstEncodableVideoCodec(['vp9', 'vp8'], { width: plan.width, height: plan.height, bitrate: plan.bitrate, frameRate: 30 });
+        mp4 = false;
+        if (videoCodec && keepAudio) {
+          audioCodec = (await getFirstEncodableAudioCodec(['opus'], { numberOfChannels: 2, sampleRate: 48000, bitrate: plan.audioBitrate })) as 'opus' | null;
+          if (!audioCodec) {
+            keepAudio = false;
+          }
+        }
       }
 
-      const target = new BufferTarget();
-      const output = new Output({ target, format: mp4 ? new Mp4OutputFormat({ fastStart: 'in-memory' }) : new WebMOutputFormat() });
-      
-      let conversion = await Conversion.init({
-        input,
-        output,
-        tracks: 'primary',
-        tags: {},
-        showWarnings: false,
-        video: { width: plan.width, height: plan.height, fit: 'contain', frameRate: 30, codec: videoCodec, quality: new Quality({ bitrate: plan.bitrate }), forceTranscode: true, keyFrameInterval: 2 },
-        audio: keepAudio && audioCodec ? { codec: audioCodec, quality: new Quality({ bitrate: plan.audioBitrate }), sampleRate: 48000, numberOfChannels: 2, forceTranscode: true } : { discard: true },
-      });
+      if (!videoCodec) {
+        throw new Error('Ο browser δεν υποστηρίζει συμπίεση αυτού του βίντεο. Δοκιμάστε πρόσφατο Chrome ή Edge.');
+      }
 
-      // If conversion is invalid with audio, retry without audio
-      if (!conversion.isValid && keepAudio) {
-        await conversion.cancel().catch(() => {});
+      // Initialize conversion
+      let target = new BufferTarget();
+      let output = new Output({ target, format: mp4 ? new Mp4OutputFormat({ fastStart: 'in-memory' }) : new WebMOutputFormat() });
+      let conversion: Conversion | null = null;
+
+      try {
+        conversion = await Conversion.init({
+          input,
+          output,
+          tracks: 'primary',
+          tags: {},
+          showWarnings: false,
+          video: { width: plan.width, height: plan.height, fit: 'contain', frameRate: 30, codec: videoCodec, quality: new Quality({ bitrate: plan.bitrate }), forceTranscode: true, keyFrameInterval: 2 },
+          audio: keepAudio && audioCodec ? { codec: audioCodec, quality: new Quality({ bitrate: plan.audioBitrate }), sampleRate: 48000, numberOfChannels: 2, forceTranscode: true } : { discard: true },
+        });
+      } catch {
+        // If conversion initialization threw with audio, retry fresh with audio discarded
+        if (keepAudio) {
+          keepAudio = false;
+          target = new BufferTarget();
+          output = new Output({ target, format: mp4 ? new Mp4OutputFormat({ fastStart: 'in-memory' }) : new WebMOutputFormat() });
+          conversion = await Conversion.init({
+            input,
+            output,
+            tracks: 'primary',
+            tags: {},
+            showWarnings: false,
+            video: { width: plan.width, height: plan.height, fit: 'contain', frameRate: 30, codec: videoCodec, quality: new Quality({ bitrate: plan.bitrate }), forceTranscode: true, keyFrameInterval: 2 },
+            audio: { discard: true },
+          });
+        }
+      }
+
+      // If conversion is not valid with audio, retry fresh without audio
+      if ((!conversion || !conversion.isValid) && keepAudio) {
+        if (conversion) await conversion.cancel().catch(() => {});
         keepAudio = false;
+        target = new BufferTarget();
+        output = new Output({ target, format: mp4 ? new Mp4OutputFormat({ fastStart: 'in-memory' }) : new WebMOutputFormat() });
         conversion = await Conversion.init({
           input,
           output,
@@ -66,8 +108,8 @@ scope.onmessage = async ({ data: file }) => {
         });
       }
 
-      if (!conversion.isValid) {
-        await conversion.cancel().catch(() => {});
+      if (!conversion || !conversion.isValid) {
+        if (conversion) await conversion.cancel().catch(() => {});
         throw new Error('Δεν ήταν δυνατή η συμπίεση του βίντεο. Δοκιμάστε αρχείο MP4 με H.264.');
       }
 
@@ -75,12 +117,12 @@ scope.onmessage = async ({ data: file }) => {
       const stop = target.on('write', ({ end }) => {
         if (end > VIDEO_UPLOAD_LIMIT && !oversize) {
           oversize = true;
-          void conversion.cancel().catch(() => {});
+          void conversion?.cancel().catch(() => {});
         }
       });
-      
+
       conversion.onProgress = value => scope.postMessage({ type: 'progress', progress: Math.min(99, Math.floor(value * 100)), attempt });
-      
+
       try {
         await conversion.execute();
       } catch (error) {
@@ -96,7 +138,7 @@ scope.onmessage = async ({ data: file }) => {
         return;
       }
     }
-    
+
     throw new Error('Το συμπιεσμένο βίντεο παραμένει πάνω από 30 MB. Επιλέξτε μικρότερο απόσπασμα.');
   } catch (error: any) {
     scope.postMessage({ type: 'error', message: error.message || 'Δεν ολοκληρώθηκε η συμπίεση του βίντεο.' });

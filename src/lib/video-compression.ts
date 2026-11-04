@@ -1,6 +1,13 @@
 import { validateVideoInput, VIDEO_UPLOAD_LIMIT, videoSize } from './video-policy';
 export type VideoProgress = { text: string; percent?: number };
-export async function prepareVideoUpload(file: File, onProgress: (value: VideoProgress) => void, signal?: AbortSignal): Promise<File> {
+export type VideoUploadOptions = { stripAudio?: boolean };
+
+export async function prepareVideoUpload(
+  file: File,
+  onProgress: (value: VideoProgress) => void,
+  signal?: AbortSignal,
+  options?: VideoUploadOptions
+): Promise<File> {
   validateVideoInput(file);
   if (signal?.aborted) throw new DOMException('Η συμπίεση ακυρώθηκε.', 'AbortError');
   onProgress({ text: `Προετοιμασία ${file.name} (${videoSize(file.size)})…`, percent: 0 });
@@ -36,7 +43,7 @@ export async function prepareVideoUpload(file: File, onProgress: (value: VideoPr
         resolve(result);
       }
     };
-    worker.postMessage(file);
+    worker.postMessage({ file, stripAudio: Boolean(options?.stripAudio) });
   });
 }
 

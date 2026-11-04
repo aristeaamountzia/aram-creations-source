@@ -172,12 +172,18 @@ interface BackOfficeViewProps {
             }
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onerror = () => reject(new Error('Δεν διαβάστηκε η εικόνα.'));
+                reader.onerror = () => {
+                    if (file.size <= 2 * 1024 * 1024) resolve(file);
+                    else reject(new Error('Δεν διαβάστηκε η εικόνα.'));
+                };
                 reader.onabort = () => reject(new Error('Η ανάγνωση εικόνας ακυρώθηκε.'));
                 reader.readAsDataURL(file);
                 reader.onload = (event) => {
                     const img = new Image();
-                    img.onerror = () => reject(new Error('Δεν άνοιξε η εικόνα. Επίλεξε JPG, PNG, WebP ή GIF.'));
+                    img.onerror = () => {
+                        if (file.size <= 2 * 1024 * 1024) resolve(file);
+                        else reject(new Error('Δεν άνοιξε η εικόνα. Επίλεξε JPG, PNG, WebP ή GIF.'));
+                    };
                     img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
@@ -305,11 +311,11 @@ interface BackOfficeViewProps {
             const [videoCompressing, setVideoCompressing] = useState(false);
             const videoAbort = useRef(null);
             useEffect(() => () => videoAbort.current?.abort(), []);
-            const prepareLocalVideo = async (file) => {
+            const prepareLocalVideo = async (file, options?: { stripAudio?: boolean }) => {
                 const controller = new AbortController();
                 videoAbort.current = controller;
                 setVideoCompressing(true);
-                try { return await prepareVideoUpload(file, setVideoProgress, controller.signal); }
+                try { return await prepareVideoUpload(file, setVideoProgress, controller.signal, options); }
                 catch (error) { setVideoProgress({ text: error.message }); throw error; }
                 finally { setVideoCompressing(false); videoAbort.current = null; }
             };
@@ -875,7 +881,7 @@ interface BackOfficeViewProps {
                 setStatus('');
                 setVideoProgress(null);
                 try {
-                    const prepared = await prepareLocalVideo(file);
+                    const prepared = await prepareLocalVideo(file, { stripAudio: true });
                     setStatus('Ανέβασμα συμπιεσμένου βίντεο...');
                     const safeName = prepared.name.replace(/[^a-zA-Z0-9._-]/g, '') || 'hero-video.mp4';
                     const fileRef = firebaseRef(storage, `jewelry/hero/${section}/${Date.now()}-${safeName}`);
