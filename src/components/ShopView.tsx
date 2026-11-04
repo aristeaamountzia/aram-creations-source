@@ -249,9 +249,11 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const [availableOnly, setAvailableOnly] = useState<boolean>(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
   const [heroVideoFailed, setHeroVideoFailed] = useState<boolean>(false);
+  const [heroVideoRetry, setHeroVideoRetry] = useState<number>(0);
 
   useEffect(() => {
     setHeroVideoFailed(false);
+    setHeroVideoRetry(0);
   }, [shopSettings.heroVideoUrl]);
 
   useEffect(() => {
@@ -507,15 +509,25 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       >
         {hasHeroVideo && (
           <video
+            key={`${shopSettings.heroVideoUrl}-${heroVideoRetry}`}
             className="absolute inset-0 h-full w-full object-cover"
-            src={shopSettings.heroVideoUrl}
+            src={heroVideoRetry > 0
+              ? (shopSettings.heroVideoUrl.includes('?') ? `${shopSettings.heroVideoUrl}&_cb=${heroVideoRetry}` : `${shopSettings.heroVideoUrl}?_cb=${heroVideoRetry}`)
+              : shopSettings.heroVideoUrl
+            }
             autoPlay
             muted
             loop
             playsInline
-            preload="none"
+            preload="metadata"
             referrerPolicy="no-referrer"
-            onError={() => setHeroVideoFailed(true)}
+            onError={() => {
+              if (heroVideoRetry < 2) {
+                setHeroVideoRetry(c => c + 1);
+              } else {
+                setHeroVideoFailed(true);
+              }
+            }}
             aria-hidden="true"
           />
         )}

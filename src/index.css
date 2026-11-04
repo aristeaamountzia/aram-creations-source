@@ -314,10 +314,27 @@
 .atelier-theme .catalog-card .bg-white\/90 { background: rgba(255,253,250,.94); border-color: var(--ds-line, #e4e4e7); color: var(--ds-ink, #18181b); }
 .atelier-theme .catalog-card .bg-stone-900,
 /* Clean buttons in portfolio hero handled by component */
-.atelier-theme .site-footer { background: var(--ds-accent, #18181b); border-color: rgba(255,255,255,.16); color: #c8c0b5; }
-.atelier-theme .site-footer :is(h4, .text-stone-900, .text-stone-800) { color: #fffdf9; }
-.atelier-theme .site-footer .bg-white,
-.atelier-theme .site-footer .bg-teal-50 { background: transparent; border-color: rgba(255,255,255,.28); color: #fffdf9; border-radius: 6px; }
+.atelier-theme .site-footer {
+  background: var(--ds-accent, #0c0a09);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #d6d3d1;
+}
+.atelier-theme .site-footer :is(h2, h3, h4, .brand-name, .text-white, .text-stone-900, .text-stone-800) {
+  color: #fafaf9 !important;
+}
+.atelier-theme .site-footer :is(p, span, div, .text-stone-700, .text-stone-600, .text-stone-500) {
+  color: #d6d3d1 !important;
+}
+.atelier-theme .site-footer button {
+  color: #d6d3d1 !important;
+}
+.atelier-theme .site-footer button:hover {
+  color: #ffffff !important;
+}
+.atelier-theme .site-footer .border-stone-800,
+.atelier-theme .site-footer .border-stone-200 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
 .atelier-theme .image-lightbox { background: rgba(5, 5, 5, .985); }
 .atelier-theme .image-lightbox > button { border-radius: 2px; background: #292522; border-color: rgba(255,255,255,.3); color: #fffdf9; }
 .atelier-theme .image-lightbox > button:hover { background: #292929; }

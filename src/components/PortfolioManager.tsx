@@ -568,7 +568,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           storage,
           `jewelry/portfolio/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`
         );
-        await uploadBytes(fileRef, prepared, { contentType: prepared.type });
+        await uploadBytes(fileRef, prepared, {
+          contentType: prepared.type || (file.type.startsWith('video/') ? 'video/mp4' : 'image/jpeg'),
+          cacheControl: 'public, max-age=31536000, immutable'
+        });
         const uploaded: Media = {
           url: await getDownloadURL(fileRef),
           type: file.type.startsWith('video/') ? 'video' : 'image',

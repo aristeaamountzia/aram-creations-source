@@ -108,6 +108,13 @@ interface BackOfficeViewProps {
             },
             aiAssistant: {
                 backofficeEndpoint: ''
+            },
+            shippingSettings: {
+                boxnowPrice: 2.50,
+                boxnowFreeThreshold: 45.00,
+                courierPrice: 4.00,
+                courierFreeThreshold: 50.00,
+                customNotes: ''
             }
         };
         const MINIMAL_SHOP_SETTINGS = {
@@ -885,7 +892,10 @@ interface BackOfficeViewProps {
                     setStatus('Ανέβασμα συμπιεσμένου βίντεο...');
                     const safeName = prepared.name.replace(/[^a-zA-Z0-9._-]/g, '') || 'hero-video.mp4';
                     const fileRef = firebaseRef(storage, `jewelry/hero/${section}/${Date.now()}-${safeName}`);
-                    const task = uploadBytesResumable(fileRef, prepared, { contentType: prepared.type });
+                    const task = uploadBytesResumable(fileRef, prepared, {
+                        contentType: prepared.type || 'video/mp4',
+                        cacheControl: 'public, max-age=31536000, immutable'
+                    });
                     await new Promise((resolve, reject) => task.on('state_changed', null, reject, resolve));
                     const url = await getDownloadURL(task.snapshot.ref);
                     setShopSettings(prev => ({ ...prev, [isPortfolioHero ? 'portfolioHeroVideoUrl' : 'heroVideoUrl']: url }));
@@ -2574,7 +2584,10 @@ interface BackOfficeViewProps {
                     .slice(0, 60) || 'vinted-item';
                 const storagePath = `jewelry/vinted-imports/${Date.now()}-${safeName}-${mediaIndex + 1}.${ext}`;
                 const storageRef = firebaseRef(storage, storagePath);
-                const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: blob.type || 'image/jpeg' });
+                const uploadTask = uploadBytesResumable(storageRef, blob, {
+                    contentType: blob.type || 'image/jpeg',
+                    cacheControl: 'public, max-age=31536000, immutable'
+                });
 
                 await new Promise((resolve, reject) => {
                     uploadTask.on('state_changed', null, reject, resolve);
@@ -2763,7 +2776,10 @@ interface BackOfficeViewProps {
                         const safeName = fileObj.name.replace(/[^a-zA-Z0-9.\-_]/g, '') || 'image.jpg';
                         const uniqueName = Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '_' + safeName;
                         const storageRef = firebaseRef(storage, folder + '/' + uniqueName);
-                        const uploadTask = uploadBytesResumable(storageRef, fileObj);
+                        const uploadTask = uploadBytesResumable(storageRef, fileObj, {
+                            contentType: fileObj.type || (fileObj.name.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg'),
+                            cacheControl: 'public, max-age=31536000, immutable'
+                        });
 
                         await new Promise((resolve, reject) => {
                             uploadTask.on('state_changed',
@@ -5688,7 +5704,7 @@ interface BackOfficeViewProps {
 
                                                 {shopSettings.heroVideoUrl && (
                                                     <div className="pt-2 border-t border-stone-100 flex flex-col sm:flex-row items-center gap-4">
-                                                        <video src={shopSettings.heroVideoUrl} controls muted referrerPolicy="no-referrer" className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
+                                                        <video src={shopSettings.heroVideoUrl} controls muted preload="none" referrerPolicy="no-referrer" className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <MediaDownload media={{ url: shopSettings.heroVideoUrl, type: 'video' }} name="aram-hero-video" />
                                                             <button
@@ -5832,6 +5848,114 @@ interface BackOfficeViewProps {
                                                     ))}
                                                 </div>
                                             </section>
+
+                                            <section className="rounded-2xl border border-stone-200 bg-white p-5 shadow-2xs space-y-4">
+                                                <div className="border-b border-stone-100 pb-3">
+                                                    <h3 className="text-sm font-black text-stone-900 uppercase tracking-wider">7. Έξοδα Αποστολής & Μεταφορικά (Checkout)</h3>
+                                                    <p className="text-xs text-stone-500 mt-0.5">
+                                                        Ρυθμίστε τα κόστη και τα όρια δωρεάν αποστολής που εφαρμόζονται στο ταμείο για BoxNow και Courier.
+                                                    </p>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-3">
+                                                        <h4 className="text-xs font-black text-stone-900 uppercase tracking-wider">BOX NOW Locker 24/7</h4>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="block text-[11px] font-bold text-stone-700 mb-1">Βασικό Κόστος (€)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.10"
+                                                                    className="w-full border border-stone-200 rounded-xl px-3 py-2 text-xs bg-white text-stone-900 font-bold outline-none"
+                                                                    value={shopSettings.shippingSettings?.boxnowPrice ?? 2.5}
+                                                                    onChange={e => setShopSettings(prev => ({
+                                                                        ...prev,
+                                                                        shippingSettings: {
+                                                                            ...(prev.shippingSettings || {}),
+                                                                            boxnowPrice: parseFloat(e.target.value) || 0
+                                                                        }
+                                                                    }))}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-[11px] font-bold text-stone-700 mb-1">Όριο Δωρεάν (€)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="1"
+                                                                    className="w-full border border-stone-200 rounded-xl px-3 py-2 text-xs bg-white text-stone-900 font-bold outline-none"
+                                                                    value={shopSettings.shippingSettings?.boxnowFreeThreshold ?? 45}
+                                                                    onChange={e => setShopSettings(prev => ({
+                                                                        ...prev,
+                                                                        shippingSettings: {
+                                                                            ...(prev.shippingSettings || {}),
+                                                                            boxnowFreeThreshold: parseFloat(e.target.value) || 0
+                                                                        }
+                                                                    }))}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-3">
+                                                        <h4 className="text-xs font-black text-stone-900 uppercase tracking-wider">Courier (ACS / Speedex)</h4>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="block text-[11px] font-bold text-stone-700 mb-1">Βασικό Κόστος (€)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.10"
+                                                                    className="w-full border border-stone-200 rounded-xl px-3 py-2 text-xs bg-white text-stone-900 font-bold outline-none"
+                                                                    value={shopSettings.shippingSettings?.courierPrice ?? 4.0}
+                                                                    onChange={e => setShopSettings(prev => ({
+                                                                        ...prev,
+                                                                        shippingSettings: {
+                                                                            ...(prev.shippingSettings || {}),
+                                                                            courierPrice: parseFloat(e.target.value) || 0
+                                                                        }
+                                                                    }))}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-[11px] font-bold text-stone-700 mb-1">Όριο Δωρεάν (€)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="1"
+                                                                    className="w-full border border-stone-200 rounded-xl px-3 py-2 text-xs bg-white text-stone-900 font-bold outline-none"
+                                                                    value={shopSettings.shippingSettings?.courierFreeThreshold ?? 50}
+                                                                    onChange={e => setShopSettings(prev => ({
+                                                                        ...prev,
+                                                                        shippingSettings: {
+                                                                            ...(prev.shippingSettings || {}),
+                                                                            courierFreeThreshold: parseFloat(e.target.value) || 0
+                                                                        }
+                                                                    }))}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-xs font-bold text-stone-700 mb-1">Σημείωση / Επισήμανση Μεταφορικών (για ογκώδη αντικείμενα ή μεγαλύτερες θυρίδες)</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="π.χ. *Τα παραπάνω κόστη αφορούν βασικές θυρίδες. Για ογκώδη αντικείμενα ενδέχεται να υπάρξει προσαρμογή."
+                                                        className="w-full border border-stone-200 rounded-xl px-3.5 py-2 text-xs bg-stone-50 focus:bg-white outline-none"
+                                                        value={shopSettings.shippingSettings?.customNotes || ''}
+                                                        onChange={e => setShopSettings(prev => ({
+                                                            ...prev,
+                                                            shippingSettings: {
+                                                                ...(prev.shippingSettings || {}),
+                                                                customNotes: e.target.value
+                                                            }
+                                                        }))}
+                                                    />
+                                                </div>
+                                            </section>
                                         </div>
                                     )}
 
@@ -5898,7 +6022,7 @@ interface BackOfficeViewProps {
 
                                                 {shopSettings.portfolioHeroVideoUrl && (
                                                     <div className="pt-2 border-t border-stone-100 flex flex-col sm:flex-row items-center gap-4">
-                                                        <video src={shopSettings.portfolioHeroVideoUrl} controls muted referrerPolicy="no-referrer" className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
+                                                        <video src={shopSettings.portfolioHeroVideoUrl} controls muted preload="none" referrerPolicy="no-referrer" className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <MediaDownload media={{ url: shopSettings.portfolioHeroVideoUrl, type: 'video' }} name="aram-portfolio-hero-video" />
                                                             <button

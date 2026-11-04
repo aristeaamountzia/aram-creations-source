@@ -22,7 +22,7 @@ export function normalizeOrder(raw: any) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email) || customer.phone.replace(/\D/g, '').length < 8) throw new OrderError('Συμπλήρωσε έγκυρο email και τηλέφωνο.');
   return { requestId: raw.requestId as string, expectedTotalCents: Math.round(raw.expectedTotal * 100), items, customer, shippingMethod: raw.shippingMethod as keyof typeof shipping, paymentMethod: raw.paymentMethod as string };
 }
-export function priceOrder(input: ReturnType<typeof normalizeOrder>, catalog: Array<any | null>) {
+export function priceOrder(input: ReturnType<typeof normalizeOrder>, catalog: Array<any | null>, customShipping?: { boxnow?: { cents: number; free: number }; courier?: { cents: number; free: number } }) {
   let subtotalCents = 0;
   const items = input.items.map((requested, index) => {
     const product = catalog[index];
@@ -35,7 +35,11 @@ export function priceOrder(input: ReturnType<typeof normalizeOrder>, catalog: Ar
     subtotalCents += cents * requested.quantity;
     return { ...requested, name: String(product.name || product.title || 'Χειροποίητη δημιουργία'), price: cents / 100, imageUrl: String(product.imageUrl || product.src || '') };
   });
-  const option = shipping[input.shippingMethod];
+  const activeShipping = {
+    boxnow: customShipping?.boxnow || shipping.boxnow,
+    courier: customShipping?.courier || shipping.courier,
+  };
+  const option = activeShipping[input.shippingMethod];
   const shippingCents = option.free > 0 && subtotalCents >= option.free ? 0 : option.cents;
   return { items, subtotal: subtotalCents / 100, shippingCost: shippingCents / 100, total: (subtotalCents + shippingCents) / 100 };
 }

@@ -180,13 +180,26 @@ export function createOrdersHandler(connect: typeof database = database, notify:
 
       let stripeCheckoutUrl: string | undefined;
       const receipt = await db.runTransaction(async transaction => {
+        const shopSnap = await transaction.get(db.doc('settings/shop'));
+        const shopData = shopSnap.exists ? shopSnap.data() : null;
+        const customShipping = shopData?.shippingSettings ? {
+          boxnow: {
+            cents: Math.round((Number(shopData.shippingSettings.boxnowPrice) || 2.5) * 100),
+            free: Math.round((Number(shopData.shippingSettings.boxnowFreeThreshold) || 45) * 100)
+          },
+          courier: {
+            cents: Math.round((Number(shopData.shippingSettings.courierPrice) || 4.0) * 100),
+            free: Math.round((Number(shopData.shippingSettings.courierFreeThreshold) || 50) * 100)
+          }
+        } : undefined;
+
         const previous = await transaction.get(ref);
         if (previous.exists) {
           const data = previous.data()!;
           if (data.status === 'pending' && data.requestHash !== requestHash) {
             // Pending order being retried with modified details: update it
             const snapshots = await Promise.all(input.items.map(item => transaction.get(db.doc(`jewelry/${item.id}`))));
-            const priced = priceOrder(input, snapshots.map(doc => doc.exists ? { ...doc.data(), id: doc.id } : null));
+            const priced = priceOrder(input, snapshots.map(doc => doc.exists ? { ...doc.data(), id: doc.id } : null), customShipping);
             if (Math.round(priced.total * 100) !== input.expectedTotalCents) {
               throw new OrderError('Η τιμή ή τα μεταφορικά άλλαξαν. Έλεγξε το νέο σύνολο στο καλάθι και δοκίμασε ξανά.', 409);
             }
@@ -233,7 +246,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
         }
 
         const snapshots = await Promise.all(input.items.map(item => transaction.get(db.doc(`jewelry/${item.id}`))));
-        const priced = priceOrder(input, snapshots.map(doc => doc.exists ? { ...doc.data(), id: doc.id } : null));
+        const priced = priceOrder(input, snapshots.map(doc => doc.exists ? { ...doc.data(), id: doc.id } : null), customShipping);
         if (Math.round(priced.total * 100) !== input.expectedTotalCents) {
           throw new OrderError('Η τιμή ή τα μεταφορικά άλλαξαν. Έλεγξε το νέο σύνολο στο καλάθι και δοκίμασε ξανά.', 409);
         }

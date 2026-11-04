@@ -17,19 +17,30 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const source = portfolioHeroVideoUrl(videoUrl);
   const hasVideo = Boolean(source) && !failed;
-  useEffect(() => { setFailed(false); }, [source]);
+
+  useEffect(() => {
+    setFailed(false);
+    setRetryCount(0);
+  }, [source]);
+
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => setReducedMotion(preference.matches);
     preference.addEventListener('change', update);
     return () => preference.removeEventListener('change', update);
   }, []);
+
   useEffect(() => {
     if (reducedMotion) videoRef.current?.pause();
   }, [reducedMotion]);
+
+  const resolvedSrc = retryCount > 0
+    ? (source.includes('?') ? `${source}&_cb=${retryCount}` : `${source}?_cb=${retryCount}`)
+    : source;
 
   return (
     <section className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video bg-stone-950 text-white' : 'bg-stone-950 text-white'} min-h-[58vh] sm:min-h-[68vh] flex flex-col justify-center items-center relative overflow-hidden border-b border-stone-800 px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8`}>
@@ -43,18 +54,24 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
             )
           ) : (
             <video
-              key={source}
+              key={`${source}-${retryCount}`}
               ref={videoRef}
-              src={source}
+              src={resolvedSrc}
               autoPlay={!reducedMotion}
               muted
               loop
               playsInline
-              preload="none"
+              preload="metadata"
               referrerPolicy="no-referrer"
               aria-hidden="true"
               className="absolute inset-0 h-full w-full object-cover"
-              onError={() => setFailed(true)}
+              onError={() => {
+                if (retryCount < 2) {
+                  setRetryCount(c => c + 1);
+                } else {
+                  setFailed(true);
+                }
+              }}
             />
           )}
           <div className="absolute inset-0 bg-black/55 backdrop-blur-[1px]" aria-hidden="true" />

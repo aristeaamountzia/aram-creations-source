@@ -7,3 +7,5 @@ server-dist/
 !.env.example
 *.log
 work-api-check.cjs
+.auth/
+audit-results/

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CartItem, OrderCustomerInfo } from '../types';
+import { ShippingSettings } from '../shopSettings';
 import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 import {
   X,
@@ -14,8 +15,6 @@ import {
   Loader2,
   Copy,
   Check,
-  Smartphone,
-  Landmark,
   Package
 } from 'lucide-react';
 
@@ -26,12 +25,8 @@ interface CartDrawerProps {
   onRemoveItem: (itemId: string) => void;
   onCompleted: () => void;
   onOpenLegal?: (type: 'terms' | 'privacy' | 'returns') => void;
+  shippingSettings?: ShippingSettings;
 }
-
-const SHIPPING_OPTIONS = [
-  { id: 'boxnow', label: 'BoxNow Locker 24/7', price: 2.5, freeThreshold: 45 },
-  { id: 'courier', label: 'Courier (ACS / Speedex)', price: 4.0, freeThreshold: 50 }
-];
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
   isOpen,
@@ -40,8 +35,24 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onRemoveItem,
   onCompleted,
   onOpenLegal,
+  shippingSettings,
 }) => {
-  const [selectedShipping, setSelectedShipping] = useState(SHIPPING_OPTIONS[0].id);
+  const shippingOptions = useMemo(() => [
+    {
+      id: 'boxnow',
+      label: 'BoxNow Locker 24/7',
+      price: Number(shippingSettings?.boxnowPrice ?? 2.5),
+      freeThreshold: Number(shippingSettings?.boxnowFreeThreshold ?? 45)
+    },
+    {
+      id: 'courier',
+      label: 'Courier (ACS / Speedex)',
+      price: Number(shippingSettings?.courierPrice ?? 4.0),
+      freeThreshold: Number(shippingSettings?.courierFreeThreshold ?? 50)
+    }
+  ], [shippingSettings]);
+
+  const [selectedShipping, setSelectedShipping] = useState('boxnow');
   const [isCheckoutStep, setIsCheckoutStep] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittingStep, setSubmittingStep] = useState('');
@@ -61,12 +72,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     postalCode: '',
     notes: ''
   });
-  const [paymentMethod, setPaymentMethod] = useState('stripe');
+  const paymentMethod = 'stripe';
 
   if (!isOpen) return null;
 
   const subtotal = items.reduce((sum, item) => sum + (Number(item.item.price) || 0) * item.quantity, 0);
-  const activeShippingObj = SHIPPING_OPTIONS.find((s) => s.id === selectedShipping) || SHIPPING_OPTIONS[0];
+  const activeShippingObj = shippingOptions.find((s) => s.id === selectedShipping) || shippingOptions[0];
   const shippingCost = (activeShippingObj.freeThreshold > 0 && subtotal >= activeShippingObj.freeThreshold) ? 0 : activeShippingObj.price;
   const total = subtotal + shippingCost;
 
@@ -249,70 +260,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 )}
               </div>
 
-              {/* Payment Instructions depending on method */}
-              {paymentMethod === 'iris' ? (
-                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-xs text-stone-900">
-                    <Smartphone className="w-4 h-4 text-stone-800" />
-                    <span>Οδηγίες Πληρωμής μέσω IRIS Payments</span>
-                  </div>
-                  <div className="space-y-2 text-xs text-stone-700">
-                    <div className="p-3 bg-white rounded-xl border border-stone-200 space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-stone-500">Αριθμός Κινητού IRIS:</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-stone-900">6946292685</span>
-                          <button
-                            type="button"
-                            onClick={() => handleCopy('6946292685', 'phone')}
-                            className="p-1 rounded-md hover:bg-stone-100 text-stone-600 transition"
-                            title="Αντιγραφή αριθμού"
-                          >
-                            {copiedField === 'phone' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-stone-100">
-                        <span className="text-stone-500">Δικαιούχος:</span>
-                        <span className="font-bold text-stone-900">Αριστέα Μούντζια</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-stone-100">
-                        <span className="text-stone-500">Αιτιολογία Μεταφοράς:</span>
-                        <span className="font-mono font-bold text-stone-900">#{completedOrderNumber}</span>
-                      </div>
-                    </div>
-                    <ol className="list-decimal list-inside space-y-1 text-[11px] text-stone-500 leading-relaxed pt-1">
-                      <li>Ανοίξτε το mobile banking της τράπεζάς σας.</li>
-                      <li>Επιλέξτε μεταφορά μέσω IRIS Payments προς τον αριθμό <b>6946292685</b>.</li>
-                      <li>Συμπληρώστε ως αιτιολογία τον κωδικό <b>#{completedOrderNumber}</b>.</li>
-                    </ol>
-                  </div>
+              {/* Payment confirmation */}
+              <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-xs text-stone-900">
+                  <CreditCard className="w-4 h-4 text-emerald-600" />
+                  <span>Πληρωμή μέσω Stripe</span>
                 </div>
-              ) : paymentMethod === 'bank' ? (
-                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-xs text-stone-900">
-                    <Landmark className="w-4 h-4 text-stone-800" />
-                    <span>Οδηγίες Τραπεζικής Κατάθεσης</span>
-                  </div>
-                  <div className="p-3 bg-white rounded-xl border border-stone-200 space-y-2 text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-stone-500">Δικαιούχος:</span>
-                      <span className="font-bold text-stone-900">Αριστέα Μούντζια (Aram Creations)</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-stone-100">
-                      <span className="text-stone-500">Τηλέφωνο Επικοινωνίας:</span>
-                      <span className="font-mono font-bold text-stone-900">6946292685</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-stone-100">
-                      <span className="text-stone-500">Αιτιολογία Κατάθεσης:</span>
-                      <span className="font-mono font-bold text-stone-900">#{completedOrderNumber}</span>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-stone-500 leading-relaxed">
-                    Θα επικοινωνήσουμε άμεσα μαζί σας μέσω τηλεφώνου ή email για την παροχή του IBAN της τράπεζας της επιλογής σας (Εθνική, Eurobank, Alpha, Πειραιώς).
-                  </p>
-                </div>
-              ) : null}
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Η πληρωμή σας διεκπεραιώνεται με ασφάλεια μέσω της πλατφόρμας Stripe. Σας έχει αποσταλεί ηλεκτρονική επιβεβαίωση.
+                </p>
+              </div>
 
               {/* Workshop and packaging card */}
               <div className="bg-stone-50 rounded-xl p-3.5 border border-stone-200 space-y-2 text-xs text-stone-600">
@@ -434,64 +391,19 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <CreditCard className="w-3.5 h-3.5 text-stone-800" />
                   <span>Τρόπος Πληρωμής</span>
                 </label>
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('stripe')}
-                    className={`w-full p-3 rounded-xl border text-left transition flex items-center justify-between ${
-                      paymentMethod === 'stripe'
-                        ? 'border-stone-900 bg-stone-900 text-white shadow-sm'
-                        : 'border-stone-200 bg-white text-stone-700 hover:border-stone-400'
-                    }`}
-                  >
-                    <div>
-                      <div className="text-xs font-bold flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 shrink-0" />
-                        <span>Κάρτα / Apple Pay / Google Pay / Revolut</span>
-                      </div>
-                      <div className={`text-[10px] mt-0.5 ${paymentMethod === 'stripe' ? 'text-stone-300' : 'text-stone-500'}`}>
-                        Άμεση & ασφαλής πληρωμή μέσω Stripe (Visa, Mastercard κ.α.)
-                      </div>
+                <div className="w-full p-3.5 rounded-xl border border-stone-900 bg-stone-900 text-white shadow-xs flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 shrink-0 text-emerald-400" />
+                      <span>Κάρτα / Apple Pay / Google Pay / Revolut</span>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                      paymentMethod === 'stripe' ? 'bg-stone-800 text-stone-200 border border-stone-700' : 'bg-stone-100 text-stone-600'
-                    }`}>
-                      Stripe
-                    </span>
-                  </button>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('iris')}
-                      className={`p-2.5 rounded-xl border text-left transition flex items-center gap-2 ${
-                        paymentMethod === 'iris'
-                          ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
-                          : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-                      }`}
-                    >
-                      <Smartphone className="w-3.5 h-3.5 shrink-0 text-stone-700" />
-                      <div>
-                        <div className="text-xs">IRIS Payments</div>
-                        <div className="text-[9px] text-stone-500 font-normal">Χωρίς προμήθεια</div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('bank')}
-                      className={`p-2.5 rounded-xl border text-left transition flex items-center gap-2 ${
-                        paymentMethod === 'bank'
-                          ? 'border-stone-900 bg-stone-100 text-stone-900 font-bold'
-                          : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-                      }`}
-                    >
-                      <Landmark className="w-3.5 h-3.5 shrink-0 text-stone-700" />
-                      <div>
-                        <div className="text-xs">Κατάθεση</div>
-                        <div className="text-[9px] text-stone-500 font-normal">Τραπεζικός λογαριασμός</div>
-                      </div>
-                    </button>
+                    <div className="text-[10px] mt-0.5 text-stone-300">
+                      Άμεση & ασφαλής πληρωμή μέσω Stripe (Visa, Mastercard, Revolut κ.α.)
+                    </div>
                   </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-stone-800 text-stone-200 border border-stone-700">
+                    Stripe
+                  </span>
                 </div>
               </div>
 
@@ -571,7 +483,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <span>Επιλογή Τρόπου Αποστολής</span>
                 </label>
                 <div className="space-y-2">
-                  {SHIPPING_OPTIONS.map((opt) => {
+                  {shippingOptions.map((opt) => {
                     const isFree = opt.freeThreshold > 0 && subtotal >= opt.freeThreshold;
                     const priceLabel = isFree ? 'ΔΩΡΕΑΝ' : opt.price === 0 ? 'ΔΩΡΕΑΝ' : `+€${opt.price.toFixed(2)}`;
                     return (
@@ -596,6 +508,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     );
                   })}
                 </div>
+                {shippingSettings?.customNotes ? (
+                  <p className="text-[11px] text-amber-800 bg-amber-50/70 p-2.5 rounded-lg border border-amber-200/80 mt-2 leading-relaxed">
+                    {shippingSettings.customNotes}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-stone-500 mt-2 leading-relaxed">
+                    *Τα αναγραφόμενα κόστη αφορούν βασικές διαστάσεις δεμάτων/θυρίδων. Για ογκώδη αντικείμενα ή μεγαλύτερες θυρίδες ενδέχεται να υπάρξει ειδική συνεννόηση.
+                  </p>
+                )}
               </div>
             </div>
           )}
