@@ -748,6 +748,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                         loop
                         autoPlay
                         playsInline
+                        preload="metadata"
+                        referrerPolicy="no-referrer"
                       />
                     ) : (
                       <img

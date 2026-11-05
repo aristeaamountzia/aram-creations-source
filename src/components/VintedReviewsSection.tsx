@@ -143,8 +143,8 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
           }
         }
       },
-      (error) => {
-        console.warn('Firestore vinted_reviews subscription fallback:', error.message);
+      () => {
+        // Fallback dataset and /api/vinted-reviews endpoint remain active when Firestore rules restrict direct client subscription
       }
     );
 

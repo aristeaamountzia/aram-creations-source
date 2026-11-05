@@ -2,6 +2,10 @@ import { extractListingState, classifyVintedCategory } from './server/vinted-lis
 import { getVintedReviews, fetchLiveVintedReviews, persistVintedReviewsToFirestore } from './server/vinted-reviews';
 import { createStripeCheckoutSession, retrieveStripeCheckoutSession } from './server/stripe-service';
 import { sendContactEmail } from './server/contact-service';
+import catalogBackupsHandler from "./netlify/functions/catalog-backups";
+import mediaHandler from "./netlify/functions/media";
+import wixProjectHandler from "./netlify/functions/wix-project";
+import orderEmailTestHandler from "./netlify/functions/order-email-test";
 import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
@@ -862,6 +866,50 @@ app.post("/api/contact", async (req: Request, res: Response) => {
     });
   }
 });
+
+// 6b. Bridge additional Netlify Function handlers into Express for local dev & Cloud Run parity
+function wrapWebHandler(webHandler: (request: globalThis.Request) => Promise<globalThis.Response>) {
+  return async (req: Request, res: Response) => {
+    try {
+      const protocol = req.protocol || "http";
+      const host = req.get("host") || "localhost:3000";
+      const url = `${protocol}://${host}${req.originalUrl}`;
+      const headers = new Headers();
+      for (const [key, value] of Object.entries(req.headers)) {
+        if (typeof value === "string") headers.set(key, value);
+        else if (Array.isArray(value)) headers.set(key, value.join(", "));
+      }
+      const hasBody = !["GET", "HEAD"].includes(req.method.toUpperCase());
+      const bodyText =
+        hasBody && req.body !== undefined
+          ? typeof req.body === "string"
+            ? req.body
+            : JSON.stringify(req.body)
+          : undefined;
+      const webReq = new globalThis.Request(url, {
+        method: req.method,
+        headers,
+        body: bodyText,
+      });
+      const webRes = await webHandler(webReq);
+      res.status(webRes.status);
+      webRes.headers.forEach((val, key) => res.setHeader(key, val));
+      const buf = Buffer.from(await webRes.arrayBuffer());
+      return res.send(buf);
+    } catch (err: any) {
+      return res.status(500).json({ error: err?.message || "Internal Server Error" });
+    }
+  };
+}
+
+app.all("/api/catalog-backups", wrapWebHandler(catalogBackupsHandler));
+app.all("/.netlify/functions/catalog-backups", wrapWebHandler(catalogBackupsHandler));
+app.all("/api/media", wrapWebHandler(mediaHandler));
+app.all("/.netlify/functions/media", wrapWebHandler(mediaHandler));
+app.all("/api/wix-project", wrapWebHandler(wixProjectHandler));
+app.all("/.netlify/functions/wix-project", wrapWebHandler(wixProjectHandler));
+app.all("/api/order-email-test", wrapWebHandler(orderEmailTestHandler));
+app.all("/.netlify/functions/order-email-test", wrapWebHandler(orderEmailTestHandler));
 
 // 7. Serve static public files
 app.use(express.static(path.join(process.cwd(), "public")));

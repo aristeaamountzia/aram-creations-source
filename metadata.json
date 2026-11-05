@@ -1,0 +1,8 @@
+{
+  "name": "Aram Creations | Χειροποίητες Δημιουργίες & Κοσμήματα",
+  "description": "Χειροποίητες δημιουργίες και κοσμήματα - Επίσημος κατάλογος, portfolio έργων και σύστημα διαχείρισης back-office",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

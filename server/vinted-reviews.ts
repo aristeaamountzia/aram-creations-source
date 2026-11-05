@@ -299,6 +299,7 @@ export async function persistVintedReviewsToFirestore(
   stats: VintedReviewsStats,
   reviews: VintedReview[]
 ): Promise<void> {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT?.trim()) return;
   try {
     const { db } = adminDatabase();
     await db.collection('settings').doc('vinted_reviews').set({
@@ -329,6 +330,7 @@ export async function loadVintedReviewsFromFirestore(): Promise<{
   reviews: VintedReview[];
   updatedAt?: string;
 } | null> {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT?.trim()) return null;
   try {
     const { db } = adminDatabase();
     const docSnap = await db.collection('settings').doc('vinted_reviews').get();
@@ -397,26 +399,7 @@ export async function getVintedReviews(options: {
     return payload;
   }
 
-  // 4. Try live fetch if we didn't try it already
-  if (!options.forceRefresh) {
-    try {
-      const live = await fetchLiveVintedReviews(memberId);
-      await persistVintedReviewsToFirestore(live.stats, live.reviews);
-      const payload: VintedReviewsPayload = {
-        ok: true,
-        stats: live.stats,
-        reviews: live.reviews,
-        source: 'live',
-        cachedAt: new Date().toISOString()
-      };
-      memoryCache = { payload, timestamp: now };
-      return payload;
-    } catch (err: any) {
-      console.warn('Background live Vinted fetch failed, using bundled reviews:', err.message);
-    }
-  }
-
-  // 5. Rock-solid fallback to bundled authentic reviews
+  // 4. Rock-solid immediate fallback to bundled authentic reviews
   const payload: VintedReviewsPayload = {
     ok: true,
     stats: BUNDLED_VINTED_STATS,
