@@ -582,6 +582,7 @@ export function VintedRefresh({
                                     <span key={media.url} className="relative shrink-0">
                                       <img
                                         src={media.url}
+                                        referrerPolicy="no-referrer"
                                         alt={`Νέα φωτογραφία ${index + 1}`}
                                         className="h-20 w-20 rounded-lg border-2 border-emerald-500 object-cover shadow-sm"
                                       />

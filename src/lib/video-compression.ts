@@ -15,7 +15,19 @@ export async function prepareVideoUpload(
   return new Promise((resolve, reject) => {
     let finished = false;
     const cleanup = () => { worker.terminate(); clearTimeout(timer); signal?.removeEventListener('abort', cancel); };
-    const fail = (error: Error) => { if (finished) return; finished = true; cleanup(); reject(error); };
+    const fail = (error: Error) => {
+      if (finished) return;
+      if (file.size <= VIDEO_UPLOAD_LIMIT && (/^video\//.test(file.type) || /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name))) {
+        finished = true;
+        cleanup();
+        onProgress({ text: `Το αρχικό βίντεο είναι ήδη κάτω από 30 MB (${videoSize(file.size)}) και διατηρήθηκε.`, percent: 100 });
+        resolve(file);
+        return;
+      }
+      finished = true;
+      cleanup();
+      reject(error);
+    };
     const cancel = () => fail(new DOMException('Η συμπίεση ακυρώθηκε. Το βίντεο δεν ανέβηκε.', 'AbortError'));
     const timer = setTimeout(() => fail(new Error('Η συμπίεση καθυστέρησε πολύ. Δοκίμασε μικρότερο βίντεο.')), 15 * 60 * 1000);
     signal?.addEventListener('abort', cancel, { once: true });
@@ -24,14 +36,6 @@ export async function prepareVideoUpload(
       if (finished) return;
       if (data.type === 'progress') { onProgress({ text: `${data.attempt ? 'Δεύτερη συμπίεση' : 'Συμπίεση'} ${file.name}: ${data.progress}%`, percent: data.progress }); return; }
       if (data.type === 'error') {
-        // Safe fallback: if original file is already <= 30 MB and is a standard video, keep original file
-        if (file.size <= VIDEO_UPLOAD_LIMIT && (/^video\//.test(file.type) || /\.(mp4|webm|mov|m4v|mkv|avi)$/i.test(file.name))) {
-          finished = true;
-          cleanup();
-          onProgress({ text: `Το αρχικό βίντεο είναι ήδη κάτω από 30 MB (${videoSize(file.size)}) και διατηρήθηκε.`, percent: 100 });
-          resolve(file);
-          return;
-        }
         fail(new Error(data.message));
         return;
       }

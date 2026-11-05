@@ -576,7 +576,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         });
         const uploaded: Media = {
           url: await getDownloadURL(fileRef),
-          type: file.type.startsWith('video/') ? 'video' : 'image',
+          type: isVideo ? 'video' : 'image',
           title: file.name
         };
         setForm(current => current && { ...current, mediaList: [...current.mediaList, uploaded] });
@@ -1787,7 +1787,11 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                       accept="image/*,video/*"
                       multiple
                       disabled={uploading}
-                      onChange={e => upload(e.target.files)}
+                      onChange={e => {
+                        const files = e.target.files;
+                        e.target.value = '';
+                        upload(files);
+                      }}
                       className="w-full rounded-xl border border-stone-200 p-3 text-xs bg-stone-50 focus:bg-white"
                     />
                     <p className="text-[11px] text-stone-400 mt-1">{VIDEO_UPLOAD_HELP}</p>
