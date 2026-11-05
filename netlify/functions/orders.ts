@@ -21,7 +21,6 @@ function isAllowedOrigin(origin: string | null): boolean {
 
   if (configured.some(allowed => origin === allowed || origin === allowed.replace(/\/$/, ''))) return true;
   if (/^https:\/\/(?:[a-z0-9-]+--)?(?:aramcreationsofficial1|aramcreationss|aram-creations)\.netlify\.app$/i.test(origin)) return true;
-  if (/^https:\/\/(?:[a-z0-9-]+--)?lovely-bienenstitch-b6079c\.netlify\.app$/i.test(origin)) return true;
   return false;
 }
 
@@ -121,6 +120,9 @@ export function createOrdersHandler(connect: typeof database = database, notify:
             updatedAt: new Date().toISOString(),
             history: [...(order.history || []), { status, at: new Date().toISOString(), by: user.uid }]
           });
+          if (status === 'cancelled') {
+            transaction.delete(db.doc(`orderNotifications/${id}`));
+          }
         });
         return reply({ ok: true }, 200, origin);
       }
@@ -146,27 +148,33 @@ export function createOrdersHandler(connect: typeof database = database, notify:
           const oSnap = await tx.get(oRef);
           if (!oSnap.exists) return;
           const order = oSnap.data()!;
-          if (order.status !== 'pending') return;
+          if (order.status !== 'pending' && order.status !== 'cancelled') return;
 
           if (Array.isArray(order.items)) {
             for (const it of order.items) {
               const pRef = db.doc(`jewelry/${it.id}`);
               const pSnap = await tx.get(pRef);
               if (pSnap.exists) {
+                const pData = pSnap.data()!;
+                const isOnlyReservation = Object.keys(pData.checkoutReservations || {}).every(k => k === targetId || !pData.checkoutReservations?.[k]);
                 tx.update(pRef, {
-                  stock: 1,
-                  status: 'Διαθέσιμο',
+                  ...(order.status === 'pending' || (pData.status === 'Κρατημένο' && isOnlyReservation)
+                    ? { stock: 1, status: 'Διαθέσιμο' }
+                    : {}),
                   [`checkoutReservations.${targetId}`]: FieldValue.delete()
                 });
               }
             }
           }
-          const nowIso = new Date().toISOString();
-          tx.update(oRef, {
-            status: 'cancelled',
-            updatedAt: nowIso,
-            history: [...(order.history || []), { status: 'cancelled', at: nowIso, reason: 'customer_checkout_cancelled' }]
-          });
+          if (order.status === 'pending') {
+            const nowIso = new Date().toISOString();
+            tx.update(oRef, {
+              status: 'cancelled',
+              updatedAt: nowIso,
+              history: [...(order.history || []), { status: 'cancelled', at: nowIso, reason: 'customer_checkout_cancelled' }]
+            });
+          }
+          tx.delete(db.doc(`orderNotifications/${targetId}`));
         });
         return reply({ ok: true, cancelled: true }, 200, origin);
       }
@@ -256,7 +264,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
           const product = snapshots[index];
           transaction.update(product.ref, {
             stock: 0,
-            [`checkoutReservations.${ref.id}`]: input.items[index].quantity,
+            checkoutReservations: { [ref.id]: input.items[index].quantity },
             status: 'Κρατημένο'
           });
         }
@@ -283,7 +291,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
 
         transaction.create(ref, orderData);
         transaction.create(db.doc(`orderNotifications/${ref.id}`), {
-          state: 'pending',
+          state: input.paymentMethod === 'stripe' ? 'awaiting_payment' : 'pending',
           payload: {
             ...orderData,
             id: ref.id

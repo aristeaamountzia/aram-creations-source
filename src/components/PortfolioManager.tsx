@@ -8,6 +8,7 @@ import { portfolioMedia, isVideoUrl } from '../lib/video-links';
 import { VideoPlayer } from './VideoPlayer';
 import { MediaDownload } from './MediaDownload';
 import { CatalogExcelExport } from './CatalogExcelExport';
+import { FirebaseMediaCleanup } from './FirebaseMediaCleanup';
 import { CatalogControls } from './CatalogControls';
 import { VideoUploadStatus } from './VideoUploadStatus';
 import { prepareVideoUpload, VideoProgress } from '../lib/video-compression';
@@ -25,7 +26,7 @@ import {
   setDoc,
   writeBatch
 } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes, uploadBytesResumable } from 'firebase/storage';
 import { auth, db, storage } from '../firebase';
 import { ART_ITEMS } from '../data';
 import { persistHistory } from '../lib/catalog-history';
@@ -38,7 +39,7 @@ type PortfolioRecord = ArtItem & {
   imageUrl?: string;
   deletedAt?: unknown;
 };
-type Media = { url: string; type: 'image' | 'video'; title?: string };
+type Media = { url: string; type: 'image' | 'video'; title?: string; originalUrl?: string };
 type EditorTab = 'basics' | 'details' | 'media' | 'ai';
 type StatsFilter = 'active' | 'archived' | 'featured' | 'all';
 type SortOption = 'portfolio_order' | 'year_desc' | 'year_asc' | 'title_asc' | 'title_desc';
@@ -570,15 +571,36 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           storage,
           `jewelry/portfolio/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`
         );
-        await uploadBytes(fileRef, prepared, {
+        const uploadTask = uploadBytesResumable(fileRef, prepared, {
           contentType: prepared.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
           cacheControl: 'public, max-age=31536000, immutable'
         });
+        await new Promise<void>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            snapshot => {
+              const pct =
+                snapshot.totalBytes > 0
+                  ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+                  : 0;
+              setVideoProgress({
+                text: `Ανέβασμα ${prepared.name} στο Firebase Storage: ${pct}%`,
+                percent: pct
+              });
+            },
+            reject,
+            () => resolve()
+          );
+        });
         const uploaded: Media = {
-          url: await getDownloadURL(fileRef),
+          url: await getDownloadURL(uploadTask.snapshot.ref),
           type: isVideo ? 'video' : 'image',
           title: file.name
         };
+        setVideoProgress({
+          text: `Ολοκληρώθηκε το ανέβασμα: ${file.name} (100%)`,
+          percent: 100
+        });
         setForm(current => current && { ...current, mediaList: [...current.mediaList, uploaded] });
       }
     } catch (err: any) {
@@ -914,6 +936,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
 
           {/* Utility Action Row */}
           <div className="backoffice-utility-actions flex flex-wrap items-center justify-start lg:justify-end gap-2 pt-3 border-t border-stone-100">
+            <FirebaseMediaCleanup />
             <CatalogExcelExport />
             <WixProjectExport />
             <button
@@ -1239,6 +1262,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                         src={first.url || item.imageUrl || item.image}
                         alt={item.title}
                         referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
                         className={`w-full h-full object-cover ${isArchived ? 'grayscale' : ''}`}
                       />
                     )
@@ -1448,6 +1473,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                         src={first.url || item.imageUrl || item.image}
                         alt=""
                         referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                     )
@@ -1554,7 +1581,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                   );
                   return (
                     <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-300 overflow-hidden shrink-0 relative shadow-sm">
-                      <img src={preview} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                      <img src={preview} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                     </div>
                   );
                 })()}
@@ -1824,7 +1851,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                           {media.type === 'video' ? (
                             <VideoPlayer url={media.url} title={media.title || form.title} />
                           ) : (
-                            <img src={media.url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                            <img src={media.url} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                           )}
                           {index === 0 && (
                             <span className="absolute top-1 left-1 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
@@ -2050,14 +2077,35 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           imageUrl={imageEditorTarget.url}
           title={imageEditorTarget.title}
           onClose={() => setImageEditorTarget(null)}
-          onSave={dataUrl => {
+          onSave={async dataUrl => {
             if (form && imageEditorTarget.mediaIndex !== undefined) {
+              const targetIdx = imageEditorTarget.mediaIndex!;
+              const prevEntry = form.mediaList[targetIdx];
+              let finalUrl = dataUrl;
+              try {
+                const res = await fetch(dataUrl);
+                const blob = await res.blob();
+                const storagePath = `jewelry/portfolio/${Date.now()}-edited.jpg`;
+                const storageReference = ref(storage, storagePath);
+                await uploadBytes(storageReference, blob, {
+                  contentType: blob.type || 'image/jpeg',
+                  cacheControl: 'public, max-age=31536000, immutable'
+                });
+                finalUrl = await getDownloadURL(storageReference);
+              } catch {
+                // Fallback to dataUrl only if offline/unauthenticated
+              }
+
               setForm(current => {
                 if (!current) return current;
                 const nextMedia = [...current.mediaList];
-                nextMedia[imageEditorTarget.mediaIndex!] = {
-                  ...nextMedia[imageEditorTarget.mediaIndex!],
-                  url: dataUrl
+                const preservedOriginalUrl =
+                  prevEntry?.originalUrl ||
+                  (prevEntry?.url && !prevEntry.url.startsWith('data:') ? prevEntry.url : undefined);
+                nextMedia[targetIdx] = {
+                  ...nextMedia[targetIdx],
+                  url: finalUrl,
+                  ...(preservedOriginalUrl ? { originalUrl: preservedOriginalUrl } : {})
                 };
                 return { ...current, mediaList: nextMedia };
               });

@@ -5,6 +5,7 @@
 
 [build.environment]
   URL = "https://aramcreationsofficial1.netlify.app"
+  PUBLIC_SITE_URL = "https://aramcreationsofficial1.netlify.app"
   ADMIN_EMAIL = "aristeaamnta@gmail.com"
   AI_PROVIDER = "gemini"
   GEMINI_MODEL = "gemini-3.5-flash"

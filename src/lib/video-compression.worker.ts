@@ -28,6 +28,16 @@ scope.onmessage = async ({ data }) => {
     const originalWidth = await video.getDisplayWidth();
     const originalHeight = await video.getDisplayHeight();
 
+    const canDecodeVideo = await video.canDecode().catch(() => false);
+    if (!canDecodeVideo || video.codec === 'hevc') {
+      scope.postMessage({
+        type: 'needs-server-transcode',
+        codec: video.codec || 'hevc',
+        message: `Το βίντεο είναι κωδικοποιημένο σε ${(video.codec || 'HEVC').toUpperCase()} (H.265). Γίνεται αυτόματη μετατροπή σε καθολικά συμβατό MP4 (H.264)…`
+      });
+      return;
+    }
+
     const canDecodeAudio = !stripAudioRequested && audio ? await audio.canDecode().catch(() => false) : false;
     let keepAudio = Boolean(audio && canDecodeAudio && !stripAudioRequested);
 

@@ -492,7 +492,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                     {/* Main Media Stage */}
                     <div className="aspect-[4/3] sm:aspect-square w-full bg-black rounded-xl overflow-hidden relative flex items-center justify-center border border-stone-800/80 shadow-inner group">
                       {isVideo ? (<VideoPlayer url={normalizedUrl} title={selectedItem.title} autoPlay />) : (<>
-                          <img src={normalizedUrl} alt={selectedItem.title} referrerPolicy="no-referrer" className="w-full h-full object-contain cursor-zoom-in" onClick={() => setIsZoomOpen(true)}/>
+                          <img src={normalizedUrl} alt={selectedItem.title} referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-contain cursor-zoom-in" onClick={() => setIsZoomOpen(true)}/>
                           <button onClick={() => setIsZoomOpen(true)} className="absolute bottom-3 right-3 p-2 rounded-lg bg-stone-900/80 hover:bg-stone-800 text-stone-200 border border-stone-700/80 text-xs flex items-center gap-1.5 transition opacity-90 group-hover:opacity-100" title="Μεγέθυνση σε πλήρη οθόνη">
                             <Maximize2 className="w-3.5 h-3.5"/>
                             <span>Zoom</span>
@@ -522,7 +522,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                                 {isThumbVideo ? (<div className="w-full h-full bg-stone-900 flex flex-col items-center justify-center text-red-400">
                                     <Play className="w-4 h-4 fill-current"/>
                                     <span className="text-[8px] font-sans mt-0.5">VIDEO</span>
-                                  </div>) : (<img src={media.url} alt={media.title || `Thumb ${idx + 1}`} referrerPolicy="no-referrer" className="w-full h-full object-cover"/>)}
+                                  </div>) : (<img src={media.url} alt={media.title || `Thumb ${idx + 1}`} referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-cover"/>)}
                               </button>);
                         })}
                         </div>

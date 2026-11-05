@@ -27,7 +27,7 @@ let sentCount = 0;
 const handler = createOrdersHandler(() => ({ db: scopedDb as any, auth: fixtureAuth }), (db, id) => notifyOrder(db, id, async () => { sentCount++; return 'fixture-email'; }));
 const first = randomUUID(), second = randomUUID();
 const payload = (id: string) => ({ requestId: id, expectedTotal: 22.5, shippingMethod: 'boxnow', paymentMethod: 'iris', items: [{ id: 'fixture', quantity: 1 }], customer: { name: 'Checkout verification', email: 'test@example.invalid', phone: '6900000000', address: 'Test 1', city: 'Test', postalCode: '', notes: 'Automated isolated verification' } });
-const send = (method: string, body?: any, admin = false) => handler(new Request('https://lovely-bienenstitch-b6079c.netlify.app/api/orders', { method, headers: { 'content-type': 'application/json', ...(admin ? { authorization: 'Bearer fixture-admin' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }), { ip: prefix });
+const send = (method: string, body?: any, admin = false) => handler(new Request('https://aramcreationsofficial1.netlify.app/api/orders', { method, headers: { 'content-type': 'application/json', ...(admin ? { authorization: 'Bearer fixture-admin' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }), { ip: prefix });
 try {
   await scopedDb.doc('jewelry/fixture').set({ name: 'Isolated fixture', price: 20, stock: 9, status: 'Διαθέσιμο' });
   assert.equal((await send('GET')).status, 401);

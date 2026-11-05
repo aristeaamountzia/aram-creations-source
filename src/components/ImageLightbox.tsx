@@ -74,7 +74,7 @@ export function ImageLightbox({ images, index, title, onIndexChange, onClose }: 
         const dy = event.changedTouches[0].clientY - start.y;
         if (Math.abs(dx) >= 50 && Math.abs(dy) < Math.abs(dx) * .65) move(dx < 0 ? 1 : -1);
       }}>
-      {isVideo ? <div className="lightbox-video"><VideoPlayer url={media.url} title={media.title || title} autoPlay /></div> : <img key={media.url} src={media.url} alt={media.title || title} referrerPolicy="no-referrer" draggable={false} />}
+      {isVideo ? <div className="lightbox-video"><VideoPlayer url={media.url} title={media.title || title} autoPlay /></div> : <img key={media.url} src={media.url} alt={media.title || title} referrerPolicy="no-referrer" loading="lazy" decoding="async" draggable={false} />}
     </div>
     <div className="image-lightbox-caption">
       <p>{title}</p>

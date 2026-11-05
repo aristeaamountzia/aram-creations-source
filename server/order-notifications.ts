@@ -1,11 +1,20 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 export const OWNER_EMAIL = 'aristeaamnta@gmail.com';
+export const CANONICAL_SITE_URL = 'https://aramcreationsofficial1.netlify.app';
+
+export function resolveAdminUrl(candidate?: string): string {
+  const raw = (candidate || process.env.PUBLIC_SITE_URL || process.env.URL || CANONICAL_SITE_URL).trim().replace(/\/$/, '');
+  if (!raw || /lovely-bienenstitch-b6079c/i.test(raw)) {
+    return `${CANONICAL_SITE_URL}/#admin`;
+  }
+  return `${raw}/#admin`;
+}
 
 export async function sendOrderEmail(id: string, payload: any, send = fetch) {
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new Error('MAIL_NOT_CONFIGURED');
-  const adminUrl = (process.env.URL || 'https://aramcreationsofficial1.netlify.app').replace(/\/$/, '') + '/#admin';
+  const adminUrl = resolveAdminUrl(payload?.siteOrigin);
   const customer = payload.customer || {};
   const items = Array.isArray(payload.items) ? payload.items : [];
   const itemsText = items.map((it: any) => `• ${it.name || 'Χειροποίητο κόσμημα'} (x${it.quantity || 1}) — €${Number(it.price || 0).toFixed(2)}${it.customInscription ? ` [Χάραξη: ${it.customInscription}]` : ''}`).join('\n');
@@ -67,7 +76,7 @@ export async function notifyOrder(db: Firestore, id: string, send = sendOrderEma
     const snapshot = await tx.get(ref);
     const data = snapshot.data();
     const now = Date.now();
-    if (!data || data.state !== 'pending' || (data.leaseUntil && data.leaseUntil > now)) return null;
+    if (!data || (data.state !== 'pending' && data.state !== 'awaiting_payment') || (data.leaseUntil && data.leaseUntil > now)) return null;
     if (data.firstAttemptAt && now - data.firstAttemptAt > 23 * 3600000) {
       tx.update(ref, { state: 'review_required', error: 'Η ειδοποίηση χρειάζεται χειροκίνητο έλεγχο στη Resend.' });
       return null;
@@ -75,10 +84,14 @@ export async function notifyOrder(db: Firestore, id: string, send = sendOrderEma
 
     // If payload doesn't have customer details, pull from order document
     let orderPayload = data.payload || {};
-    if (!orderPayload.customer) {
-      const orderSnap = await tx.get(db.doc(`orders/${id}`));
-      if (orderSnap.exists) {
-        const orderData = orderSnap.data()!;
+    const orderSnap = await tx.get(db.doc(`orders/${id}`));
+    if (orderSnap.exists) {
+      const orderData = orderSnap.data()!;
+      if (orderData.status === 'cancelled') {
+        tx.update(ref, { state: 'cancelled', leaseUntil: 0, error: '' });
+        return null;
+      }
+      if (!orderPayload.customer) {
         orderPayload = {
           number: orderData.number,
           total: orderData.total,
@@ -90,10 +103,13 @@ export async function notifyOrder(db: Firestore, id: string, send = sendOrderEma
           items: orderData.items,
           status: orderData.status
         };
+      } else if (orderData.status) {
+        orderPayload = { ...orderPayload, status: orderData.status };
       }
     }
 
     tx.update(ref, {
+      state: 'pending',
       leaseUntil: now + 60000,
       firstAttemptAt: data.firstAttemptAt || now,
       attempts: (data.attempts || 0) + 1,

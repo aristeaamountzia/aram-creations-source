@@ -447,6 +447,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       src={img}
                       alt={item.name || item.title}
                       referrerPolicy="no-referrer"
+                      loading="lazy"
+                      decoding="async"
                       className="w-16 h-16 rounded-xl object-cover bg-stone-100 shrink-0 border border-stone-200"
                     />
                     <div className="flex-1 min-w-0">

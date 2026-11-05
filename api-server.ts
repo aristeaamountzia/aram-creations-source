@@ -5,6 +5,15 @@ import { sendContactEmail } from './server/contact-service';
 import catalogBackupsHandler from "./netlify/functions/catalog-backups";
 import mediaHandler from "./netlify/functions/media";
 import wixProjectHandler from "./netlify/functions/wix-project";
+import { handleVideoTranscode } from "./server/video-transcode";
+import {
+  bridgedOrdersHandler,
+  bridgedStripeConfirmHandler,
+  bridgedStripeWebhookHandler,
+  bridgedCatalogBackupsHandler,
+  bridgedOrderEmailTestHandler,
+  bridgedContactHandler,
+} from "./server/production-bridge";
 import orderEmailTestHandler from "./netlify/functions/order-email-test";
 import "dotenv/config";
 import express from "express";
@@ -705,167 +714,11 @@ app.get("/.netlify/functions/vinted-reviews", handleVintedReviews);
 app.post("/api/vinted-reviews/sync", handleVintedReviewsSync);
 app.post("/.netlify/functions/vinted-reviews/sync", handleVintedReviewsSync);
 
-// In-memory dev orders store for local testing
-const localDevOrders: any[] = [];
-
-// 5. Orders and Stripe endpoints with live payment gateway integration
-app.post("/api/orders", async (req: Request, res: Response) => {
-  try {
-    const { customer, items, shippingMethod, paymentMethod, expectedTotal, website, requestId, action, orderId: targetOrderId } = req.body || {};
-
-    // Handle order cancellation from frontend
-    if (action === 'cancel_unpaid' && targetOrderId) {
-      const found = localDevOrders.find(o => o.id === targetOrderId);
-      if (found && found.status === 'pending') {
-        found.status = 'cancelled';
-        found.updatedAt = new Date().toISOString();
-      }
-      return res.json({ ok: true, cancelled: true });
-    }
-
-    // Anti-spam honeypot
-    if (website) return res.status(400).json({ ok: false, error: "Spam detected." });
-
-    if (!customer?.name?.trim() || !customer?.email?.trim() || !customer?.phone?.trim() || !customer?.address?.trim()) {
-      return res.status(400).json({
-        ok: false,
-        error: "Παρακαλώ συμπληρώστε όλα τα απαιτούμενα στοιχεία επικοινωνίας (Ονοματεπώνυμο, Email, Τηλέφωνο, Διεύθυνση).",
-        reason: "missing_required_fields"
-      });
-    }
-
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        ok: false,
-        error: "Το καλάθι αγορών σας είναι άδειο.",
-        reason: "empty_cart"
-      });
-    }
-
-    const orderId = requestId || `ARAM-${Date.now()}`;
-    const orderNumber = `ARAM-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${orderId.slice(0, 8).toUpperCase()}`;
-    const totalAmount = Number(expectedTotal) || 0;
-    const shippingCost = shippingMethod === 'boxnow' ? (totalAmount >= 45 ? 0 : 2.5) : (totalAmount >= 50 ? 0 : 4.0);
-
-    const newOrder = {
-      id: orderId,
-      number: orderNumber,
-      total: totalAmount,
-      subtotal: Math.max(0, totalAmount - shippingCost),
-      shippingCost,
-      createdAt: new Date().toISOString(),
-      status: "pending",
-      shippingMethod: shippingMethod || "boxnow",
-      paymentMethod: paymentMethod || "stripe",
-      customer: {
-        name: customer.name.trim(),
-        email: customer.email.trim(),
-        phone: customer.phone.trim(),
-        address: customer.address.trim(),
-        city: customer.city?.trim() || "",
-        postalCode: customer.postalCode?.trim() || "",
-        notes: customer.notes?.trim() || "",
-      },
-      items
-    };
-
-    let checkoutUrl: string | undefined;
-    if (paymentMethod === 'stripe') {
-      const session = await createStripeCheckoutSession({
-        orderId,
-        orderNumber,
-        items: items.map((it: any) => ({
-          name: it.name || it.title || 'Χειροποίητο κόσμημα',
-          price: Number(it.price) || 0,
-          quantity: it.quantity || 1,
-          imageUrl: it.imageUrl
-        })),
-        shippingMethod: shippingMethod || 'boxnow',
-        shippingCost,
-        customerEmail: customer.email.trim(),
-        origin: req.get('origin') || process.env.URL || 'https://aramcreationsofficial1.netlify.app'
-      });
-      checkoutUrl = session.url;
-      (newOrder as any).stripeSessionId = session.id;
-      (newOrder as any).stripeCheckoutUrl = session.url;
-    }
-
-    localDevOrders.unshift(newOrder);
-
-    return res.status(201).json({
-      ok: true,
-      order: newOrder,
-      checkoutUrl
-    });
-  } catch (err: any) {
-    return res.status(500).json({
-      ok: false,
-      error: `Σφάλμα καταχώρησης παραγγελίας: ${err.message || 'Άγνωστο σφάλμα'}`,
-      reason: err.message
-    });
-  }
-});
-
-app.post("/api/stripe-confirm", async (req: Request, res: Response) => {
-  try {
-    const { sessionId, orderId } = req.body || {};
-    if (!sessionId) return res.status(400).json({ ok: false, error: "Missing sessionId" });
-
-    const session = await retrieveStripeCheckoutSession(sessionId);
-    const targetId = orderId || session.client_reference_id || session.metadata?.orderId;
-    const found = localDevOrders.find(o => o.id === targetId);
-    if (found) {
-      found.status = 'paid';
-      found.paidAt = new Date().toISOString();
-      found.stripePaymentIntent = session.payment_intent;
-    }
-
-    return res.json({
-      ok: true,
-      paid: session.payment_status === 'paid',
-      orderNumber: found?.number || targetId,
-      total: found?.total
-    });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-app.get("/api/orders", (_req: Request, res: Response) => {
-  return res.json({
-    ok: true,
-    orders: localDevOrders,
-    nextCursor: null
-  });
-});
-
-app.patch("/api/orders", (req: Request, res: Response) => {
-  const { id, status, tracking } = req.body || {};
-  const found = localDevOrders.find(o => o.id === id);
-  if (found) {
-    if (status) found.status = status;
-    if (tracking !== undefined) found.tracking = tracking;
-  }
-  return res.json({ ok: true, order: found });
-});
-
-// 6. Contact message endpoint (Resend)
-app.post("/api/contact", async (req: Request, res: Response) => {
-  try {
-    const { name, email, interest, message } = req.body || {};
-    const result = await sendContactEmail({ name, email, interest, message });
-    return res.json({
-      ok: true,
-      id: result.id,
-      message: "Το μήνυμά σας εστάλη επιτυχώς. Θα επικοινωνήσουμε σύντομα μαζί σας."
-    });
-  } catch (err: any) {
-    return res.status(500).json({
-      ok: false,
-      error: err.message || "Αποτυχία αποστολής email."
-    });
-  }
-});
+// 5. Orders, Stripe Checkout, Stripe Confirm & Webhook, Contact, and Backups (Live Firestore + Stripe)
+app.all(["/api/orders", "/.netlify/functions/orders"], bridgedOrdersHandler);
+app.all(["/api/stripe-confirm", "/.netlify/functions/stripe-confirm"], bridgedStripeConfirmHandler);
+app.all(["/api/stripe-webhook", "/.netlify/functions/stripe-webhook"], bridgedStripeWebhookHandler);
+app.all(["/api/contact", "/.netlify/functions/contact"], bridgedContactHandler);
 
 // 6b. Bridge additional Netlify Function handlers into Express for local dev & Cloud Run parity
 function wrapWebHandler(webHandler: (request: globalThis.Request) => Promise<globalThis.Response>) {
@@ -902,14 +755,17 @@ function wrapWebHandler(webHandler: (request: globalThis.Request) => Promise<glo
   };
 }
 
-app.all("/api/catalog-backups", wrapWebHandler(catalogBackupsHandler));
-app.all("/.netlify/functions/catalog-backups", wrapWebHandler(catalogBackupsHandler));
+app.all(["/api/catalog-backups", "/.netlify/functions/catalog-backups"], bridgedCatalogBackupsHandler);
 app.all("/api/media", wrapWebHandler(mediaHandler));
 app.all("/.netlify/functions/media", wrapWebHandler(mediaHandler));
 app.all("/api/wix-project", wrapWebHandler(wixProjectHandler));
 app.all("/.netlify/functions/wix-project", wrapWebHandler(wixProjectHandler));
-app.all("/api/order-email-test", wrapWebHandler(orderEmailTestHandler));
-app.all("/.netlify/functions/order-email-test", wrapWebHandler(orderEmailTestHandler));
+app.all(["/api/order-email-test", "/.netlify/functions/order-email-test"], bridgedOrderEmailTestHandler);
+app.post(
+  ["/api/video-transcode", "/.netlify/functions/video-transcode"],
+  express.raw({ type: () => true, limit: "120mb" }),
+  handleVideoTranscode
+);
 
 // 7. Serve static public files
 app.use(express.static(path.join(process.cwd(), "public")));

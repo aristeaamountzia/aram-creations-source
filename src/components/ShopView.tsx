@@ -8,6 +8,7 @@ import { db } from '../firebase';
 import { DEFAULT_SHOP_SETTINGS, normalizeShopSettings, ShopSettings } from '../shopSettings';
 import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
+import { portfolioHeroVideoUrl } from './PortfolioHero';
 import {
   collection,
   doc,
@@ -495,13 +496,14 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const activeMedia = selectedMediaList[activeMediaIndex] || selectedMediaList[0];
   const zoomImages = selectedMediaList.map((media, index) => ({ ...media, mediaIndex: index })).filter(media => media.type !== 'video');
   const ds = shopSettings.designStudio || DEFAULT_DESIGN_STUDIO;
-  const hasHeroVideo = Boolean(shopSettings.heroVideoUrl) && !heroVideoFailed;
+  const resolvedHeroVideoUrl = portfolioHeroVideoUrl(shopSettings.heroVideoUrl);
+  const hasHeroVideo = Boolean(resolvedHeroVideoUrl) && !heroVideoFailed;
 
   return (
     <div className="catalog-view shop-view min-h-screen" style={{ backgroundColor: ds.pageBackground || shopSettings.bgColor, color: ds.ink || shopSettings.textColor, fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif` }}>
       {/* Authentic Artisan Hero Banner */}
       <section
-        className={`shop-hero ${hasHeroVideo ? 'catalog-hero--video bg-stone-950' : 'bg-stone-900'} min-h-[58vh] sm:min-h-[68vh] flex flex-col justify-center items-center relative overflow-hidden py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center transition-colors`}
+        className={`shop-hero ${hasHeroVideo ? 'catalog-hero--video bg-stone-950' : 'bg-stone-950'} min-h-[520px] h-[62svh] max-h-[680px] flex flex-col justify-center items-center relative overflow-hidden py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center transition-colors`}
         style={{
           backgroundColor: hasHeroVideo ? '#0c0a09' : (shopSettings.heroBgColor && shopSettings.heroBgColor !== '#ffffff' ? shopSettings.heroBgColor : '#0c0a09'),
           color: '#ffffff'
@@ -509,11 +511,11 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       >
         {hasHeroVideo && (
           <video
-            key={`${shopSettings.heroVideoUrl}-${heroVideoRetry}`}
+            key={`${resolvedHeroVideoUrl}-${heroVideoRetry}`}
             className="absolute inset-0 h-full w-full object-cover"
             src={heroVideoRetry > 0
-              ? (shopSettings.heroVideoUrl.includes('?') ? `${shopSettings.heroVideoUrl}&_cb=${heroVideoRetry}` : `${shopSettings.heroVideoUrl}?_cb=${heroVideoRetry}`)
-              : shopSettings.heroVideoUrl
+              ? (resolvedHeroVideoUrl.includes('?') ? `${resolvedHeroVideoUrl}&_cb=${heroVideoRetry}` : `${resolvedHeroVideoUrl}?_cb=${heroVideoRetry}`)
+              : resolvedHeroVideoUrl
             }
             autoPlay
             muted
@@ -991,6 +993,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                       src={activeMedia.url}
                       alt={selectedItem.name || selectedItem.title}
                       referrerPolicy="no-referrer"
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-contain"
                     />
                   )
@@ -1067,7 +1071,10 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                         <img
                           src={media.url}
                           alt={`Thumbnail ${idx + 1}`}
-                          referrerPolicy="no-referrer" className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
                         />
                       )}
                     </button>

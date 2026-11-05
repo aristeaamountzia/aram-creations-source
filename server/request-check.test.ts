@@ -4,7 +4,7 @@ import { extractListingState, listingState, classifyVintedCategory } from './vin
 import { chooseRefreshPatch, RefreshChoice, refreshBaseline } from '../src/lib/vinted-refresh';
 import { restorationFields, historyRecords } from '../src/lib/catalog-history';
 import { sortPortfolio, movePortfolio } from '../src/lib/portfolio-order';
-import { sendOrderEmail } from './order-notifications';
+import { sendOrderEmail, resolveAdminUrl } from './order-notifications';
 
 test('current listing status ignores recommended listings and supports numeric/string IDs in RSC', () => {
   const source = '<script>' + JSON.stringify({ item: { id: 123, is_sold: false, is_reserved: true, is_closed: false }, recommended: { id: 456, is_sold: true } }) + '</script>';
@@ -59,15 +59,23 @@ test('portfolio ordering is stable and moves forward/back without dropping filte
   assert.equal(movePortfolio(items,'missing','a'),items);
   assert.deepEqual(sortPortfolio([{ id: 'a' }, { id: 'b', portfolioOrder: 1 }, { id: 'c', portfolioOrder: 0 }]).map(x => x.id), ['c','b','a']);
 });
-test('order mail goes only to owner, excludes customer details and has an idempotency key', async () => {
+test('order mail goes only to owner, uses canonical Back Office URL, and has an idempotency key', async () => {
   const before = process.env.RESEND_API_KEY; process.env.RESEND_API_KEY = 'fixture-only';
+  const beforeUrl = process.env.URL; process.env.URL = 'https://lovely-bienenstitch-b6079c.netlify.app';
   try {
+    assert.equal(resolveAdminUrl(), 'https://aramcreationsofficial1.netlify.app/#admin');
+    assert.equal(resolveAdminUrl('https://lovely-bienenstitch-b6079c.netlify.app'), 'https://aramcreationsofficial1.netlify.app/#admin');
     let init: RequestInit | undefined;
     const id = await sendOrderEmail('fixture-order', { number: 'TEST', total: 20 }, (async (_url: any, options: any) => { init = options; return Response.json({ id: 'fixture-mail' }); }) as any);
     assert.equal(id, 'fixture-mail');
     assert.equal((init!.headers as any)['Idempotency-Key'], 'order-notification/fixture-order');
     const body = JSON.parse(String(init!.body)); assert.deepEqual(body.to, ['aristeaamnta@gmail.com']);
     assert.ok(!body.text.includes('customer')); assert.ok(body.text.includes('20.00'));
+    assert.ok(body.text.includes('https://aramcreationsofficial1.netlify.app/#admin'));
+    assert.ok(!body.text.includes('lovely-bienenstitch'));
     await assert.rejects(sendOrderEmail('fixture-order', { number: 'TEST', total: 20 }, (async () => new Response(null,{status:429})) as any));
-  } finally { if (before === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = before; }
+  } finally {
+    if (before === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = before;
+    if (beforeUrl === undefined) delete process.env.URL; else process.env.URL = beforeUrl;
+  }
 });

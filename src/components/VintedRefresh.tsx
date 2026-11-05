@@ -413,7 +413,7 @@ export function VintedRefresh({
 
                       <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-stone-100 border border-stone-200 overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
                         {previewImg ? (
-                          <img src={previewImg} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                          <img src={previewImg} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-[10px] text-stone-400 font-bold uppercase">ARAM</span>
                         )}
@@ -583,6 +583,8 @@ export function VintedRefresh({
                                       <img
                                         src={media.url}
                                         referrerPolicy="no-referrer"
+                                        loading="lazy"
+                                        decoding="async"
                                         alt={`Νέα φωτογραφία ${index + 1}`}
                                         className="h-20 w-20 rounded-lg border-2 border-emerald-500 object-cover shadow-sm"
                                       />

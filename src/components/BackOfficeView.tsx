@@ -6,13 +6,14 @@ import { PortfolioDesignSettings } from './PortfolioDesignSettings';
 import { DesignStudioSettings } from './DesignStudioSettings';
 import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, validatePortfolioDesign } from '../lib/portfolio-settings';
-import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
+import { PortfolioHero, portfolioHeroVideoUrl, isKnownUnplayableHevcHeroUrl, TRANSCODED_HERO_H264_PATH } from './PortfolioHero';
 import { Check, X, Star, BadgeCheck, RefreshCw, MessageSquare, ExternalLink, CornerDownRight } from 'lucide-react';
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
 import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 import { CatalogBackups } from './CatalogBackups';
 import { CatalogExcelExport } from './CatalogExcelExport';
+import { FirebaseMediaCleanup } from './FirebaseMediaCleanup';
 import { OrdersManager } from './OrdersManager';
 import { VintedRefresh } from './VintedRefresh';
 import { MediaDownload } from './MediaDownload';
@@ -841,7 +842,7 @@ interface BackOfficeViewProps {
                     if (shopSettings.portfolioHeroVideoUrl && shopSettings.portfolioHeroVideoUrl.trim() && !portfolioHeroVideoUrl(shopSettings.portfolioHeroVideoUrl)) {
                         throw new Error('Εισάγετε έγκυρο σύνδεσμο http ή https για το βίντεο Hero του Portfolio.');
                     }
-                    if (shopSettings.heroVideoUrl && shopSettings.heroVideoUrl.trim() && !/^https?:\/\//i.test(shopSettings.heroVideoUrl.trim())) {
+                    if (shopSettings.heroVideoUrl && shopSettings.heroVideoUrl.trim() && !portfolioHeroVideoUrl(shopSettings.heroVideoUrl)) {
                         throw new Error('Εισάγετε έγκυρο σύνδεσμο http ή https για το βίντεο Hero του Shop.');
                     }
                     validatePortfolioDesign(normalizePortfolioDesign(shopSettings.portfolioDesign));
@@ -896,8 +897,18 @@ interface BackOfficeViewProps {
                         contentType: prepared.type || 'video/mp4',
                         cacheControl: 'public, max-age=31536000, immutable'
                     });
-                    await new Promise((resolve, reject) => task.on('state_changed', null, reject, resolve));
+                    await new Promise((resolve, reject) => task.on(
+                        'state_changed',
+                        (snapshot) => {
+                            const pct = snapshot.totalBytes > 0 ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0;
+                            setStatus(`Ανέβασμα συμπιεσμένου βίντεο: ${pct}%`);
+                            setVideoProgress({ text: `Ανέβασμα συμπιεσμένου βίντεο στο Firebase Storage: ${pct}%`, percent: pct });
+                        },
+                        reject,
+                        resolve
+                    ));
                     const url = await getDownloadURL(task.snapshot.ref);
+                    setVideoProgress({ text: 'Το βίντεο ανέβηκε επιτυχώς (100%).', percent: 100 });
                     setShopSettings(prev => ({ ...prev, [isPortfolioHero ? 'portfolioHeroVideoUrl' : 'heroVideoUrl']: url }));
                     setStatus(`Το βίντεο ανέβηκε. Πάτησε Αποθήκευση ρυθμίσεων για να εμφανιστεί στο ${isPortfolioHero ? 'Portfolio' : 'Shop'}.`);
                     notifyOperationSuccess('Βίντεο Hero', `Το βίντεο ανέβηκε επιτυχώς για το ${isPortfolioHero ? 'Portfolio' : 'Shop'}.`);
@@ -2881,6 +2892,7 @@ interface BackOfficeViewProps {
                         imageUrl: mainImage.url,
                         fileType: mainImage.type,
                         mediaList: finalMediaUrls,
+                        ...(formStatus === 'Διαθέσιμο' && parsedStock >= 1 ? { checkoutReservations: {} } : {}),
                         updatedAt: serverTimestamp()
                     };
 
@@ -3906,6 +3918,7 @@ interface BackOfficeViewProps {
                                 <button onClick={() => setIsHistoryOpen(true)} className="flex items-center justify-center px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg transition font-bold text-xs" title="Ιστορικό εκδόσεων">
                                     Ιστορικό
                                 </button>
+                                <FirebaseMediaCleanup />
                                 <CatalogExcelExport />
                                 <button onClick={exportToCSV} className="flex items-center justify-center px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg transition font-bold text-xs" title="Εξαγωγή CSV χωρίς ενσωματωμένες εικόνες">
                                     <IconDownload /> <span className="ml-2">CSV</span>
@@ -4041,7 +4054,7 @@ interface BackOfficeViewProps {
                                                     item.fileType === 'video' ? (
                                                         <video src={item.imageUrl} referrerPolicy="no-referrer" className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} muted loop autoPlay playsInline />
                                                     ) : (
-                                                        <img referrerPolicy="no-referrer" src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
+                                                        <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
                                                     )
                                                 ) : <IconImage />}
 
@@ -4126,7 +4139,7 @@ interface BackOfficeViewProps {
                                                     item.fileType === 'video' ? (
                                                         <video src={item.imageUrl} referrerPolicy="no-referrer" className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} muted />
                                                     ) : (
-                                                        <img referrerPolicy="no-referrer" src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
+                                                        <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
                                                     )
                                                 ) : <IconImage />}
                                                 {item.stock > 1 && !isSold && <div className="absolute bottom-0 right-0 bg-stone-900 text-white text-[9px] px-1 font-bold rounded-tl">{item.stock}x</div>}
@@ -4179,7 +4192,7 @@ interface BackOfficeViewProps {
                                         <div className="flex -space-x-2 overflow-hidden shrink-0">
                                             {selectedItems.slice(0, 5).map((item) => (
                                                 <div key={item.id} className="w-10 h-10 rounded-lg border-2 border-white bg-stone-200 overflow-hidden shadow-sm">
-                                                    {item.imageUrl ? <img referrerPolicy="no-referrer" src={item.imageUrl} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-stone-300">ARAM</div>}
+                                                    {item.imageUrl ? <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={item.imageUrl} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-stone-300">ARAM</div>}
                                                 </div>
                                             ))}
                                         </div>
@@ -4524,7 +4537,7 @@ interface BackOfficeViewProps {
                                                         {modalPreviewType === 'video' ? (
                                                             <video src={modalPreviewMedia} referrerPolicy="no-referrer" className="w-full h-full object-cover" muted playsInline />
                                                         ) : (
-                                                            <img referrerPolicy="no-referrer" src={modalPreviewMedia} alt="" className="w-full h-full object-cover" />
+                                                            <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={modalPreviewMedia} alt="" className="w-full h-full object-cover" />
                                                         )}
                                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                             <span className="text-[10px] text-white font-bold">Προεπισκόπηση</span>
@@ -5055,7 +5068,7 @@ interface BackOfficeViewProps {
                                                                     {media.type === 'video' ? (
                                                                         <video src={media.url} referrerPolicy="no-referrer" className="w-full h-full object-cover pointer-events-none" muted />
                                                                     ) : (
-                                                                        <img referrerPolicy="no-referrer" src={media.url} className="w-full h-full object-cover pointer-events-none" />
+                                                                        <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={media.url} className="w-full h-full object-cover pointer-events-none" />
                                                                     )}
 
                                                                     <MediaDownload media={media} name={formName || 'aram-media'} className="absolute bottom-1 right-1 z-10" />
@@ -5109,7 +5122,7 @@ interface BackOfficeViewProps {
                                                                     {media.type === 'video' ? (
                                                                         <video src={media.url} referrerPolicy="no-referrer" className="w-full h-full object-cover pointer-events-none grayscale" muted />
                                                                     ) : (
-                                                                        <img referrerPolicy="no-referrer" src={media.url} className="w-full h-full object-cover pointer-events-none grayscale" />
+                                                                        <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={media.url} className="w-full h-full object-cover pointer-events-none grayscale" />
                                                                     )}
 
                                                                     <div className="absolute top-1 left-1 bg-stone-800 text-white text-[9px] px-1 rounded shadow-sm">Κρυφό</div>
@@ -5312,7 +5325,7 @@ interface BackOfficeViewProps {
                                                     {activeMedia.type === 'video' ? (
                                                         <video src={activeMedia.url} key={activeMedia.url} referrerPolicy="no-referrer" className="w-full h-full object-cover" controls autoPlay muted loop playsInline />
                                                     ) : (
-                                                        <img referrerPolicy="no-referrer" src={activeMedia.url} key={activeMedia.url} className="w-full h-full object-cover" alt={currentItem.name} />
+                                                        <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={activeMedia.url} key={activeMedia.url} className="w-full h-full object-cover" alt={currentItem.name} />
                                                     )}
                                                     {activeMedia.showInShop === false && (
                                                         <div className="absolute top-2 right-2 bg-stone-800 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1 shadow-lg">
@@ -5335,7 +5348,7 @@ interface BackOfficeViewProps {
                                                         {m.type === 'video' ? (
                                                             <div className="w-full h-full bg-stone-800 flex items-center justify-center text-[10px]">VIDEO</div>
                                                         ) : (
-                                                            <img referrerPolicy="no-referrer" src={m.url} className="w-full h-full object-cover" />
+                                                            <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={m.url} className="w-full h-full object-cover" />
                                                         )}
                                                         {m.showInShop === false && <span className="absolute top-0 right-0 bg-stone-900/90 text-white text-[8px] p-0.5 rounded-bl"></span>}
                                                     </button>
@@ -5718,9 +5731,24 @@ interface BackOfficeViewProps {
 
                                                 {shopSettings.heroVideoUrl && (
                                                     <div className="pt-2 border-t border-stone-100 flex flex-col sm:flex-row items-center gap-4">
-                                                        <video src={shopSettings.heroVideoUrl} controls muted preload="none" referrerPolicy="no-referrer" className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
+                                                        <video src={portfolioHeroVideoUrl(shopSettings.heroVideoUrl)} controls muted preload="metadata" referrerPolicy="no-referrer" className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
                                                         <div className="flex flex-wrap items-center gap-2">
-                                                            <MediaDownload media={{ url: shopSettings.heroVideoUrl, type: 'video' }} name="aram-hero-video" />
+                                                            <MediaDownload media={{ url: portfolioHeroVideoUrl(shopSettings.heroVideoUrl), type: 'video' }} name="aram-hero-video" />
+                                                            {isKnownUnplayableHevcHeroUrl(shopSettings.heroVideoUrl) && (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={mediaPreparing || isSavingSettings}
+                                                                    onClick={async () => {
+                                                                        const res = await fetch(TRANSCODED_HERO_H264_PATH);
+                                                                        const blob = await res.blob();
+                                                                        const h264File = new File([blob], '2026-11-04-145207521-h264.mp4', { type: 'video/mp4' });
+                                                                        await handleHeroVideoUpload(h264File, 'shop');
+                                                                    }}
+                                                                    className="rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 px-3 py-2 text-xs font-bold transition"
+                                                                >
+                                                                    Αποθήκευση H.264 στο Cloud
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 type="button"
                                                                 disabled={mediaPreparing || isSavingSettings}
@@ -6036,9 +6064,24 @@ interface BackOfficeViewProps {
 
                                                 {shopSettings.portfolioHeroVideoUrl && (
                                                     <div className="pt-2 border-t border-stone-100 flex flex-col sm:flex-row items-center gap-4">
-                                                        <video src={shopSettings.portfolioHeroVideoUrl} controls muted preload="none" referrerPolicy="no-referrer" className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
+                                                        <video src={portfolioHeroVideoUrl(shopSettings.portfolioHeroVideoUrl)} controls muted preload="metadata" referrerPolicy="no-referrer" className="max-h-36 w-full sm:w-64 rounded-xl bg-black object-cover shadow-xs" />
                                                         <div className="flex flex-wrap items-center gap-2">
-                                                            <MediaDownload media={{ url: shopSettings.portfolioHeroVideoUrl, type: 'video' }} name="aram-portfolio-hero-video" />
+                                                            <MediaDownload media={{ url: portfolioHeroVideoUrl(shopSettings.portfolioHeroVideoUrl), type: 'video' }} name="aram-portfolio-hero-video" />
+                                                            {isKnownUnplayableHevcHeroUrl(shopSettings.portfolioHeroVideoUrl) && (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={mediaPreparing || isSavingSettings}
+                                                                    onClick={async () => {
+                                                                        const res = await fetch(TRANSCODED_HERO_H264_PATH);
+                                                                        const blob = await res.blob();
+                                                                        const h264File = new File([blob], '2026-11-04-145207521-h264.mp4', { type: 'video/mp4' });
+                                                                        await handleHeroVideoUpload(h264File, 'portfolio');
+                                                                    }}
+                                                                    className="rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 px-3 py-2 text-xs font-bold transition"
+                                                                >
+                                                                    Αποθήκευση H.264 στο Cloud
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 type="button"
                                                                 disabled={mediaPreparing || isSavingSettings}
@@ -6568,7 +6611,7 @@ interface BackOfficeViewProps {
                                                                                     if (images.length) setVintedPreviewImage({ images, index: images.findIndex(entry => entry.url === previewVintedImageSrc(media.url)), title: item.name || 'Vinted preview' });
                                                                                 }}
                                                                             >
-                                                                                <img referrerPolicy="no-referrer" src={previewVintedImageSrc(media.url)} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                                                                <img referrerPolicy="no-referrer" src={previewVintedImageSrc(media.url)} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                                                             </button>
                                                                         </div>
                                                                     ))}

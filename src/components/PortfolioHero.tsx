@@ -4,11 +4,26 @@ import { PortfolioDesign, DEFAULT_PORTFOLIO_DESIGN } from '../lib/portfolio-sett
 import { VideoPlayer } from './VideoPlayer';
 import { videoLink } from '../lib/video-links';
 
+export const TRANSCODED_HERO_H264_PATH = '/assets/aistudio/2026-11-04-145207521_d7414d66.mp4';
+
+export function isKnownUnplayableHevcHeroUrl(value: unknown): boolean {
+  const text = typeof value === 'string' ? value.trim() : '';
+  return /(?:1793907543677-2026-11-04-145207521|2026-11-04-145207521\.mp4|c3301d5fcf6bdfe2784ad9746726db20\.mp4)/i.test(text);
+}
+
 export function portfolioHeroVideoUrl(value: unknown): string {
   const text = typeof value === 'string' ? value.trim() : '';
+  if (!text) return '';
+  if (text.startsWith('/') && !text.startsWith('//') && /\.(mp4|webm|mov|m4v|ogv)(?:[?#]|$)/i.test(text)) {
+    return text;
+  }
   try {
     const url = new URL(text);
-    return ['https:', 'http:'].includes(url.protocol) ? url.href : '';
+    if (!['https:', 'http:'].includes(url.protocol)) return '';
+    if (isKnownUnplayableHevcHeroUrl(url.href)) {
+      return TRANSCODED_HERO_H264_PATH;
+    }
+    return url.href;
   } catch { return ''; }
 }
 
@@ -43,7 +58,7 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
     : source;
 
   return (
-    <section className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video bg-stone-950 text-white' : 'bg-stone-950 text-white'} min-h-[58vh] sm:min-h-[68vh] flex flex-col justify-center items-center relative overflow-hidden border-b border-stone-800 px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8`}>
+    <section className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video bg-stone-950 text-white' : 'bg-stone-950 text-white'} min-h-[520px] h-[62svh] max-h-[680px] flex flex-col justify-center items-center relative overflow-hidden border-b border-stone-800 px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8 transition-colors`}>
       {hasVideo && (
         <>
           {videoLink(source) ? (
@@ -105,13 +120,13 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
           const el = document.getElementById('portfolio-catalog') || document.querySelector('.catalog-controls') || document.querySelector('.catalog-content');
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }}
-        className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 cursor-pointer transition group bg-transparent border-0 p-0 text-white hover:text-stone-200 focus:outline-hidden"
+        className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 cursor-pointer transition group bg-transparent border-0 p-0 text-white/90 hover:text-white focus:outline-hidden"
         aria-label="Κύλιση για δημιουργίες — προβολή έργων"
       >
-        <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-widest text-stone-300 drop-shadow-sm group-hover:scale-105 transition-transform">
+        <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest drop-shadow-md group-hover:scale-105 transition-transform">
           Κύλιση για δημιουργίες
         </span>
-        <div className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-md animate-bounce transition">
+        <div className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg animate-bounce group-hover:bg-black/60 transition">
           <ChevronDown className="w-4 h-4 text-white drop-shadow" />
         </div>
       </button>

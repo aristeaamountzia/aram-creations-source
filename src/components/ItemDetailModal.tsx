@@ -70,7 +70,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           <div className="flex items-center gap-3">
             {currentMedia && (
               <div className="w-12 h-12 rounded-xl bg-stone-200 overflow-hidden shrink-0 border border-stone-300">
-                <img src={currentMedia.url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                <img src={currentMedia.url} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-cover" />
               </div>
             )}
             <div>
@@ -97,7 +97,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                 currentMedia.type === 'video' ? (
                   <video src={currentMedia.url} controls referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 ) : (
-                  <img src={currentMedia.url} alt={title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                  <img src={currentMedia.url} alt={title} referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 )
               ) : (
                 <span className="text-xs text-stone-400">Χωρίς εικόνα</span>
@@ -133,7 +133,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                         : 'border-stone-200 opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <img src={m.url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    <img src={m.url} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
