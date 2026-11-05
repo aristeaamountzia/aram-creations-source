@@ -1587,18 +1587,22 @@ interface BackOfficeViewProps {
                 try {
                 for (const file of files) {
                     try {
-                    if (file.type.startsWith('image/')) {
+                    const isImage = (file.type && file.type.startsWith('image/')) || /\.(jpg|jpeg|png|webp|gif|svg|avif)$/i.test(file.name);
+                    const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name);
+                    if (isImage) {
                         const compressedFile = await compressImage(file);
                         const previewUrl = URL.createObjectURL(compressedFile);
                         if (!isEditMode && formShopMediaList.length === 0 && newMedia.length === 0) {
                             smartCandidate = { url: previewUrl, fileName: file.name };
                         }
                         newMedia.push({ url: previewUrl, type: 'image', isNew: true, fileObj: compressedFile, showInShop: true });
-                    } else if (file.type.startsWith('video/')) {
-                            const prepared = await prepareLocalVideo(file);
-                            newMedia.push({ url: URL.createObjectURL(prepared), type: 'video', isNew: true, fileObj: prepared, showInShop: true });
+                    } else if (isVideo) {
+                        const prepared = await prepareLocalVideo(file);
+                        newMedia.push({ url: URL.createObjectURL(prepared), type: 'video', isNew: true, fileObj: prepared, showInShop: true });
+                    } else {
+                        errors.push(`${file.name}: Μη υποστηριζόμενος τύπος αρχείου. Επιτρέπονται εικόνες και βίντεο.`);
                     }
-                    } catch (error) { errors.push(`${file.name}: ${error.message}`); if (error.name === 'AbortError') break; }
+                    } catch (error) { errors.push(`${file.name}: ${error.message || 'Αποτυχία προετοιμασίας αρχείου.'}`); if (error.name === 'AbortError') break; }
                 }
                 setFormShopMediaList(prev => [...prev, ...newMedia]);
                 if (smartCandidate) {
@@ -1613,7 +1617,10 @@ interface BackOfficeViewProps {
                 }
                 } catch (error) { errors.push(error.message); }
                 finally {
-                    if (errors.length) setVideoProgress({ text: errors.join('\n') });
+                    if (errors.length) {
+                        setVideoProgress({ text: errors.join('\n') });
+                        notifyOperationError('Σφάλμα αρχείων', errors.join('\n'));
+                    }
                     setUploadStatus(''); input.value = ''; setMediaPreparing(false);
                 }
             };
@@ -1650,16 +1657,20 @@ interface BackOfficeViewProps {
                 try {
                 for (const file of files) {
                     try {
-                    if (file.type.startsWith('image/')) {
+                    const isImage = (file.type && file.type.startsWith('image/')) || /\.(jpg|jpeg|png|webp|gif|svg|avif)$/i.test(file.name);
+                    const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name);
+                    if (isImage) {
                         const compressedFile = await compressImage(file);
                         const previewUrl = URL.createObjectURL(compressedFile);
                         if (!smartCandidate) smartCandidate = { url: previewUrl, fileName: file.name };
                         newMedia.push({ url: previewUrl, type: 'image', isNew: true, fileObj: compressedFile, showInShop: false });
-                    } else if (file.type.startsWith('video/')) {
-                            const prepared = await prepareLocalVideo(file);
-                            newMedia.push({ url: URL.createObjectURL(prepared), type: 'video', isNew: true, fileObj: prepared, showInShop: false });
+                    } else if (isVideo) {
+                        const prepared = await prepareLocalVideo(file);
+                        newMedia.push({ url: URL.createObjectURL(prepared), type: 'video', isNew: true, fileObj: prepared, showInShop: false });
+                    } else {
+                        errors.push(`${file.name}: Μη υποστηριζόμενος τύπος αρχείου. Επιτρέπονται εικόνες και βίντεο.`);
                     }
-                    } catch (error) { errors.push(`${file.name}: ${error.message}`); if (error.name === 'AbortError') break; }
+                    } catch (error) { errors.push(`${file.name}: ${error.message || 'Αποτυχία προετοιμασίας αρχείου.'}`); if (error.name === 'AbortError') break; }
                 }
                 const nextPrivateMediaList = [...formPrivateMediaList, ...newMedia];
                 setFormPrivateMediaList(nextPrivateMediaList);
@@ -1669,7 +1680,10 @@ interface BackOfficeViewProps {
                 }
                 } catch (error) { errors.push(error.message); }
                 finally {
-                    if (errors.length) setVideoProgress({ text: errors.join('\n') });
+                    if (errors.length) {
+                        setVideoProgress({ text: errors.join('\n') });
+                        notifyOperationError('Σφάλμα αρχείων', errors.join('\n'));
+                    }
                     setUploadStatus(''); input.value = ''; setMediaPreparing(false);
                 }
             };

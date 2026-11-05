@@ -35,6 +35,6 @@ await build({
   banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' },
 });
 
-for (const name of ['catalog-backups', 'catalog-backup-schedule', 'order-email-retry', 'order-email-test', 'wix-project', 'stripe-confirm', 'stripe-webhook', 'vinted-reviews']) {
+for (const name of ['contact', 'catalog-backups', 'catalog-backup-schedule', 'order-email-retry', 'order-email-test', 'wix-project', 'stripe-confirm', 'stripe-webhook', 'vinted-reviews']) {
   await build({ entryPoints: [join(source, `${name}.ts`)], outfile: join(output, `${name}.mjs`), bundle: true, platform: 'node', format: 'esm', packages: 'bundle', target: 'node20', banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' } });
 }

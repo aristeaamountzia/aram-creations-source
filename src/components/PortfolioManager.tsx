@@ -547,9 +547,11 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     setVideoProgress(null);
     try {
       for (const file of Array.from(files)) {
-        if (!/^(image|video)\//.test(file.type)) throw new Error('Επίλεξε εικόνα ή βίντεο.');
+        const isImage = (file.type && file.type.startsWith('image/')) || /\.(jpg|jpeg|png|webp|gif|svg|avif)$/i.test(file.name);
+        const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name);
+        if (!isImage && !isVideo) throw new Error(`Το αρχείο ${file.name} δεν αναγνωρίζεται ως έγκυρη εικόνα ή βίντεο.`);
         let prepared = file;
-        if (file.type.startsWith('video/')) {
+        if (isVideo) {
           videoAbort.current = new AbortController();
           setVideoCompressing(true);
           try {
@@ -558,7 +560,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
             setVideoCompressing(false);
             videoAbort.current = null;
           }
-        } else if (file.type.startsWith('image/')) {
+        } else if (isImage) {
           prepared = await compressPortfolioImage(file);
         } else if (file.size > VIDEO_UPLOAD_LIMIT) {
           throw new Error('Η εικόνα πρέπει να είναι έως 30 MB.');
@@ -569,7 +571,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           `jewelry/portfolio/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`
         );
         await uploadBytes(fileRef, prepared, {
-          contentType: prepared.type || (file.type.startsWith('video/') ? 'video/mp4' : 'image/jpeg'),
+          contentType: prepared.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
           cacheControl: 'public, max-age=31536000, immutable'
         });
         const uploaded: Media = {

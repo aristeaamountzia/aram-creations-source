@@ -9,9 +9,15 @@ export async function loadExcelThumbnail(url: string, signal?: AbortSignal): Pro
   signal?.addEventListener('abort', cancel, { once: true });
   const timer = setTimeout(cancel, 15000);
   try {
-    const response = await fetch(url, { signal: controller.signal });
-    if (!response.ok || !response.headers.get('content-type')?.startsWith('image/')) throw new Error('Η εικόνα δεν φορτώθηκε.');
-    blob = await response.blob();
+    // Firebase and Google Cloud Storage do not expose browser-fetchable CORS headers on direct URLs;
+    // route directly through the authenticated media proxy to prevent console CORS failures and network aborts.
+    if (/firebasestorage\.googleapis\.com|storage\.googleapis\.com/i.test(url)) {
+      blob = await editableBlob({ url }, signal);
+    } else {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok || !response.headers.get('content-type')?.startsWith('image/')) throw new Error('Η εικόνα δεν φορτώθηκε.');
+      blob = await response.blob();
+    }
   } catch {
     signal?.throwIfAborted();
     // Authenticated existing media proxy also handles missing CORS headers/tokens.

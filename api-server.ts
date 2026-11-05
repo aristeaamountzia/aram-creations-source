@@ -1,6 +1,7 @@
 import { extractListingState, classifyVintedCategory } from './server/vinted-listing';
 import { getVintedReviews, fetchLiveVintedReviews, persistVintedReviewsToFirestore } from './server/vinted-reviews';
 import { createStripeCheckoutSession, retrieveStripeCheckoutSession } from './server/stripe-service';
+import { sendContactEmail } from './server/contact-service';
 import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
@@ -844,7 +845,25 @@ app.patch("/api/orders", (req: Request, res: Response) => {
   return res.json({ ok: true, order: found });
 });
 
-// 6. Serve static public files
+// 6. Contact message endpoint (Resend)
+app.post("/api/contact", async (req: Request, res: Response) => {
+  try {
+    const { name, email, interest, message } = req.body || {};
+    const result = await sendContactEmail({ name, email, interest, message });
+    return res.json({
+      ok: true,
+      id: result.id,
+      message: "Το μήνυμά σας εστάλη επιτυχώς. Θα επικοινωνήσουμε σύντομα μαζί σας."
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: err.message || "Αποτυχία αποστολής email."
+    });
+  }
+});
+
+// 7. Serve static public files
 app.use(express.static(path.join(process.cwd(), "public")));
 
 

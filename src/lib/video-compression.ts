@@ -25,7 +25,7 @@ export async function prepareVideoUpload(
       if (data.type === 'progress') { onProgress({ text: `${data.attempt ? 'Δεύτερη συμπίεση' : 'Συμπίεση'} ${file.name}: ${data.progress}%`, percent: data.progress }); return; }
       if (data.type === 'error') {
         // Safe fallback: if original file is already <= 30 MB and is a standard video, keep original file
-        if (file.size <= VIDEO_UPLOAD_LIMIT && (/^video\//.test(file.type) || /\.(mp4|webm|mov)$/i.test(file.name))) {
+        if (file.size <= VIDEO_UPLOAD_LIMIT && (/^video\//.test(file.type) || /\.(mp4|webm|mov|m4v|mkv|avi)$/i.test(file.name))) {
           finished = true;
           cleanup();
           onProgress({ text: `Το αρχικό βίντεο είναι ήδη κάτω από 30 MB (${videoSize(file.size)}) και διατηρήθηκε.`, percent: 100 });
@@ -46,4 +46,3 @@ export async function prepareVideoUpload(
     worker.postMessage({ file, stripAudio: Boolean(options?.stripAudio) });
   });
 }
-
