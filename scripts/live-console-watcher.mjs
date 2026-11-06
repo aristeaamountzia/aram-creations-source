@@ -243,6 +243,15 @@ function setupPageMonitoring(page, pageIndex = 1, targetUrl = '') {
     const url = req.url();
     const method = req.method();
 
+    // Ignore benign browser media range cancellations & Firestore keep-alive stream cycles
+    if (errText === 'net::ERR_ABORTED') {
+      const isMedia = /\.(mp4|webm|mov|m4v|mkv|avi|ogv)/i.test(url) || url.includes('firebasestorage.googleapis.com');
+      const isFirestoreChannel = url.includes('firestore.googleapis.com') && url.includes('Listen/channel');
+      if (isMedia || isFirestoreChannel) {
+        return;
+      }
+    }
+
     let isCors = isCorsIssue(errText);
     if (!isCors && errText === 'net::ERR_FAILED') {
       try {

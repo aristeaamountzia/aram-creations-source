@@ -19,7 +19,7 @@ import { VintedRefresh } from './VintedRefresh';
 import { MediaDownload } from './MediaDownload';
 import { VideoUploadStatus } from './VideoUploadStatus';
 import { prepareVideoUpload } from '../lib/video-compression';
-import { VIDEO_UPLOAD_HELP } from '../lib/video-policy';
+import { inferVideoContentType, VIDEO_UPLOAD_HELP } from '../lib/video-policy';
 import { editableBlob } from '../lib/media-files';
 import { vintedSourceUrl } from '../lib/vinted-refresh';
 import { db, auth, storage } from "../firebase";
@@ -894,7 +894,7 @@ interface BackOfficeViewProps {
                     const safeName = prepared.name.replace(/[^a-zA-Z0-9._-]/g, '') || 'hero-video.mp4';
                     const fileRef = firebaseRef(storage, `jewelry/hero/${section}/${Date.now()}-${safeName}`);
                     const task = uploadBytesResumable(fileRef, prepared, {
-                        contentType: prepared.type || 'video/mp4',
+                        contentType: inferVideoContentType(prepared) || 'video/mp4',
                         cacheControl: 'public, max-age=31536000, immutable'
                     });
                     await new Promise((resolve, reject) => task.on(
@@ -902,7 +902,7 @@ interface BackOfficeViewProps {
                         (snapshot) => {
                             const pct = snapshot.totalBytes > 0 ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0;
                             setStatus(`Ανέβασμα συμπιεσμένου βίντεο: ${pct}%`);
-                            setVideoProgress({ text: `Ανέβασμα συμπιεσμένου βίντεο στο Firebase Storage: ${pct}%`, percent: pct });
+                            setVideoProgress({ text: `Ανέβασμα Hero στο Cloud... ${pct}%`, percent: pct });
                         },
                         reject,
                         resolve
@@ -2802,7 +2802,7 @@ interface BackOfficeViewProps {
                         const uniqueName = Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '_' + safeName;
                         const storageRef = firebaseRef(storage, folder + '/' + uniqueName);
                         const uploadTask = uploadBytesResumable(storageRef, fileObj, {
-                            contentType: fileObj.type || (fileObj.name.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg'),
+                            contentType: inferVideoContentType(fileObj) || fileObj.type || 'image/jpeg',
                             cacheControl: 'public, max-age=31536000, immutable'
                         });
 
@@ -5719,7 +5719,11 @@ interface BackOfficeViewProps {
                                                             accept="video/*"
                                                             disabled={mediaPreparing}
                                                             aria-label="Ανέβασμα βίντεο Hero"
-                                                            onChange={e => { handleHeroVideoUpload(e.target.files?.[0]); e.target.value = ''; }}
+                                                            onChange={e => {
+                                                                const file = e.target.files?.[0];
+                                                                e.target.value = '';
+                                                                if (file) handleHeroVideoUpload(file, 'shop');
+                                                            }}
                                                             className="w-full text-xs text-stone-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-stone-900 file:text-white hover:file:bg-stone-800 cursor-pointer"
                                                         />
                                                         <p className="text-[10px] text-stone-400 mt-1">{VIDEO_UPLOAD_HELP}</p>
@@ -6052,7 +6056,11 @@ interface BackOfficeViewProps {
                                                             accept="video/*"
                                                             disabled={mediaPreparing || isSavingSettings}
                                                             aria-label="Ανέβασμα βίντεο Hero Portfolio"
-                                                            onChange={e => { handleHeroVideoUpload(e.target.files?.[0], 'portfolio'); e.target.value = ''; }}
+                                                            onChange={e => {
+                                                                const file = e.target.files?.[0];
+                                                                e.target.value = '';
+                                                                if (file) handleHeroVideoUpload(file, 'portfolio');
+                                                            }}
                                                             className="w-full text-xs text-stone-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-stone-900 file:text-white hover:file:bg-stone-800 cursor-pointer"
                                                         />
                                                         <p className="text-[10px] text-stone-400 mt-1">{VIDEO_UPLOAD_HELP}</p>

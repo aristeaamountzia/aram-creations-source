@@ -12,7 +12,7 @@ import { FirebaseMediaCleanup } from './FirebaseMediaCleanup';
 import { CatalogControls } from './CatalogControls';
 import { VideoUploadStatus } from './VideoUploadStatus';
 import { prepareVideoUpload, VideoProgress } from '../lib/video-compression';
-import { VIDEO_UPLOAD_HELP, VIDEO_UPLOAD_LIMIT } from '../lib/video-policy';
+import { inferVideoContentType, VIDEO_UPLOAD_HELP, VIDEO_UPLOAD_LIMIT } from '../lib/video-policy';
 import { ImageEditorModal } from './ImageEditorModal';
 import { BulkEditModal } from './BulkEditModal';
 import { ItemDetailModal } from './ItemDetailModal';
@@ -541,13 +541,14 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     setError('');
   };
 
-  const upload = async (files: FileList | null) => {
-    if (!files?.length || !form || uploading) return;
+  const upload = async (files: FileList | File[] | null) => {
+    if (!files || (Array.isArray(files) ? files.length === 0 : files.length === 0) || !form || uploading) return;
     setUploading(true);
     setError('');
     setVideoProgress(null);
     try {
-      for (const file of Array.from(files)) {
+      const fileList = Array.isArray(files) ? files : Array.from(files);
+      for (const file of fileList) {
         const isImage = (file.type && file.type.startsWith('image/')) || /\.(jpg|jpeg|png|webp|gif|svg|avif)$/i.test(file.name);
         const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name);
         if (!isImage && !isVideo) throw new Error(`Το αρχείο ${file.name} δεν αναγνωρίζεται ως έγκυρη εικόνα ή βίντεο.`);
@@ -572,7 +573,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           `jewelry/portfolio/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`
         );
         const uploadTask = uploadBytesResumable(fileRef, prepared, {
-          contentType: prepared.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
+          contentType: isVideo ? inferVideoContentType(prepared) || 'video/mp4' : prepared.type || 'image/jpeg',
           cacheControl: 'public, max-age=31536000, immutable'
         });
         await new Promise<void>((resolve, reject) => {
@@ -584,7 +585,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                   ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
                   : 0;
               setVideoProgress({
-                text: `Ανέβασμα ${prepared.name} στο Firebase Storage: ${pct}%`,
+                text: `Ανέβασμα στο Cloud ${prepared.name}: ${pct}%`,
                 percent: pct
               });
             },
@@ -1815,9 +1816,9 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                       multiple
                       disabled={uploading}
                       onChange={e => {
-                        const files = e.target.files;
+                        const files = Array.from(e.target.files || []);
                         e.target.value = '';
-                        upload(files);
+                        if (files.length > 0) upload(files);
                       }}
                       className="w-full rounded-xl border border-stone-200 p-3 text-xs bg-stone-50 focus:bg-white"
                     />

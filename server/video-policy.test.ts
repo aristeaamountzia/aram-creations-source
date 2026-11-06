@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateVideoInput, videoEncodingPlan, VIDEO_INPUT_LIMIT, VIDEO_UPLOAD_LIMIT } from '../src/lib/video-policy';
+import { inferVideoContentType, validateVideoInput, videoEncodingPlan, VIDEO_INPUT_LIMIT, VIDEO_UPLOAD_LIMIT } from '../src/lib/video-policy';
 test('oversized source is rejected before reading or starting a worker; a source above the upload limit can be compressed', () => {
   assert.throws(() => validateVideoInput({ size: VIDEO_INPUT_LIMIT + 1, type: 'video/mp4' }), /1 GB/);
   assert.throws(() => validateVideoInput({ size: 0, type: 'video/mp4' }));
@@ -18,4 +18,9 @@ test('portrait and landscape retain orientation without upscaling; bitrate accou
   assert.ok(videoEncodingPlan(3840, 2160, 600, true, true).bitrate < long.bitrate);
   assert.throws(() => videoEncodingPlan(1080, 1920, 601, true), /10 λεπτά/);
 });
-
+test('video MIME types are inferred from supported file extensions when the browser omits them', () => {
+  assert.equal(inferVideoContentType({ name: 'clip.mov', type: '' }), 'video/quicktime');
+  assert.equal(inferVideoContentType({ name: 'clip.webm', type: 'application/octet-stream' }), 'video/webm');
+  assert.equal(inferVideoContentType({ name: 'clip.mp4', type: 'video/mp4' }), 'video/mp4');
+  assert.equal(inferVideoContentType({ name: 'clip.bin', type: 'application/octet-stream' }), undefined);
+});

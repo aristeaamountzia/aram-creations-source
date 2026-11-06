@@ -121,7 +121,19 @@ export async function prepareVideoUpload(
   validateVideoInput(file);
   if (signal?.aborted) throw new DOMException('Η συμπίεση ακυρώθηκε.', 'AbortError');
   onProgress({ text: `Προετοιμασία ${file.name} (${videoSize(file.size)})…`, percent: 0 });
-  const worker = new Worker(new URL('./video-compression.worker.ts', import.meta.url), { type: 'module' });
+  const canKeepOriginal = !options?.stripAudio
+    && file.size <= VIDEO_UPLOAD_LIMIT
+    && (/^video\//.test(file.type) || /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name));
+  let worker: Worker;
+  try {
+    worker = new Worker(new URL('./video-compression.worker.ts', import.meta.url), { type: 'module' });
+  } catch (error) {
+    if (canKeepOriginal) {
+      onProgress({ text: `Η συμπίεση δεν ξεκίνησε. Διατηρήθηκε το αρχικό βίντεο (${videoSize(file.size)}).`, percent: 100 });
+      return file;
+    }
+    throw error instanceof Error ? error : new Error(String(error));
+  }
   return new Promise((resolve, reject) => {
     let finished = false;
     const cleanup = () => { worker.terminate(); clearTimeout(timer); signal?.removeEventListener('abort', cancel); };
@@ -129,6 +141,8 @@ export async function prepareVideoUpload(
       if (finished) return;
       finished = true;
       cleanup();
+
+      // If user aborted explicitly, honor cancellation
       if (error.name === 'AbortError' || signal?.aborted) {
         reject(error);
         return;
@@ -151,11 +165,13 @@ export async function prepareVideoUpload(
         }
       }
 
-      if (file.size <= VIDEO_UPLOAD_LIMIT && (/^video\//.test(file.type) || /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name))) {
+      // Safe fallback: if original file is already <= 30 MB and is a standard video, keep original file
+      if (canKeepOriginal) {
         onProgress({ text: `Το αρχικό βίντεο είναι ήδη κάτω από 30 MB (${videoSize(file.size)}) και διατηρήθηκε.`, percent: 100 });
         resolve(file);
         return;
       }
+
       reject(error);
     };
     const cancel = () => {
