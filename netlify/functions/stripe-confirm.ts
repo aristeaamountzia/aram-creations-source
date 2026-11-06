@@ -8,16 +8,14 @@ function isAllowedOrigin(origin: string | null): boolean {
   const configured = [
     process.env.URL,
     process.env.DEPLOY_PRIME_URL,
-    'https://aramcreationsofficial1.netlify.app',
-    'https://aramcreationss.netlify.app',
-    'https://aram-creations.netlify.app',
+    'https://aramcreationsofficial.netlify.app',
     'http://localhost:5173',
     'http://localhost:8888',
     'http://localhost:3000'
   ].filter(Boolean) as string[];
 
   if (configured.some(allowed => origin === allowed || origin === allowed.replace(/\/$/, ''))) return true;
-  if (/^https:\/\/(?:[a-z0-9-]+--)?(?:aramcreationsofficial1|aramcreationss|aram-creations)\.netlify\.app$/i.test(origin)) return true;
+  if (/^https:\/\/(?:[a-z0-9-]+--)?aramcreationsofficial\.netlify\.app$/i.test(origin)) return true;
   return false;
 }
 

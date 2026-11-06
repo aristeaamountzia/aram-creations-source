@@ -149,7 +149,7 @@ function initLogs() {
   const initHeader = `========================================================================\n` +
     `📡 ARAM CREATIONS — ΖΩΝΤΑΝΗ ΚΑΤΑΓΡΑΦΗ ΣΥΝΕΔΡΙΑΣ ΧΡΗΣΤΗ\n` +
     `📅 Έναρξη: ${new Date().toLocaleString('el-GR')}\n` +
-    `🌐 Στόχος: ${sessionData.targetUrl || 'https://aramcreationsofficial1.netlify.app#admin'}\n` +
+    `🌐 Στόχος: ${sessionData.targetUrl || 'https://aramcreationsofficial.netlify.app#admin'}\n` +
     `========================================================================\n\n`;
 
   for (const logFile of LOG_FILES) {
@@ -307,7 +307,7 @@ function resolveTargetUrl(args = []) {
       return `https://${arg}`;
     }
   }
-  return 'https://aramcreationsofficial1.netlify.app#admin';
+  return 'https://aramcreationsofficial.netlify.app#admin';
 }
 
 async function launchBrowserWithFallback() {

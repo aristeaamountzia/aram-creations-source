@@ -6,7 +6,7 @@ import catalogBackupsHandler from "../netlify/functions/catalog-backups";
 import orderEmailTestHandler from "../netlify/functions/order-email-test";
 import contactHandler from "../netlify/functions/contact";
 
-const PRODUCTION_BACKEND_ORIGIN = "https://aramcreationsofficial1.netlify.app";
+const PRODUCTION_BACKEND_ORIGIN = "https://aramcreationsofficial.netlify.app";
 
 type WebHandler = (request: globalThis.Request, context?: { ip?: string }) => Promise<globalThis.Response>;
 

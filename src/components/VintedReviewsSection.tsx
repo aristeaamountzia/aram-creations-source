@@ -198,12 +198,12 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
       '@graph': [
         {
           '@type': ['OnlineStore', 'JewelryStore'],
-          '@id': 'https://aramcreationsofficial1.netlify.app/#store',
+          '@id': 'https://aramcreationsofficial.netlify.app/#store',
           name: 'Aram Creations',
           alternateName: 'Aram Creations Χειροποίητα Κοσμήματα & Δημιουργίες',
-          url: 'https://aramcreationsofficial1.netlify.app/',
-          logo: 'https://aramcreationsofficial1.netlify.app/logo.png',
-          image: 'https://aramcreationsofficial1.netlify.app/logo.png',
+          url: 'https://aramcreationsofficial.netlify.app/',
+          logo: 'https://aramcreationsofficial.netlify.app/logo.png',
+          image: 'https://aramcreationsofficial.netlify.app/logo.png',
           description:
             'Ανακαλύψτε μοναδικά χειροποίητα κοσμήματα, δημιουργίες από υγρό γυαλί (resin art), σκουλαρίκια, κολιέ, δαχτυλίδια και custom παραγγελίες από το Aram Creations.',
           priceRange: '€',
@@ -239,12 +239,12 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
         },
         {
           '@type': 'WebSite',
-          '@id': 'https://aramcreationsofficial1.netlify.app/#website',
-          url: 'https://aramcreationsofficial1.netlify.app/',
+          '@id': 'https://aramcreationsofficial.netlify.app/#website',
+          url: 'https://aramcreationsofficial.netlify.app/',
           name: 'Aram Creations | Χειροποίητες Δημιουργίες & Κοσμήματα',
           inLanguage: 'el-GR',
           publisher: {
-            '@id': 'https://aramcreationsofficial1.netlify.app/#store'
+            '@id': 'https://aramcreationsofficial.netlify.app/#store'
           }
         }
       ]

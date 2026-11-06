@@ -15,7 +15,7 @@ test('createStripeCheckoutSession throws if STRIPE_SECRET_KEY is missing', async
           shippingMethod: 'boxnow',
           shippingCost: 2.5,
           customerEmail: 'test@example.com',
-          origin: 'https://aramcreationsofficial1.netlify.app'
+          origin: 'https://aramcreationsofficial.netlify.app'
         });
       },
       { message: /απαιτείται κλειδί API/ }

@@ -28,10 +28,8 @@ export async function createStripeCheckoutSession(params: CreateSessionParams): 
     throw new OrderError('Η πληρωμή μέσω Stripe δεν είναι διαθέσιμη αυτή τη στιγμή (απαιτείται κλειδί API).', 503);
   }
 
-  const rawOrigin = (params.origin || process.env.PUBLIC_SITE_URL || process.env.URL || 'https://aramcreationsofficial1.netlify.app').trim().replace(/\/$/, '');
-  const baseOrigin = !rawOrigin || /lovely-bienenstitch-b6079c/i.test(rawOrigin)
-    ? 'https://aramcreationsofficial1.netlify.app'
-    : rawOrigin;
+  const rawOrigin = (params.origin || process.env.PUBLIC_SITE_URL || process.env.URL || 'https://aramcreationsofficial.netlify.app').trim().replace(/\/$/, '');
+  const baseOrigin = rawOrigin || 'https://aramcreationsofficial.netlify.app';
   const successUrl = `${baseOrigin}/?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(params.orderId)}#order-success`;
   const cancelUrl = `${baseOrigin}/?order_cancelled=${encodeURIComponent(params.orderId)}#cart`;
 
