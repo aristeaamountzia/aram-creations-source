@@ -5,7 +5,7 @@ import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signOut } from 'firebase/auth';
 const base = process.env.DEPLOY_VERIFY_URL;
-if (!base || !/^https:\/\/(?:[a-f0-9]+--)?lovely-bienenstitch-b6079c\.netlify\.app$/.test(base)) throw new Error('Set the verified site URL.');
+if (!base || !/^https:\/\/(?:[a-f0-9]+--)?aramcreationsofficial\.netlify\.app$/.test(base)) throw new Error('Set the verified site URL.');
 const path = process.env.ORDER_TEST_CREDENTIAL_PATH;
 if (!path) throw new Error('Set a local credential path.');
 const admin = initializeAdmin({ credential: cert(JSON.parse(readFileSync(path, 'utf8'))) }, 'deploy-verification');

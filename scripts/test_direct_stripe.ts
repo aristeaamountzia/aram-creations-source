@@ -18,7 +18,7 @@ try {
     shippingMethod: "boxnow",
     shippingCost: 2.5,
     customerEmail: "aristeaamnta@gmail.com",
-    origin: "https://aramcreationsofficial1.netlify.app"
+    origin: "https://aramcreationsofficial.netlify.app"
   });
 
   console.log('SUCCESS! Session ID:', session.id);

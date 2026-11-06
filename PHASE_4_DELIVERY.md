@@ -13,11 +13,11 @@
 
 ### Βασικές Διορθώσεις & Αναβαθμίσεις που Ενσωματώθηκαν:
 1. **Επίλυση του Checkout Origin & CORS Bug (`netlify/functions/orders.ts`)**:
-   - Καταργήθηκε η σκληρά κωδικοποιημένη λίστα παλαιών domains (`lovely-bienenstitch-b6079c`).
+   - Καταργήθηκε η σκληρά κωδικοποιημένη λίστα παλαιών domains (`aramcreationsofficial`).
    - Υλοποιήθηκε δυναμικός έλεγχος Origin (`isAllowedOrigin`) που υποστηρίζει:
      * `process.env.URL` και `process.env.DEPLOY_PRIME_URL` (Netlify Production & Branch Deploys).
-     * `https://aramcreationss.netlify.app` (Κύριο domain παραγωγής).
-     * `https://aram-creations.netlify.app` (Εναλλακτικό domain).
+     * `https://aramcreationsofficial.netlify.app` (Κύριο domain παραγωγής).
+     * `https://aramcreationsofficial.netlify.app` (Εναλλακτικό domain).
      * `http://localhost:5173`, `http://localhost:8888`, `http://localhost:3000` (Τοπικό development).
    - Προστέθηκε πλήρης υποστήριξη **OPTIONS Preflight** με επιστροφή HTTP 204 No Content και έγκυρα CORS headers (`Access-Control-Allow-*`).
 2. **Παραμετροποίηση Admin Authorization (`ADMIN_EMAIL`)**:

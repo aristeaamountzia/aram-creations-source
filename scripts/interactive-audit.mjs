@@ -19,7 +19,7 @@ async function pause(ms) {
 }
 
 async function main() {
-  const targetUrl = process.argv.find(arg => arg.startsWith('http')) || 'https://aramcreationsofficial1.netlify.app';
+  const targetUrl = process.argv.find(arg => arg.startsWith('http')) || 'https://aramcreationsofficial.netlify.app';
 
   console.log('================================================================');
   console.log('🚀 ΕΚΚΙΝΗΣΗ ΖΩΝΤΑΝΟΥ BROWSER AUDITOR (HEADFUL INTERACTIVE MODE)');

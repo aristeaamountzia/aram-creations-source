@@ -13,7 +13,7 @@ if (!fs.existsSync(SCREENSHOTS_DIR)) {
 }
 
 export async function runLiveAudit({
-  targetUrl = 'https://aramcreationsofficial1.netlify.app',
+  targetUrl = 'https://aramcreationsofficial.netlify.app',
   headless = true,
   deviceProfiles = [
     { name: 'Desktop-1440x900', width: 1440, height: 900, isMobile: false },
@@ -130,7 +130,7 @@ export async function runLiveAudit({
 // Run if called directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const isHeadless = !process.argv.includes('--headful');
-  const target = process.argv.find(arg => arg.startsWith('http')) || 'https://aramcreationsofficial1.netlify.app';
+  const target = process.argv.find(arg => arg.startsWith('http')) || 'https://aramcreationsofficial.netlify.app';
   runLiveAudit({ targetUrl: target, headless: isHeadless })
     .catch(err => {
       console.error('[Audit Fatal Error]', err);

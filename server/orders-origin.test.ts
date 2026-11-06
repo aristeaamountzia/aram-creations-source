@@ -17,11 +17,11 @@ test('OPTIONS request returns 204 with CORS headers for allowed origin', async (
   const handler = createOrdersHandler(() => ({ db: mockDb as any, auth: mockAuth as any }), async () => 'test');
   const req = new Request('http://localhost/api/orders', {
     method: 'OPTIONS',
-    headers: { 'Origin': 'https://aramcreationss.netlify.app' }
+    headers: { 'Origin': 'https://aramcreationsofficial.netlify.app' }
   });
   const res = await handler(req, { ip: '127.0.0.1' });
   assert.equal(res.status, 204);
-  assert.equal(res.headers.get('Access-Control-Allow-Origin'), 'https://aramcreationss.netlify.app');
+  assert.equal(res.headers.get('Access-Control-Allow-Origin'), 'https://aramcreationsofficial.netlify.app');
   assert.ok(res.headers.get('Access-Control-Allow-Methods')?.includes('POST'));
 });
 
@@ -30,7 +30,7 @@ test('POST with primary production origin passes origin validation and reaches b
   const req = new Request('http://localhost/api/orders', {
     method: 'POST',
     headers: {
-      'Origin': 'https://aramcreationss.netlify.app',
+      'Origin': 'https://aramcreationsofficial.netlify.app',
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ ping: true })
@@ -39,7 +39,7 @@ test('POST with primary production origin passes origin validation and reaches b
   // Should NOT be 403 Forbidden! It should reach body validation and return 400 Bad Request
   assert.notEqual(res.status, 403);
   assert.equal(res.status, 400);
-  assert.equal(res.headers.get('Access-Control-Allow-Origin'), 'https://aramcreationss.netlify.app');
+  assert.equal(res.headers.get('Access-Control-Allow-Origin'), 'https://aramcreationsofficial.netlify.app');
 });
 
 test('POST with unauthorized origin is rejected with 403', async () => {

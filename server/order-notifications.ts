@@ -1,11 +1,11 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 export const OWNER_EMAIL = 'aristeaamnta@gmail.com';
-export const CANONICAL_SITE_URL = 'https://aramcreationsofficial1.netlify.app';
+export const CANONICAL_SITE_URL = 'https://aramcreationsofficial.netlify.app';
 
 export function resolveAdminUrl(candidate?: string): string {
   const raw = (candidate || process.env.PUBLIC_SITE_URL || process.env.URL || CANONICAL_SITE_URL).trim().replace(/\/$/, '');
-  if (!raw || /lovely-bienenstitch-b6079c/i.test(raw)) {
+  if (!raw) {
     return `${CANONICAL_SITE_URL}/#admin`;
   }
   return `${raw}/#admin`;

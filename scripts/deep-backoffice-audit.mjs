@@ -63,7 +63,7 @@ async function runDeepAudit() {
 
   // --- SECTION 1: BACK OFFICE - CATALOG & STATS ---
   console.log('\n--- 1. BACK OFFICE: CATALOG & METRICS ---');
-  await page.goto('https://aramcreationsofficial1.netlify.app/#admin', { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.goto('https://aramcreationsofficial.netlify.app/#admin', { waitUntil: 'domcontentloaded', timeout: 30000 });
   await sleep(3500); // Allow Firestore sync
 
   await takeSnap('01-catalog-initial', 'Αρχική οθόνη καταλόγου Back Office', true);
@@ -200,7 +200,7 @@ async function runDeepAudit() {
 
   // --- SECTION 8: FRONTEND SHOP LIVE INTERACTION ---
   console.log('\n--- 8. FRONTEND PUBLIC SHOP INSPECTION ---');
-  await page.goto('https://aramcreationsofficial1.netlify.app/#shop', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://aramcreationsofficial.netlify.app/#shop', { waitUntil: 'domcontentloaded' });
   await sleep(3000);
 
   await takeSnap('11-frontend-shop-hero', 'Hero Section Καταστήματος με Video & Scroll Cue');
@@ -223,7 +223,7 @@ async function runDeepAudit() {
 
   // --- SECTION 9: FRONTEND PORTFOLIO LIVE INTERACTION ---
   console.log('\n--- 9. FRONTEND PUBLIC PORTFOLIO INSPECTION ---');
-  await page.goto('https://aramcreationsofficial1.netlify.app/#portfolio', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://aramcreationsofficial.netlify.app/#portfolio', { waitUntil: 'domcontentloaded' });
   await sleep(3000);
   await takeSnap('13-frontend-portfolio-hero', 'Hero Section Portfolio & Parity Check');
 
@@ -233,11 +233,11 @@ async function runDeepAudit() {
   await sleep(1500);
   await takeSnap('14-mobile-portfolio', 'Mobile Portfolio View');
 
-  await page.goto('https://aramcreationsofficial1.netlify.app/#shop', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://aramcreationsofficial.netlify.app/#shop', { waitUntil: 'domcontentloaded' });
   await sleep(2000);
   await takeSnap('15-mobile-shop-hero', 'Mobile Shop Hero & Navigation');
 
-  await page.goto('https://aramcreationsofficial1.netlify.app/#admin', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://aramcreationsofficial.netlify.app/#admin', { waitUntil: 'domcontentloaded' });
   await sleep(2500);
   await takeSnap('16-mobile-admin-dashboard', 'Mobile Back Office Dashboard & Controls');
 

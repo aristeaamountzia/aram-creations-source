@@ -1,6 +1,6 @@
 # Aram Creations
 
-Πηγαίος κώδικας για το κύριο Shop, το Portfolio και το Back Office του [aram-creations.netlify.app](https://aram-creations.netlify.app).
+Πηγαίος κώδικας για το κύριο Shop, το Portfolio και το Back Office του [aramcreationsofficial.netlify.app](https://aramcreationsofficial.netlify.app).
 
 ## Τοπική εκτέλεση
 
