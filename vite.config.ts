@@ -1,14 +1,38 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-import { defineConfig } from 'vite';
+import { fileURLToPath } from 'node:url';
+import { defineConfig, type Plugin } from 'vite';
+import { initialContent, searchPages, SITE_URL } from './src/lib/search-content';
+
+function searchLandingPages(): Plugin {
+  return {
+    name: 'search-landing-pages',
+    enforce: 'post',
+    transformIndexHtml(html) {
+      return html.replace('<div id="root"></div>', `<div id="root">${initialContent()}</div>`);
+    },
+    generateBundle(_, bundle) {
+      const index = bundle['index.html'];
+      if (!index || index.type !== 'asset') return;
+      const page = searchPages.portfolio;
+      const html = String(index.source)
+        .replace(/<title>.*?<\/title>/, `<title>${page.title}</title>`)
+        .replace(/(<meta (?:name="description"|property="og:description"|name="twitter:description") content=")[^"]*/g, `$1${page.description}`)
+        .replace(/(<meta (?:property="og:title"|name="twitter:title") content=")[^"]*/g, `$1${page.title}`)
+        .replace(/(<link rel="canonical" href=")[^"]*/, `$1${SITE_URL}${page.path}`)
+        .replace(/(<meta property="og:url" content=")[^"]*/, `$1${SITE_URL}${page.path}`)
+        .replace(initialContent(), initialContent(true));
+      this.emitFile({ type: 'asset', fileName: 'portfolio/index.html', source: html });
+    },
+  };
+}
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), searchLandingPages()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
     build: {

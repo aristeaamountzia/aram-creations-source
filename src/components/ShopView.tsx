@@ -566,7 +566,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
               title="Δείτε τις επίσημες αξιολογήσεις των πελατών"
             >
               <Star className="w-3 h-3 fill-amber-300 text-amber-300 shrink-0" strokeWidth={1.5} />
-              <span>5.0 • 10 αξιολογήσεις στο Vinted</span>
+              <span>Αξιολογήσεις πελατών στο Vinted</span>
             </a>
           </div>
         </div>

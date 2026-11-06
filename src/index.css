@@ -437,3 +437,9 @@
 .aram-site .portfolio-view .catalog-card .bg-white\/95 { background: var(--ds-badge-background, #f4f4f5) !important; color: var(--ds-badge-ink, #18181b) !important; border-color: var(--ds-badge-border, #e4e4e7) !important; }
 .aram-site .portfolio-view .fixed .max-w-4xl { background: var(--ds-modal-background, #ffffff) !important; color: var(--ds-modal-ink, #18181b) !important; border-color: var(--ds-modal-border, #e4e4e7) !important; border-radius: var(--ds-modal-radius, 16px) !important; }
 .aram-site .portfolio-view .fixed .max-w-4xl :is(p, .text-\[\#675f79\]) { color: var(--ds-modal-muted, #71717a) !important; }
+
+.studio-information { line-height: 1.85; }
+.studio-information h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; }
+.studio-information h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1.5rem; }
+.studio-information p { margin-top: .65rem; }
+.studio-information a { text-decoration: underline; text-underline-offset: .2em; }
