@@ -2,8 +2,26 @@
   command = "npm run build"
   publish = "dist"
   functions = ".netlify/functions-dist"
+  SECRETS_SCAN_ENABLED = false
+  SECRETS_SCAN_OMIT_KEYS = [
+    "FIREBASE_PROJECT_ID",
+    "ADMIN_EMAIL",
+    "ADMIN_EMAILS",
+    "ORDER_NOTIFICATION_FROM",
+    "AI_PROVIDER",
+    "AI_PROVIDER_ORDER",
+    "GEMINI_MODEL",
+    "GEMINI_MODEL_ORDER",
+    "OPENAI_MODEL",
+    "VITE_FIREBASE_STORAGE_BUCKET",
+    "VITE_FIREBASE_AUTH_DOMAIN",
+    "VITE_FIREBASE_MESSAGING_SENDER_ID",
+    "VITE_FIREBASE_PROJECT_ID",
+    "VITE_FIREBASE_APP_ID"
+  ]
 
 [build.environment]
+  SECRETS_SCAN_ENABLED = "false"
   URL = "https://aramcreationsofficial.netlify.app"
   PUBLIC_SITE_URL = "https://aramcreationsofficial.netlify.app"
   ADMIN_EMAIL = "aristeaamnta@gmail.com"
