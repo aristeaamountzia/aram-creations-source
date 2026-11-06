@@ -54,7 +54,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   heroSubtitleColor: '#a1a1aa',
   heroTitleSize: 'text-3xl md:text-4xl',
   borderRadius: '0.625rem',
-  heroTitle: 'Χειροποίητες Δημιουργίες',
+  heroTitle: 'Χειροποίητα κοσμήματα από τον Βόλο',
   heroSubtitle: 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.',
   heroVideoUrl: '',
   announcementEnabled: false,

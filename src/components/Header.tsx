@@ -51,14 +51,14 @@ export const Header: React.FC<HeaderProps> = ({ currentMode, onSelectMode, cartC
             </span>
           </button>
           <nav aria-label="Shop και Portfolio" className="section-entrances">
-            <button id="nav-btn-shop" type="button" onClick={() => onSelectMode('shop')}
-              aria-pressed={currentMode === 'shop'} className="section-entrance entrance-shop cursor-pointer">
+            <a id="nav-btn-shop" href="/"
+              aria-current={currentMode === 'shop' ? 'page' : undefined} className="section-entrance entrance-shop cursor-pointer">
               <ShoppingBag className="h-4 w-4 shrink-0" aria-hidden="true" /><span>{design?.shopNavLabel || 'Shop'}</span>
-            </button>
-            <button id="nav-btn-portfolio" type="button" onClick={() => onSelectMode('portfolio')}
-              aria-pressed={currentMode === 'portfolio'} className="section-entrance entrance-portfolio cursor-pointer">
+            </a>
+            <a id="nav-btn-portfolio" href="/portfolio/"
+              aria-current={currentMode === 'portfolio' ? 'page' : undefined} className="section-entrance entrance-portfolio cursor-pointer">
               <Palette className="h-4 w-4 shrink-0" aria-hidden="true" /><span>{design?.portfolioNavLabel || 'Portfolio'}</span>
-            </button>
+            </a>
           </nav>
           {isPortfolio ? (
             <button type="button" onClick={onContactArtist} aria-label="Επικοινωνία με την Aram Creations"

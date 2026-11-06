@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SectionMode, ArtItem, JewelryItem, CartItem } from './types';
+import { searchPages, SITE_URL, studioContent } from './lib/search-content';
 import { Header } from './components/Header';
 import { ShopView } from './components/ShopView';
 const PortfolioView = React.lazy(() =>
@@ -49,17 +50,26 @@ const getInitialThemeState = () => {
 };
 
 export const App: React.FC = () => {
-  const [currentMode, setCurrentMode] = useState<SectionMode>('shop');
+  const [currentMode, setCurrentMode] = useState<SectionMode>(window.location.pathname.startsWith('/portfolio') ? 'portfolio' : 'shop');
   const [initialTheme] = useState(getInitialThemeState);
   const [visualTheme, setVisualTheme] = useState<'atelier' | 'classic'>(initialTheme.visualTheme);
   const [designStudio, setDesignStudio] = useState<Record<string, string>>(initialTheme.designStudioCss);
   const [designStudioContent, setDesignStudioContent] = useState<DesignStudio>(initialTheme.designStudioContent);
   const hasInitializedHistory = useRef(false);
   const selectMode = useCallback((mode: SectionMode) => {
-    const hash = mode === 'shop' ? '#shop' : mode === 'portfolio' ? '#portfolio' : '#admin';
-    if (window.location.hash !== hash) window.history.pushState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
+    const target = mode === 'portfolio' ? '/portfolio/' : mode === 'admin' ? '/#admin' : '/';
+    if (`${window.location.pathname}${window.location.hash}` !== target) window.history.pushState(null, '', target);
     setCurrentMode(mode);
   }, []);
+
+  useEffect(() => {
+    const page = searchPages[currentMode === 'portfolio' ? 'portfolio' : 'shop'];
+    document.title = page.title;
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', SITE_URL + page.path);
+    for (const selector of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) document.querySelector(selector)?.setAttribute('content', page.description);
+    for (const selector of ['meta[property="og:title"]', 'meta[name="twitter:title"]']) document.querySelector(selector)?.setAttribute('content', page.title);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', SITE_URL + page.path);
+  }, [currentMode]);
 
   // Cart state persisted in localStorage
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
@@ -169,13 +179,13 @@ export const App: React.FC = () => {
     const handleHash = () => {
       if (window.location.hash === '#admin') {
         setCurrentMode('admin');
-      } else if (window.location.hash.startsWith('#portfolio')) {
+      } else if (window.location.hash.startsWith('#portfolio') || (window.location.hash !== '#shop' && window.location.pathname.startsWith('/portfolio'))) {
         setCurrentMode('portfolio');
       } else {
         setCurrentMode('shop');
       }
     };
-    if (!window.history.state?.aramShop) window.history.replaceState({ ...(window.history.state || {}), aramShop: true }, '', `${window.location.pathname}${window.location.search}${window.location.hash || '#shop'}`);
+    if (!window.history.state?.aramShop) window.history.replaceState({ ...(window.history.state || {}), aramShop: true }, '', `${window.location.pathname}${window.location.search}${window.location.hash}`);
     hasInitializedHistory.current = true;
     handleHash();
     window.addEventListener('hashchange', handleHash);
@@ -304,6 +314,7 @@ export const App: React.FC = () => {
             />
           </React.Suspense>
         )}
+        {currentMode !== 'admin' && <div className="studio-information mx-auto max-w-5xl px-6 py-12" dangerouslySetInnerHTML={{ __html: studioContent(currentMode === 'portfolio') }} />}
       </main>
 
       {/* Cart Drawer Slide-over */}
@@ -388,14 +399,14 @@ export const App: React.FC = () => {
           <div className="space-y-2 text-xs">
             <h3 className="font-bold uppercase tracking-wider text-white mb-3 text-xs">Πλοήγηση</h3>
             <div>
-              <button onClick={() => selectMode('shop')} className="text-stone-300 hover:text-white transition font-medium py-1">
+              <a href="/" className="text-stone-300 hover:text-white transition font-medium py-1">
                 Shop (Κοσμήματα)
-              </button>
+              </a>
             </div>
             <div>
-              <button onClick={() => selectMode('portfolio')} className="text-stone-300 hover:text-white transition font-medium py-1">
+              <a href="/portfolio/" className="text-stone-300 hover:text-white transition font-medium py-1">
                 Portfolio Έργων & Δημιουργιών
-              </button>
+              </a>
             </div>
             <div className="pt-2 border-t border-stone-800 space-y-1 text-xs text-stone-300">
               <div>
