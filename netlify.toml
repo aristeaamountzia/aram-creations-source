@@ -2,32 +2,26 @@
   command = "npm run build"
   publish = "dist"
   functions = ".netlify/functions-dist"
-  SECRETS_SCAN_ENABLED = false
-  SECRETS_SCAN_OMIT_KEYS = [
-    "FIREBASE_PROJECT_ID",
-    "ADMIN_EMAIL",
-    "ADMIN_EMAILS",
-    "ORDER_NOTIFICATION_FROM",
-    "AI_PROVIDER",
-    "AI_PROVIDER_ORDER",
-    "GEMINI_MODEL",
-    "GEMINI_MODEL_ORDER",
-    "OPENAI_MODEL",
-    "VITE_FIREBASE_STORAGE_BUCKET",
-    "VITE_FIREBASE_AUTH_DOMAIN",
-    "VITE_FIREBASE_MESSAGING_SENDER_ID",
-    "VITE_FIREBASE_PROJECT_ID",
-    "VITE_FIREBASE_APP_ID"
-  ]
 
 [build.environment]
   SECRETS_SCAN_ENABLED = "false"
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
   URL = "https://aramcreationsofficial.netlify.app"
   PUBLIC_SITE_URL = "https://aramcreationsofficial.netlify.app"
   ADMIN_EMAIL = "aristeaamnta@gmail.com"
+  ADMIN_EMAILS = "aristeaamnta@gmail.com"
   AI_PROVIDER = "gemini"
+  AI_PROVIDER_ORDER = "gemini,openai"
   GEMINI_MODEL = "gemini-3.5-flash"
   GEMINI_MODEL_ORDER = "gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-flash-latest"
+  OPENAI_MODEL = "gpt-4o-mini"
+  ORDER_NOTIFICATION_FROM = "onboarding@resend.dev"
+  FIREBASE_PROJECT_ID = "aramcreations-e1529"
+  VITE_FIREBASE_PROJECT_ID = "aramcreations-e1529"
+  VITE_FIREBASE_AUTH_DOMAIN = "aramcreations-e1529.firebaseapp.com"
+  VITE_FIREBASE_STORAGE_BUCKET = "aramcreations-e1529.firebasestorage.app"
+  VITE_FIREBASE_MESSAGING_SENDER_ID = "989899248568"
+  VITE_FIREBASE_APP_ID = "1:989899248568:web:9adbb692b7b1a9e363b54d"
   ORDER_NOTIFICATION_FROM = "onboarding@resend.dev"
 
 [functions]
