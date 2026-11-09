@@ -34,7 +34,7 @@ test('rejects unknown provider settings and missing provider keys', () => {
 });
 
 test('supports model order, configured preferred model, and safe defaults', () => {
-  assert.deepEqual(getAiModelOrder('gemini', { GEMINI_MODEL_ORDER: 'model-a, model-b', GEMINI_MODEL: 'model-c' }), ['model-a', 'model-b', 'model-c', 'gemini-2.5-flash']);
+  assert.deepEqual(getAiModelOrder('gemini', { GEMINI_MODEL_ORDER: 'model-a, model-b', GEMINI_MODEL: 'model-c' }), ['model-a', 'model-b', 'model-c', 'gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest']);
   assert.deepEqual(getAiModelOrder('openai', { OPENAI_MODEL: 'model-x' }), ['model-x', 'gpt-4o-mini']);
 });
 

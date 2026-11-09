@@ -58,12 +58,13 @@ export function getAiProviderPlan(environment: AiEnvironment = process.env): AiP
 
 export function getAiModelOrder(provider: AiProvider, environment: AiEnvironment = process.env): string[] {
   const [configuredModels, preferredModel, defaultModel] = provider === "gemini"
-    ? [environment.GEMINI_MODEL_ORDER, environment.GEMINI_MODEL, "gemini-2.5-flash"]
+    ? [environment.GEMINI_MODEL_ORDER, environment.GEMINI_MODEL, "gemini-3.5-flash"]
     : [environment.OPENAI_MODEL_ORDER, environment.OPENAI_MODEL, "gpt-4o-mini"];
   const models = [
     ...(configuredModels?.split(",").map(model => model.trim()).filter(Boolean) ?? []),
     ...(preferredModel?.trim() ? [preferredModel.trim()] : []),
     defaultModel,
+    ...(provider === "gemini" ? ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"] : []),
   ];
   return [...new Set(models)];
 }
@@ -146,7 +147,8 @@ export async function generateBackofficeAiJson(
           : await generateWithOpenAi(prompt, images, model, environment, fetcher);
       } catch (error) {
         if (error instanceof BackofficeAiConfigurationError) throw error;
-        failures.push(`${provider} (${model}) failed`);
+        const reason = error instanceof Error ? error.message : String(error);
+        failures.push(`${provider} (${model}): ${reason}`);
         console.error(`Back Office AI provider ${provider} failed for model ${model}.`, error);
       }
     }

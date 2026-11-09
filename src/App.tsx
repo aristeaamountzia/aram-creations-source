@@ -436,7 +436,7 @@ export const App: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 text-stone-300">
               <MapPin className="w-3.5 h-3.5 text-stone-400" />
-              <span>Βόλος</span>
+              <span>Ελλάδα</span>
             </div>
             <div className="flex items-center gap-2 text-stone-300 pt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -465,6 +465,26 @@ export const App: React.FC = () => {
                 className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-stone-200 hover:text-white hover:border-stone-500 text-xs font-bold hover:bg-stone-850 transition"
               >
                 <span>Instagram Profile</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+
+              <a
+                href="https://www.tiktok.com/@aram.creations"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-stone-200 hover:text-white hover:border-stone-500 text-xs font-bold hover:bg-stone-850 transition"
+              >
+                <span>TikTok</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+
+              <a
+                href="https://www.facebook.com/share/1DmHHwXCMC/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-stone-200 hover:text-white hover:border-stone-500 text-xs font-bold hover:bg-stone-850 transition"
+              >
+                <span>Facebook</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>

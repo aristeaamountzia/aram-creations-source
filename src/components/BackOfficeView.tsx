@@ -4698,18 +4698,18 @@ interface BackOfficeViewProps {
                                                     {aiProductError && (
                                                         <div className="mt-3 border border-rose-200 bg-rose-50 text-rose-800 rounded-xl p-3.5 text-xs space-y-2">
                                                             <div className="font-bold flex items-center gap-1.5 text-rose-800">
-                                                                
+                                                                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
                                                                 <span>{aiProductError}</span>
                                                             </div>
-                                                            <div className="p-2.5 bg-white/80 rounded-lg border border-rose-100 text-stone-700 space-y-1.5">
-                                                                <p className="font-bold text-stone-800">Οδηγός Ενεργοποίησης Google Gemini AI:</p>
-                                                                <ol className="list-decimal list-inside space-y-1 text-stone-600">
-                                                                    <li>Αποκτήστε δωρεάν κλειδί API από το <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline font-bold text-stone-900">Google AI Studio</a>.</li>
-                                                                    <li>Προσθέστε στο αρχείο <code>.env</code> της εφαρμογής τη γραμμή: <code>GEMINI_API_KEY=το_κλειδί_σας</code>.</li>
-                                                                    <li>Εναλλακτικά πατήστε το παρακάτω κουμπί για άμεση δοκιμή χωρίς κλειδί!</li>
-                                                                </ol>
-                                                                
-                                                            </div>
+                                                            {aiProductError.includes('GEMINI_API_KEY') && (
+                                                                <div className="p-2.5 bg-white/80 rounded-lg border border-rose-100 text-stone-700 space-y-1.5">
+                                                                    <p className="font-bold text-stone-800">Οδηγός Ενεργοποίησης Google Gemini AI:</p>
+                                                                    <ol className="list-decimal list-inside space-y-1 text-stone-600">
+                                                                        <li>Αποκτήστε κλειδί API από το <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline font-bold text-stone-900">Google AI Studio</a>.</li>
+                                                                        <li>Προσθέστε στο περιβάλλον Netlify / <code>.env</code> τη μεταβλητή: <code>GEMINI_API_KEY=το_κλειδί_σας</code>.</li>
+                                                                    </ol>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>

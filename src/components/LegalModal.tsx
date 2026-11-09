@@ -122,7 +122,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   1. Ταυτότητα Εργαστηρίου
                 </h4>
                 <p>
-                  Ο διαδικτυακός χώρος <strong>aram.creations</strong> αποτελεί ανεξάρτητο καλλιτεχνικό εργαστήριο χειροποίητων κοσμημάτων και εικαστικών δημιουργιών, με έδρα τον Βόλο Μαγνησίας. Η περιήγηση στον ιστότοπο και η υποβολή παραγγελίας συνεπάγεται την πλήρη αποδοχή των παρακάτω όρων.
+                  Ο διαδικτυακός χώρος <strong>aram.creations</strong> αποτελεί ανεξάρτητο καλλιτεχνικό εργαστήριο χειροποίητων κοσμημάτων και εικαστικών δημιουργιών, με έδρα την Ελλάδα. Η περιήγηση στον ιστότοπο και η υποβολή παραγγελίας συνεπάγεται την πλήρη αποδοχή των παρακάτω όρων.
                 </p>
               </section>
 
@@ -354,7 +354,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         {/* Modal Footer */}
         <div className="px-6 py-4 border-t border-stone-200 bg-stone-50 flex items-center justify-between">
           <div className="text-[11px] text-stone-500 font-sans">
-            Επικοινωνία: aristeaamnta@gmail.com • Βόλος
+            Επικοινωνία: aristeaamnta@gmail.com • Ελλάδα
           </div>
           <button
             onClick={onClose}

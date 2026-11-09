@@ -685,8 +685,9 @@ export function FirebaseMediaCleanup({
                     </div>
                   </div>
                   {executionSummary.backupSynced && (
-                    <div className="text-[11px] text-emerald-800 font-medium pt-1">
-                      ✓ Δημιουργήθηκε αυτόματα νέο συγχρονισμένο Αντίγραφο Ασφαλείας (Backup Καταλόγου).
+                    <div className="text-[11px] text-emerald-800 font-medium pt-1 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                      <span>Δημιουργήθηκε αυτόματα νέο συγχρονισμένο Αντίγραφο Ασφαλείας (Backup Καταλόγου).</span>
                     </div>
                   )}
                   {executionSummary.failedDeletions.length > 0 && (
@@ -890,13 +891,15 @@ export function FirebaseMediaCleanup({
                                     {group.signature}
                                   </span>
                                 </div>
-                                <div className="text-[11px] text-emerald-700 mt-1 truncate">
-                                  ✓ Διατηρείται: <span className="font-mono">{group.canonical.fullPath}</span>
+                                <div className="text-[11px] text-emerald-700 mt-1 truncate flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-600" />
+                                  <span>Διατηρείται: <span className="font-mono">{group.canonical.fullPath}</span></span>
                                 </div>
                                 <div className="text-[11px] text-rose-700 mt-0.5 space-y-0.5">
                                   {group.duplicates.map(d => (
-                                    <div key={d.fullPath} className="truncate font-mono">
-                                      ✗ Διαγραφή: {d.fullPath} ({formatBytes(d.size)})
+                                    <div key={d.fullPath} className="truncate font-mono flex items-center gap-1">
+                                      <X className="w-3 h-3 shrink-0 text-rose-600" />
+                                      <span>Διαγραφή: {d.fullPath} ({formatBytes(d.size)})</span>
                                     </div>
                                   ))}
                                 </div>

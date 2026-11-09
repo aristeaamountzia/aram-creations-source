@@ -499,6 +499,33 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const resolvedHeroVideoUrl = portfolioHeroVideoUrl(shopSettings.heroVideoUrl);
   const hasHeroVideo = Boolean(resolvedHeroVideoUrl) && !heroVideoFailed;
 
+  const handleScrollToReviews = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const findTarget = () => document.getElementById('customer-reviews') || document.getElementById('vinted-reviews');
+    const target = findTarget();
+    if (!target) return;
+
+    const headerOffset = 70;
+    const targetTop = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+    window.scrollTo({ top: targetTop, behavior: 'smooth' });
+
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      const current = findTarget();
+      if (!current || attempts > 8) {
+        clearInterval(interval);
+        return;
+      }
+      const rect = current.getBoundingClientRect();
+      if (Math.abs(rect.top - headerOffset) > 60) {
+        current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        clearInterval(interval);
+      }
+    }, 200);
+  };
+
   return (
     <div className="catalog-view shop-view min-h-screen" style={{ backgroundColor: ds.pageBackground || shopSettings.bgColor, color: ds.ink || shopSettings.textColor, fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif` }}>
       {/* Authentic Artisan Hero Banner */}
@@ -557,11 +584,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
           <div className="pt-2 flex items-center justify-center gap-2 text-xs text-stone-300 font-medium">
             <a
               href="#customer-reviews"
-              onClick={(e) => {
-                e.preventDefault();
-                const el = document.getElementById('customer-reviews') || document.getElementById('vinted-reviews');
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
+              onClick={handleScrollToReviews}
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-xs text-stone-200 transition cursor-pointer"
               title="Δείτε τις επίσημες αξιολογήσεις των πελατών"
             >
