@@ -29,8 +29,9 @@
 - Editor buttons must always resolve the target media reliably with safe fallbacks and explicit error alerts if an unsupported format (like GIF animation) is selected.
 
 ## 9. Project Synchronization
-- Apply each project change to both `01_GITHUB/aram-creations-source` and `09_NEW_APPLICATION`, preserving features that exist only in either tree.
-- After local verification, commit and push routine synchronization changes to `https://github.com/aristeaamountzia/aram-creations-source.git` under the user's standing authorization.
+- Apply each production site change to both `01_GITHUB/aram-creations-source` and `09_NEW_APPLICATION`, preserving features that exist only in either tree.
+- After local verification, commit and push routine production synchronization changes to `https://github.com/aristeaamountzia/aram-creations-source.git` under the user's standing authorization.
+- Do not synchronize or push tests, audit scripts, debug tools, Session Recorder code, telemetry, browser recordings, logs, generated artifacts, or local environment files unless the user explicitly requests them.
 - Do not wholesale mirror or delete files between these trees while they diverge; make scoped, semantic changes in each.
 - Do not start a separate manual Netlify deploy unless the user requests it.
 
