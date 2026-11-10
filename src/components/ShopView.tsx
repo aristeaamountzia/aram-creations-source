@@ -241,6 +241,7 @@ export function isAvailableForSale(item: JewelryItem): boolean {
 
 export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const [shopSettings, setShopSettings] = useState<ShopSettings>(DEFAULT_SHOP_SETTINGS);
+  const [areShopSettingsReady, setAreShopSettingsReady] = useState(false);
   const [jewelryList, setJewelryList] = useState<JewelryItem[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [catalogOffline, setCatalogOffline] = useState(false);
@@ -260,7 +261,11 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   useEffect(() => {
     return onSnapshot(doc(db, 'settings', 'shop'), (snapshot) => {
       setShopSettings(normalizeShopSettings(snapshot.exists() ? snapshot.data() : undefined));
-    }, (error) => console.warn('Shop settings could not be loaded:', error));
+      setAreShopSettingsReady(true);
+    }, (error) => {
+      console.warn('Shop settings could not be loaded:', error);
+      setAreShopSettingsReady(true);
+    });
   }, []);
 
   const visibleCategories = useMemo(() => {
@@ -565,33 +570,41 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
           style={{ opacity: Number(ds.heroOverlay) || 0.55 }}
           aria-hidden="true"
         />
-        <div className="relative z-10 w-full max-w-4xl mx-auto space-y-4 my-auto">
-          <h1
-            className={`${shopSettings.heroTitleSize || 'text-3xl sm:text-4xl md:text-5xl'} font-bold tracking-tight break-words text-white drop-shadow-sm`}
-            style={{
-              fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif`
-            }}
-          >
-            {shopSettings.heroTitle}
-          </h1>
-          <p
-            className="text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed text-stone-200 opacity-95 drop-shadow-xs"
-          >
-            {shopSettings.heroSubtitle}
-          </p>
+        <div className="relative z-10 w-full max-w-4xl mx-auto space-y-4 my-auto" aria-busy={!areShopSettingsReady}>
+          {areShopSettingsReady ? (
+            <>
+              <h1
+                className={`${shopSettings.heroTitleSize || 'text-3xl sm:text-4xl md:text-5xl'} font-bold tracking-tight break-words text-white drop-shadow-sm`}
+                style={{
+                  fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif`
+                }}
+              >
+                {shopSettings.heroTitle}
+              </h1>
+              <p
+                className="text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed text-stone-200 opacity-95 drop-shadow-xs"
+              >
+                {shopSettings.heroSubtitle}
+              </p>
 
-          {/* Refined brand proof-point */}
-          <div className="pt-2 flex items-center justify-center gap-2 text-xs text-stone-300 font-medium">
-            <a
-              href="#customer-reviews"
-              onClick={handleScrollToReviews}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-xs text-stone-200 transition cursor-pointer"
-              title="Δείτε τις επίσημες αξιολογήσεις των πελατών"
-            >
-              <Star className="w-3 h-3 fill-amber-300 text-amber-300 shrink-0" strokeWidth={1.5} />
-              <span>Αξιολογήσεις πελατών στο Vinted</span>
-            </a>
-          </div>
+              {/* Refined brand proof-point */}
+              <div className="pt-2 flex items-center justify-center gap-2 text-xs text-stone-300 font-medium">
+                <a
+                  href="#customer-reviews"
+                  onClick={handleScrollToReviews}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-xs text-stone-200 transition cursor-pointer"
+                  title="Δείτε τις επίσημες αξιολογήσεις των πελατών"
+                >
+                  <Star className="w-3 h-3 fill-amber-300 text-amber-300 shrink-0" strokeWidth={1.5} />
+                  <span>Αξιολογήσεις πελατών στο Vinted</span>
+                </a>
+              </div>
+            </>
+          ) : (
+            <p role="status" className="text-sm font-medium text-stone-200" aria-live="polite">
+              Φόρτωση βιτρίνας…
+            </p>
+          )}
         </div>
 
         {/* Animated scroll down indicator for mobile & desktop */}

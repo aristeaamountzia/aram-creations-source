@@ -2973,7 +2973,7 @@ interface BackOfficeViewProps {
                         for (const t of targets) {
                             if (t.url && t.url.includes('firebasestorage.googleapis.com')) {
                                 const fileRef = firebaseRef(storage, t.url);
-                                await deleteObject(fileRef).catch(err => console.log("Σφάλμα διαγραφής αρχείου:", err));
+                                await deleteObject(fileRef).catch(err => console.warn("Σφάλμα διαγραφής αρχείου:", err));
                             }
                         }
                     }
