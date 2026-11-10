@@ -6,6 +6,7 @@ import { VideoPlayer } from './VideoPlayer';
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
+import { initialHeroSnapshot, cacheHeroSnapshot } from '../lib/hero-media';
 import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import React, { useState, useEffect, useMemo } from 'react';
 import { CategoryId, ArtItem, ArtMediaItem } from '../types';
@@ -26,11 +27,12 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     const [selectedCatId, setSelectedCatId] = useState<CategoryId | 'all'>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [filterMode, setFilterMode] = useState<'all' | 'favorites'>('all');
-    const [heroVideoUrl, setHeroVideoUrl] = useState('');
+    const [heroVideoUrl, setHeroVideoUrl] = useState(() => initialHeroSnapshot().portfolioHeroVideoUrl);
     const [designStudio, setDesignStudio] = useState<DesignStudio>(DEFAULT_DESIGN_STUDIO);
     useEffect(() => onSnapshot(doc(db, 'settings', 'shop'), snapshot => {
         const data = snapshot.data();
         setHeroVideoUrl(portfolioHeroVideoUrl(data?.portfolioHeroVideoUrl));
+        if (data) cacheHeroSnapshot(data);
         if (data?.designStudio) {
             setDesignStudio(normalizeDesignStudio(data.designStudio));
         }

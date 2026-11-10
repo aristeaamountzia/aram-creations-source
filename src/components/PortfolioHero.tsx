@@ -4,28 +4,8 @@ import { PortfolioDesign, DEFAULT_PORTFOLIO_DESIGN } from '../lib/portfolio-sett
 import { VideoPlayer } from './VideoPlayer';
 import { videoLink } from '../lib/video-links';
 
-export const TRANSCODED_HERO_H264_PATH = '/assets/aistudio/2026-11-04-145207521_d7414d66.mp4';
-
-export function isKnownUnplayableHevcHeroUrl(value: unknown): boolean {
-  const text = typeof value === 'string' ? value.trim() : '';
-  return /(?:1793907543677-2026-11-04-145207521|2026-11-04-145207521\.mp4|c3301d5fcf6bdfe2784ad9746726db20\.mp4)/i.test(text);
-}
-
-export function portfolioHeroVideoUrl(value: unknown): string {
-  const text = typeof value === 'string' ? value.trim() : '';
-  if (!text) return '';
-  if (text.startsWith('/') && !text.startsWith('//') && /\.(mp4|webm|mov|m4v|ogv)(?:[?#]|$)/i.test(text)) {
-    return text;
-  }
-  try {
-    const url = new URL(text);
-    if (!['https:', 'http:'].includes(url.protocol)) return '';
-    if (isKnownUnplayableHevcHeroUrl(url.href)) {
-      return TRANSCODED_HERO_H264_PATH;
-    }
-    return url.href;
-  } catch { return ''; }
-}
+export { TRANSCODED_HERO_H264_PATH, isKnownUnplayableHevcHeroUrl, portfolioHeroVideoUrl } from '../lib/hero-media';
+import { portfolioHeroVideoUrl, heroPosterFor } from '../lib/hero-media';
 
 export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN, itemCount, categoryCount, videoCount, onContactArtist, showContact = true, showStats = true }: {
   videoUrl?: string; design?: PortfolioDesign; itemCount: number; categoryCount: number; videoCount: number; onContactArtist: () => void; showContact?: boolean; showStats?: boolean;
@@ -76,7 +56,8 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="auto"
+              poster={heroPosterFor(source)}
               referrerPolicy="no-referrer"
               aria-hidden="true"
               className="absolute inset-0 h-full w-full object-cover"
