@@ -28,3 +28,9 @@
 - Image editing and thumbnail loading must always supply `referrerPolicy="no-referrer"` to prevent external CDNs (like Vinted or social platforms) from blocking hotlinked media.
 - Editor buttons must always resolve the target media reliably with safe fallbacks and explicit error alerts if an unsupported format (like GIF animation) is selected.
 
+## 9. Project Synchronization
+- Apply each project change to both `01_GITHUB/aram-creations-source` and `09_NEW_APPLICATION`, preserving features that exist only in either tree.
+- After local verification, commit and push routine synchronization changes to `https://github.com/aristeaamountzia/aram-creations-source.git` under the user's standing authorization.
+- Do not wholesale mirror or delete files between these trees while they diverge; make scoped, semantic changes in each.
+- Do not start a separate manual Netlify deploy unless the user requests it.
+
