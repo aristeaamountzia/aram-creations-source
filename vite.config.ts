@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import { initialContent, searchPages, SITE_URL } from './src/lib/search-content';
+import { fetchHeroSnapshot, setBuildHeroSnapshot } from './src/lib/hero-media';
 
 function searchLandingPages(): Plugin {
   return {
@@ -27,8 +28,15 @@ function searchLandingPages(): Plugin {
   };
 }
 
-export default defineConfig(() => {
+export default defineConfig(async ({ command }) => {
+  // Snapshot of the current hero settings, baked into the HTML shell and bundle so
+  // first-time visitors see the real hero immediately (live data still updates it).
+  const heroSnapshot = await fetchHeroSnapshot(command === 'build' ? (process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID) : undefined);
+  setBuildHeroSnapshot(heroSnapshot);
   return {
+    define: {
+      __ARAM_HERO_SNAPSHOT__: JSON.stringify(heroSnapshot),
+    },
     plugins: [react(), tailwindcss(), searchLandingPages()],
     resolve: {
       alias: {

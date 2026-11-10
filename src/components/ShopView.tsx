@@ -8,7 +8,7 @@ import { db } from '../firebase';
 import { DEFAULT_SHOP_SETTINGS, normalizeShopSettings, ShopSettings } from '../shopSettings';
 import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
-import { portfolioHeroVideoUrl } from './PortfolioHero';
+import { portfolioHeroVideoUrl, heroPosterFor, initialHeroSnapshot, cacheHeroSnapshot } from '../lib/hero-media';
 import {
   collection,
   doc,
@@ -240,8 +240,10 @@ export function isAvailableForSale(item: JewelryItem): boolean {
 }
 
 export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
-  const [shopSettings, setShopSettings] = useState<ShopSettings>(DEFAULT_SHOP_SETTINGS);
-  const [areShopSettingsReady, setAreShopSettingsReady] = useState(false);
+  // Start with the last-known (or build-time) hero content so the hero and its
+  // video render immediately instead of waiting for the Firestore round trip.
+  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => ({ ...DEFAULT_SHOP_SETTINGS, ...initialHeroSnapshot() }));
+  const [areShopSettingsReady, setAreShopSettingsReady] = useState(true);
   const [jewelryList, setJewelryList] = useState<JewelryItem[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [catalogOffline, setCatalogOffline] = useState(false);
@@ -260,7 +262,9 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
   useEffect(() => {
     return onSnapshot(doc(db, 'settings', 'shop'), (snapshot) => {
-      setShopSettings(normalizeShopSettings(snapshot.exists() ? snapshot.data() : undefined));
+      const data = snapshot.exists() ? snapshot.data() : undefined;
+      setShopSettings(normalizeShopSettings(data));
+      if (data) cacheHeroSnapshot(data);
       setAreShopSettingsReady(true);
     }, (error) => {
       console.warn('Shop settings could not be loaded:', error);
@@ -553,7 +557,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="auto"
+            poster={heroPosterFor(resolvedHeroVideoUrl)}
             referrerPolicy="no-referrer"
             onError={() => {
               if (heroVideoRetry < 2) {
