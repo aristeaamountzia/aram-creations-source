@@ -17,6 +17,8 @@ import { FirebaseMediaCleanup } from './FirebaseMediaCleanup';
 import { OrdersManager } from './OrdersManager';
 import { VintedRefresh } from './VintedRefresh';
 import { MediaDownload } from './MediaDownload';
+import { MediaManager } from './media/MediaManager';
+import { useMediaUpload } from './media/useMediaUpload';
 import { VideoUploadStatus } from './VideoUploadStatus';
 import { prepareVideoUpload } from '../lib/video-compression';
 import { inferVideoContentType, VIDEO_UPLOAD_HELP } from '../lib/video-policy';
@@ -516,8 +518,10 @@ interface BackOfficeViewProps {
 
             const [formShopMediaList, setFormShopMediaList] = useState([]);
             const [formPrivateMediaList, setFormPrivateMediaList] = useState([]);
-            const [draggedShopIdx, setDraggedShopIdx] = useState(null);
-            const [draggedPrivateIdx, setDraggedPrivateIdx] = useState(null);
+            const { prepareFiles: prepareEditorMediaFiles } = useMediaUpload({
+                prepareImage: compressImage,
+                prepareVideo: prepareLocalVideo
+            });
 
             const closeItemEditor = () => {
                 for (const media of [...formShopMediaList, ...formPrivateMediaList]) {
@@ -1599,34 +1603,15 @@ interface BackOfficeViewProps {
                 }
             }, [formName, formNotes, formCategory, formColorsArr, formMaterials, newMaterialInput, newColorInput, allFormCategories, allAvailableColors, smartSuggestions?.source]);
 
-            const handleFileSelectShop = async (e) => {
+            const handleFileSelectShop = async (files) => {
                 if (mediaPreparing) return;
                 setMediaPreparing(true); setVideoProgress(null);
-                const files = Array.from(e.target.files);
-                const input = e.target;
-                const newMedia = [];
-                const errors = [];
-                let smartCandidate = null;
                 setUploadStatus('Επεξεργασία και συμπίεση αρχείων...');
                 try {
-                for (const file of files) {
-                    try {
-                    const detected = await validateMediaFile(file);
-                    const isImage = detected.kind === 'image';
-                    const isVideo = detected.kind === 'video';
-                    if (isImage) {
-                        const compressedFile = await compressImage(file);
-                        const previewUrl = URL.createObjectURL(compressedFile);
-                        if (!isEditMode && formShopMediaList.length === 0 && newMedia.length === 0) {
-                            smartCandidate = { url: previewUrl, fileName: file.name };
-                        }
-                        newMedia.push({ url: previewUrl, type: 'image', isNew: true, fileObj: compressedFile, showInShop: true });
-                    } else if (isVideo) {
-                        const prepared = await prepareLocalVideo(file);
-                        newMedia.push({ url: URL.createObjectURL(prepared), type: 'video', isNew: true, fileObj: prepared, showInShop: true });
-                    }
-                    } catch (error) { errors.push(`${file.name}: ${error.message || 'Αποτυχία προετοιμασίας αρχείου.'}`); if (error.name === 'AbortError') break; }
-                }
+                const { items: newMedia, errors } = await prepareEditorMediaFiles(files, true);
+                const smartCandidate = !isEditMode && formShopMediaList.length === 0 && newMedia[0]?.type === 'image'
+                    ? newMedia[0]
+                    : null;
                 setFormShopMediaList(prev => [...prev, ...newMedia]);
                 if (smartCandidate) {
                     setUploadStatus('Ανάλυση κύριας εικόνας...');
@@ -1638,14 +1623,15 @@ interface BackOfficeViewProps {
                         });
                     }
                 }
-                } catch (error) { errors.push(error.message); }
-                finally {
-                    if (errors.length) {
-                        setVideoProgress({ text: errors.join('\n') });
-                        notifyOperationError('Σφάλμα αρχείων', errors.join('\n'));
-                    }
-                    setUploadStatus(''); input.value = ''; setMediaPreparing(false);
+                if (errors.length) {
+                    setVideoProgress({ text: errors.join('\n') });
+                    notifyOperationError('Σφάλμα αρχείων', errors.join('\n'));
                 }
+                } catch (error) {
+                    const message = error.message || 'Αποτυχία προετοιμασίας αρχείων.';
+                    setVideoProgress({ text: message });
+                    notifyOperationError('Σφάλμα αρχείων', message);
+                } finally { setUploadStatus(''); setMediaPreparing(false); }
             };
 
             const handleRemoveShopMedia = (idx) => {
@@ -1655,59 +1641,28 @@ interface BackOfficeViewProps {
                 if (idx === 0) refreshSmartSuggestionsFromMain(nextList);
             };
 
-            const handleDragStartShop = (e, idx) => { setDraggedShopIdx(idx); e.dataTransfer.effectAllowed = "move"; };
-            const handleDropShop = (e, targetIdx) => {
-                e.preventDefault();
-                if (draggedShopIdx === null || draggedShopIdx === targetIdx) return;
-                const newList = [...formShopMediaList];
-                const itemToMove = newList[draggedShopIdx];
-                newList.splice(draggedShopIdx, 1);
-                newList.splice(targetIdx, 0, itemToMove);
-                setFormShopMediaList(newList);
-                setDraggedShopIdx(null);
-                if (draggedShopIdx === 0 || targetIdx === 0) refreshSmartSuggestionsFromMain(newList);
-            };
-
-            const handleFileSelectPrivate = async (e) => {
+            const handleFileSelectPrivate = async (files) => {
                 if (mediaPreparing) return;
                 setMediaPreparing(true); setVideoProgress(null);
-                const files = Array.from(e.target.files);
-                const input = e.target;
-                const newMedia = [];
-                const errors = [];
-                let smartCandidate = null;
                 setUploadStatus('Επεξεργασία και συμπίεση αρχείων...');
                 try {
-                for (const file of files) {
-                    try {
-                    const detected = await validateMediaFile(file);
-                    const isImage = detected.kind === 'image';
-                    const isVideo = detected.kind === 'video';
-                    if (isImage) {
-                        const compressedFile = await compressImage(file);
-                        const previewUrl = URL.createObjectURL(compressedFile);
-                        if (!smartCandidate) smartCandidate = { url: previewUrl, fileName: file.name };
-                        newMedia.push({ url: previewUrl, type: 'image', isNew: true, fileObj: compressedFile, showInShop: false });
-                    } else if (isVideo) {
-                        const prepared = await prepareLocalVideo(file);
-                        newMedia.push({ url: URL.createObjectURL(prepared), type: 'video', isNew: true, fileObj: prepared, showInShop: false });
-                    }
-                    } catch (error) { errors.push(`${file.name}: ${error.message || 'Αποτυχία προετοιμασίας αρχείου.'}`); if (error.name === 'AbortError') break; }
-                }
+                const { items: newMedia, errors } = await prepareEditorMediaFiles(files, false);
+                const smartCandidate = newMedia.find(media => media.type === 'image');
                 const nextPrivateMediaList = [...formPrivateMediaList, ...newMedia];
                 setFormPrivateMediaList(nextPrivateMediaList);
                 if (smartCandidate) {
                     setUploadStatus('Ανάλυση εικόνας back-office...');
                     await refreshSmartSuggestionsFromMain(formShopMediaList, nextPrivateMediaList);
                 }
-                } catch (error) { errors.push(error.message); }
-                finally {
-                    if (errors.length) {
-                        setVideoProgress({ text: errors.join('\n') });
-                        notifyOperationError('Σφάλμα αρχείων', errors.join('\n'));
-                    }
-                    setUploadStatus(''); input.value = ''; setMediaPreparing(false);
+                if (errors.length) {
+                    setVideoProgress({ text: errors.join('\n') });
+                    notifyOperationError('Σφάλμα αρχείων', errors.join('\n'));
                 }
+                } catch (error) {
+                    const message = error.message || 'Αποτυχία προετοιμασίας αρχείων.';
+                    setVideoProgress({ text: message });
+                    notifyOperationError('Σφάλμα αρχείων', message);
+                } finally { setUploadStatus(''); setMediaPreparing(false); }
             };
 
             const handleRemovePrivateMedia = (idx) => {
@@ -1715,19 +1670,6 @@ interface BackOfficeViewProps {
                 const nextPrivateMediaList = formPrivateMediaList.filter((_, i) => i !== idx);
                 setFormPrivateMediaList(nextPrivateMediaList);
                 refreshSmartSuggestionsFromMain(formShopMediaList, nextPrivateMediaList);
-            };
-
-            const handleDragStartPrivate = (e, idx) => { setDraggedPrivateIdx(idx); e.dataTransfer.effectAllowed = "move"; };
-            const handleDropPrivate = (e, targetIdx) => {
-                e.preventDefault();
-                if (draggedPrivateIdx === null || draggedPrivateIdx === targetIdx) return;
-                const newList = [...formPrivateMediaList];
-                const itemToMove = newList[draggedPrivateIdx];
-                newList.splice(draggedPrivateIdx, 1);
-                newList.splice(targetIdx, 0, itemToMove);
-                setFormPrivateMediaList(newList);
-                setDraggedPrivateIdx(null);
-                refreshSmartSuggestionsFromMain(formShopMediaList, newList);
             };
 
             const getImageEditorList = (scope) => scope === 'private' ? formPrivateMediaList : formShopMediaList;
@@ -5071,9 +5013,25 @@ interface BackOfficeViewProps {
 
                                         <section id="form-shop-media" className="scroll-mt-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50/55 p-4 shadow-sm">
                                             <h3 className="text-sm font-black text-emerald-500 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Εικονες / Βιντεο (Βιτρινα Shop)</h3>
-                                            <div className="mb-4">
-                                                <label className="block text-xs font-bold text-stone-600 mb-1">Αυτά τα αρχεία θα φαίνονται στον πελάτη (Οι εικόνες και τα βίντεο συμπιέζονται αυτόματα. Αρχικό βίντεο έως 1 GB / 10 λεπτά, τελικό έως 30 MB).</label>
-                                                <input type="file" accept="image/*,video/*" multiple disabled={mediaPreparing || isSaving} className="w-full border border-emerald-300 rounded-lg px-4 py-2.5 bg-white cursor-pointer" onChange={handleFileSelectShop} />
+                                            <MediaManager
+                                                items={formShopMediaList}
+                                                variant="shop"
+                                                uploadLabel="Αυτά τα αρχεία θα φαίνονται στον πελάτη (Οι εικόνες και τα βίντεο συμπιέζονται αυτόματα. Αρχικό βίντεο έως 1 GB / 10 λεπτά, τελικό έως 30 MB)."
+                                                inputClassName="w-full border border-emerald-300 rounded-lg px-4 py-2.5 bg-white cursor-pointer"
+                                                disabled={mediaPreparing || isSaving}
+                                                downloadName={formName || 'aram-media'}
+                                                orderingHelp="Σύρετε ή επιλέξτε εικόνα ή βίντεο για κεντρικό αρχείο προϊόντος. Το πρώτο αρχείο θα είναι το κεντρικό στο Shop."
+                                                onFiles={handleFileSelectShop}
+                                                onChange={setFormShopMediaList}
+                                                onReorder={(items, fromIndex, toIndex) => {
+                                                    if (fromIndex === 0 || toIndex === 0) refreshSmartSuggestionsFromMain(items);
+                                                }}
+                                                canEdit={media => media.type !== 'video' && !isAnimatedGifMedia(media)}
+                                                canRestore={canRestoreMediaOriginal}
+                                                onEdit={idx => openImageEditor('shop', idx)}
+                                                onRestore={idx => handleRestoreEditedMedia('shop', idx)}
+                                                onRemove={handleRemoveShopMedia}
+                                            >
                                                 <button type="button" onClick={handleRefreshSmartSuggestions} className="mt-2 px-3 py-1.5 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-bold hover:bg-emerald-100 transition">
                                                     Ανανέωση smart suggestions από τη φόρμα
                                                 </button>
@@ -5109,104 +5067,27 @@ interface BackOfficeViewProps {
                                                     </div>
                                                 )}
 
-                                                {formShopMediaList.length > 0 && (
-                                                    <div className="mt-4">
-                                                        <p className="text-xs text-stone-500 mb-2 italic">Σύρετε ή επιλέξτε εικόνα ή βίντεο για κεντρικό αρχείο προϊόντος. Το πρώτο αρχείο θα είναι το κεντρικό στο Shop.</p>
-                                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                                                            {formShopMediaList.map((media, idx) => (
-                                                                <div
-                                                                    key={idx}
-                                                                    draggable
-                                                                    onDragStart={(e) => handleDragStartShop(e, idx)}
-                                                                    onDragOver={handleDragOver}
-                                                                    onDrop={(e) => handleDropShop(e, idx)}
-                                                                    className={`relative aspect-square border-2 ${idx === 0 ? 'border-emerald-500 shadow-md' : 'border-stone-200'} bg-stone-100 rounded-xl overflow-hidden group cursor-grab active:cursor-grabbing hover:opacity-90 transition`}
-                                                                >
-                                                                    {media.type === 'video' ? (
-                                                                        <video src={media.url} referrerPolicy="no-referrer" className="w-full h-full object-cover pointer-events-none" muted />
-                                                                    ) : (
-                                                                        <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={media.url} className="w-full h-full object-cover pointer-events-none" />
-                                                                    )}
-
-                                                                    <MediaDownload media={media} name={formName || 'aram-media'} className="absolute bottom-1 right-1 z-10" />
-                                                                    {media.type !== 'video' && !isAnimatedGifMedia(media) && (
-                                                                        <button type="button" onClick={(e) => { e.stopPropagation(); openImageEditor('shop', idx); }} className="absolute top-1 left-1 bg-white/90 hover:bg-white text-stone-800 rounded-full p-1 transition shadow cursor-pointer border border-stone-200" title="Επεξεργασία εικόνας">
-                                                                            <IconEdit />
-                                                                        </button>
-                                                                    )}
-                                                                    {canRestoreMediaOriginal(media) && (
-                                                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleRestoreEditedMedia('shop', idx); }} className="absolute top-9 left-1 bg-amber-100/95 hover:bg-amber-200 text-amber-900 rounded-full p-1 transition shadow cursor-pointer border border-amber-200" title="Επαναφορά αρχικής εικόνας">
-                                                                            <IconUndo />
-                                                                        </button>
-                                                                    )}
-                                                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveShopMedia(idx); }} className="absolute top-1 right-1 bg-stone-900/80 hover:bg-rose-600 text-white rounded-full p-1 transition shadow cursor-pointer">
-                                                                        <IconX />
-                                                                    </button>
-                                                                     {idx > 0 && <button type="button" onClick={(e) => { e.stopPropagation(); setFormShopMediaList(prev => { const next = [...prev]; const [chosen] = next.splice(idx, 1); next.unshift(chosen); return next; }); }} className="absolute bottom-1 left-1 bg-white/95 text-stone-900 text-[9px] font-bold px-2 py-1 rounded shadow">Ορισμός ως κεντρική</button>}
-                                                                    {media.edited && (
-                                                                        <span className="absolute top-1 right-9 text-[8px] bg-amber-100 text-amber-900 font-black px-1.5 py-0.5 rounded shadow border border-amber-200">Edited</span>
-                                                                    )}
-                                                                    {idx === 0 && (
-                                                                        <span className="absolute bottom-1 left-1 text-[8px] bg-emerald-600 text-white font-bold px-1.5 py-0.5 rounded shadow">Κεντρική Shop</span>
-                                                                    )}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            </MediaManager>
                                         </section>
 
                                         <section id="form-private-media" className="mt-6 scroll-mt-4 rounded-2xl border border-stone-300 bg-stone-100/70 p-4">
                                             <h3 className="text-sm font-black text-stone-500 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Αρχειο (Μονο για το Back-Office)</h3>
-                                            <div className="mb-4">
-                                                <label className="block text-xs font-bold text-stone-600 mb-1">Προσωπικές φωτογραφίες και βίντεο που μένουν κρυφά</label>
-                                                <p className="mb-2 text-xs text-stone-500">{VIDEO_UPLOAD_HELP}</p>
-                                                <input type="file" accept="image/*,video/*" multiple disabled={mediaPreparing || isSaving} className="w-full border border-stone-300 rounded-lg px-4 py-2.5 bg-white cursor-pointer" onChange={handleFileSelectPrivate} />
-
-                                                {formPrivateMediaList.length > 0 && (
-                                                    <div className="mt-4">
-                                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                                                            {formPrivateMediaList.map((media, idx) => (
-                                                                <div
-                                                                    key={idx}
-                                                                    draggable
-                                                                    onDragStart={(e) => handleDragStartPrivate(e, idx)}
-                                                                    onDragOver={handleDragOver}
-                                                                    onDrop={(e) => handleDropPrivate(e, idx)}
-                                                                    className="relative aspect-square border-2 border-stone-300 bg-stone-200 rounded-xl overflow-hidden group cursor-grab active:cursor-grabbing hover:opacity-90 transition opacity-80"
-                                                                >
-                                                                    {media.type === 'video' ? (
-                                                                        <video src={media.url} referrerPolicy="no-referrer" className="w-full h-full object-cover pointer-events-none grayscale" muted />
-                                                                    ) : (
-                                                                        <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={media.url} className="w-full h-full object-cover pointer-events-none grayscale" />
-                                                                    )}
-
-                                                                    <div className="absolute top-1 left-1 bg-stone-800 text-white text-[9px] px-1 rounded shadow-sm">Κρυφό</div>
-
-                                                                    <MediaDownload media={media} name={formName || 'aram-private-media'} className="absolute top-8 right-1 z-10" />
-                                                                    {media.type !== 'video' && !isAnimatedGifMedia(media) && (
-                                                                        <button type="button" onClick={(e) => { e.stopPropagation(); openImageEditor('private', idx); }} className="absolute bottom-1 left-1 bg-white/90 hover:bg-white text-stone-800 rounded-full p-1 transition shadow cursor-pointer border border-stone-200" title="Επεξεργασία εικόνας">
-                                                                            <IconEdit />
-                                                                        </button>
-                                                                    )}
-                                                                    {canRestoreMediaOriginal(media) && (
-                                                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleRestoreEditedMedia('private', idx); }} className="absolute bottom-1 right-9 bg-amber-100/95 hover:bg-amber-200 text-amber-900 rounded-full p-1 transition shadow cursor-pointer border border-amber-200" title="Επαναφορά αρχικής εικόνας">
-                                                                            <IconUndo />
-                                                                        </button>
-                                                                    )}
-                                                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleRemovePrivateMedia(idx); }} className="absolute top-1 right-1 bg-stone-900/80 hover:bg-rose-600 text-white rounded-full p-1 transition shadow cursor-pointer">
-                                                                        <IconX />
-                                                                    </button>
-                                                                    {media.edited && (
-                                                                        <span className="absolute top-1 right-9 text-[8px] bg-amber-100 text-amber-900 font-black px-1.5 py-0.5 rounded shadow border border-amber-200">Edited</span>
-                                                                    )}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <MediaManager
+                                                items={formPrivateMediaList}
+                                                variant="private"
+                                                uploadLabel="Προσωπικές φωτογραφίες και βίντεο που μένουν κρυφά"
+                                                uploadHelp={VIDEO_UPLOAD_HELP}
+                                                disabled={mediaPreparing || isSaving}
+                                                downloadName={formName || 'aram-private-media'}
+                                                onFiles={handleFileSelectPrivate}
+                                                onChange={setFormPrivateMediaList}
+                                                onReorder={items => refreshSmartSuggestionsFromMain(formShopMediaList, items)}
+                                                canEdit={media => media.type !== 'video' && !isAnimatedGifMedia(media)}
+                                                canRestore={canRestoreMediaOriginal}
+                                                onEdit={idx => openImageEditor('private', idx)}
+                                                onRestore={idx => handleRestoreEditedMedia('private', idx)}
+                                                onRemove={handleRemovePrivateMedia}
+                                            />
                                             <div>
                                                 <label className="block text-xs font-bold text-stone-600 mb-1">Περιγραφή / σημειώσεις προϊόντος</label>
                                                 <textarea className="w-full border border-stone-200 rounded-lg px-4 py-3 h-24 bg-white focus:bg-white outline-none resize-none" value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Περιγραφή που μπορείς να επεξεργαστείς πριν εμφανιστεί στο shop..."></textarea>
