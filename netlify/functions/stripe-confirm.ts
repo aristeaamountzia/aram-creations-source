@@ -1,7 +1,8 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { getFirestore } from 'firebase-admin/firestore';
 import { retrieveStripeCheckoutSession } from '../../server/stripe-service';
 import { notifyOrder } from '../../server/order-notifications';
+import { markStripeOrderPaid, resolveStripeOrderId } from '../../server/order-lifecycle';
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return true;
@@ -75,62 +76,10 @@ export default async function handler(request: Request) {
       }, 400, origin);
     }
 
-    const targetOrderId = orderId || session.client_reference_id || session.metadata?.orderId;
-    if (!targetOrderId) {
-      return reply({ error: 'Δεν βρέθηκε αντιστοιχισμένη παραγγελία για αυτή τη συνεδρία.' }, 400, origin);
-    }
+    const targetOrderId = resolveStripeOrderId(session, orderId);
 
     const db = database();
-    const orderRef = db.doc(`orders/${targetOrderId}`);
-
-    const confirmed = await db.runTransaction(async tx => {
-      const snap = await tx.get(orderRef);
-      if (!snap.exists) {
-        throw new Error('Η παραγγελία δεν βρέθηκε.');
-      }
-
-      const orderData = snap.data()!;
-      if (orderData.status === 'paid') {
-        return {
-          id: targetOrderId,
-          number: orderData.number,
-          total: orderData.total,
-          alreadyPaid: true
-        };
-      }
-
-      // Mark items as sold
-      if (Array.isArray(orderData.items)) {
-        for (const item of orderData.items) {
-          const itemRef = db.doc(`jewelry/${item.id}`);
-          const itemSnap = await tx.get(itemRef);
-          if (itemSnap.exists) {
-            tx.update(itemRef, {
-              status: 'Πουλήθηκε',
-              stock: 0,
-              [`checkoutReservations.${targetOrderId}`]: FieldValue.delete()
-            });
-          }
-        }
-      }
-
-      const now = new Date().toISOString();
-      tx.update(orderRef, {
-        status: 'paid',
-        paidAt: now,
-        updatedAt: now,
-        stripePaymentIntent: session.payment_intent || '',
-        stripeSessionId: session.id,
-        history: [...(orderData.history || []), { status: 'paid', at: now, via: 'stripe' }]
-      });
-
-      return {
-        id: targetOrderId,
-        number: orderData.number,
-        total: orderData.total,
-        alreadyPaid: false
-      };
-    });
+    const confirmed = await markStripeOrderPaid(db, targetOrderId, session, 'stripe_confirm');
 
     // Send email notification to owner if not already sent
     await notifyOrder(db, confirmed.id).catch((err) => {
@@ -147,7 +96,7 @@ export default async function handler(request: Request) {
     console.error('stripe-confirm error:', error);
     return reply({
       error: error?.message || 'Σφάλμα κατά την επιβεβαίωση της πληρωμής.'
-    }, 500, origin);
+    }, error?.status || 500, origin);
   }
 }
 

@@ -5,6 +5,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { normalizeOrder, priceOrder, nextStatus, OrderError } from '../../server/orders-core';
 import { notifyOrder } from '../../server/order-notifications';
 import { createStripeCheckoutSession } from '../../server/stripe-service';
+import { cancelOrder, initialOrderStatus, releasePatch, reservationPatch } from '../../server/order-lifecycle';
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return true;
@@ -88,6 +89,10 @@ export function createOrdersHandler(connect: typeof database = database, notify:
 
         const { id, status, tracking } = await request.json();
         if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id)) throw new OrderError('Μη έγκυρη παραγγελία.');
+        if (status === 'cancelled') {
+          await cancelOrder(db, id, 'admin_cancelled');
+          return reply({ ok: true }, 200, origin);
+        }
         await db.runTransaction(async transaction => {
           const ref = db.doc(`orders/${id}`);
           const snapshot = await transaction.get(ref);
@@ -100,13 +105,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
             const data = product.data()!;
             const reserved = Number(data.checkoutReservations?.[id] || 0);
             if (!reserved) continue;
-            if (status === 'cancelled') {
-              transaction.update(product.ref, {
-                stock: 1,
-                [`checkoutReservations.${id}`]: FieldValue.delete(),
-                ...(data.status === 'Κρατημένο' || data.status === 'Πουλήθηκε' ? { status: 'Διαθέσιμο' } : {})
-              });
-            } else if ((status === 'paid' || status === 'shipped') && Number(data.stock) === 0 && data.status === 'Κρατημένο') {
+            if ((status === 'paid' || status === 'shipped') && data.status === 'Κρατημένο') {
               transaction.update(product.ref, { status: 'Πουλήθηκε' });
             } else if (status === 'delivered') {
               transaction.update(product.ref, { [`checkoutReservations.${id}`]: FieldValue.delete() });
@@ -118,9 +117,6 @@ export function createOrdersHandler(connect: typeof database = database, notify:
             updatedAt: new Date().toISOString(),
             history: [...(order.history || []), { status, at: new Date().toISOString(), by: user.uid }]
           });
-          if (status === 'cancelled') {
-            transaction.delete(db.doc(`orderNotifications/${id}`));
-          }
         });
         return reply({ ok: true }, 200, origin);
       }
@@ -141,39 +137,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
       // Handle cancel_unpaid action when customer cancels checkout or payment fails
       if (parsedBody?.action === 'cancel_unpaid' && typeof parsedBody.orderId === 'string' && /^[a-f0-9-]{36}$/.test(parsedBody.orderId)) {
         const targetId = parsedBody.orderId;
-        await db.runTransaction(async tx => {
-          const oRef = db.doc(`orders/${targetId}`);
-          const oSnap = await tx.get(oRef);
-          if (!oSnap.exists) return;
-          const order = oSnap.data()!;
-          if (order.status !== 'pending' && order.status !== 'cancelled') return;
-
-          if (Array.isArray(order.items)) {
-            for (const it of order.items) {
-              const pRef = db.doc(`jewelry/${it.id}`);
-              const pSnap = await tx.get(pRef);
-              if (pSnap.exists) {
-                const pData = pSnap.data()!;
-                const isOnlyReservation = Object.keys(pData.checkoutReservations || {}).every(k => k === targetId || !pData.checkoutReservations?.[k]);
-                tx.update(pRef, {
-                  ...(order.status === 'pending' || (pData.status === 'Κρατημένο' && isOnlyReservation)
-                    ? { stock: 1, status: 'Διαθέσιμο' }
-                    : {}),
-                  [`checkoutReservations.${targetId}`]: FieldValue.delete()
-                });
-              }
-            }
-          }
-          if (order.status === 'pending') {
-            const nowIso = new Date().toISOString();
-            tx.update(oRef, {
-              status: 'cancelled',
-              updatedAt: nowIso,
-              history: [...(order.history || []), { status: 'cancelled', at: nowIso, reason: 'customer_checkout_cancelled' }]
-            });
-          }
-          tx.delete(db.doc(`orderNotifications/${targetId}`));
-        });
+        await cancelOrder(db, targetId, 'customer_checkout_cancelled', ['pending', 'waiting_payment']);
         return reply({ ok: true, cancelled: true }, 200, origin);
       }
 
@@ -202,37 +166,12 @@ export function createOrdersHandler(connect: typeof database = database, notify:
         const previous = await transaction.get(ref);
         if (previous.exists) {
           const data = previous.data()!;
-          if (data.status === 'pending' && data.requestHash !== requestHash) {
-            // Pending order being retried with modified details: update it
-            const snapshots = await Promise.all(input.items.map(item => transaction.get(db.doc(`jewelry/${item.id}`))));
-            const priced = priceOrder(input, snapshots.map(doc => doc.exists ? { ...doc.data(), id: doc.id } : null), customShipping);
-            if (Math.round(priced.total * 100) !== input.expectedTotalCents) {
-              throw new OrderError('Η τιμή ή τα μεταφορικά άλλαξαν. Έλεγξε το νέο σύνολο στο καλάθι και δοκίμασε ξανά.', 409);
-            }
-            transaction.update(ref, {
-              ...priced,
-              customer: input.customer,
-              shippingMethod: input.shippingMethod,
-              paymentMethod: input.paymentMethod,
-              requestHash,
-              updatedAt: now.toISOString()
-            });
-            return {
-              id: ref.id,
-              number: data.number,
-              total: priced.total,
-              subtotal: priced.subtotal,
-              shippingCost: priced.shippingCost,
-              status: 'pending',
-              items: priced.items,
-              checkoutUrl: undefined
-            };
-          }
           if (data.requestHash !== requestHash) {
-            throw new OrderError('Το αίτημα έχει αλλάξει. Δοκίμασε ξανά.', 409);
+            throw new OrderError('Το αναγνωριστικό της παραγγελίας έχει ήδη χρησιμοποιηθεί με διαφορετικά στοιχεία. Δοκίμασε ξανά.', 409);
           }
           stripeCheckoutUrl = data.stripeCheckoutUrl;
           return {
+            created: false,
             id: ref.id,
             number: data.number,
             total: data.total,
@@ -260,11 +199,8 @@ export function createOrdersHandler(connect: typeof database = database, notify:
         const number = `ARAM-${now.toISOString().slice(0, 10).replaceAll('-', '')}-${input.requestId.slice(0, 8).toUpperCase()}`;
         for (let index = 0; index < snapshots.length; index++) {
           const product = snapshots[index];
-          transaction.update(product.ref, {
-            stock: 0,
-            checkoutReservations: { [ref.id]: input.items[index].quantity },
-            status: 'Κρατημένο'
-          });
+          const patch = reservationPatch(product.data(), ref.id, input.items[index].quantity);
+          if (patch) transaction.update(product.ref, patch);
         }
 
         transaction.set(rateRef, {
@@ -279,12 +215,18 @@ export function createOrdersHandler(connect: typeof database = database, notify:
           shippingMethod: input.shippingMethod,
           paymentMethod: input.paymentMethod,
           number,
-          status: 'pending',
-          emailNotification: 'pending',
+          status: initialOrderStatus(input.paymentMethod),
+          emailNotification: input.paymentMethod === 'stripe' ? 'awaiting_payment' : 'pending',
           createdAt: now.toISOString(),
           updatedAt: now.toISOString(),
           requestHash,
-          history: [{ status: 'pending', at: now.toISOString() }]
+          history: [{
+            status: initialOrderStatus(input.paymentMethod),
+            at: now.toISOString(),
+            stockMutation: 'reserve',
+            orderId: ref.id,
+            items: input.items.map(item => ({ id: item.id, quantity: item.quantity }))
+          }]
         };
 
         transaction.create(ref, orderData);
@@ -298,18 +240,22 @@ export function createOrdersHandler(connect: typeof database = database, notify:
         });
 
         return {
+          created: true,
           id: ref.id,
           number,
           total: priced.total,
           subtotal: priced.subtotal,
           shippingCost: priced.shippingCost,
-          status: 'pending',
+          status: initialOrderStatus(input.paymentMethod),
           items: priced.items
         };
       });
 
       if (input.paymentMethod === 'stripe') {
         if (!stripeCheckoutUrl) {
+          if (!receipt.created) {
+            throw new OrderError('Η πληρωμή της παραγγελίας προετοιμάζεται ήδη. Δοκίμασε ξανά σε λίγο.', 409);
+          }
           try {
             const session = await createStripeCheckoutSession({
               orderId: receipt.id,
@@ -326,37 +272,50 @@ export function createOrdersHandler(connect: typeof database = database, notify:
               origin: origin || ''
             });
             stripeCheckoutUrl = session.url;
-            await db.doc(`orders/${receipt.id}`).update({
-              stripeSessionId: session.id,
-              stripeCheckoutUrl: session.url
+            await db.runTransaction(async tx => {
+              const orderRef = db.doc(`orders/${receipt.id}`);
+              const orderSnap = await tx.get(orderRef);
+              const order = orderSnap.data();
+              if (!orderSnap.exists || order?.status !== 'waiting_payment' || order?.requestHash !== requestHash) {
+                throw new OrderError('Η παραγγελία ακυρώθηκε πριν ολοκληρωθεί η σύνδεση με τη Stripe.', 409);
+              }
+              tx.update(orderRef, {
+                stripeSessionId: session.id,
+                stripeCheckoutUrl: session.url
+              });
             });
           } catch (stripeErr: any) {
             console.error('Stripe session creation error, rolling back reservation:', stripeErr);
             // Roll back the reservation immediately so products are not left locked!
             await db.runTransaction(async tx => {
+              const orderSnap = await tx.get(ref);
+              if (!orderSnap.exists || orderSnap.data()?.status !== 'waiting_payment') return;
               for (const it of receipt.items || []) {
                 const pRef = db.doc(`jewelry/${it.id}`);
                 const pSnap = await tx.get(pRef);
                 if (pSnap.exists) {
-                  tx.update(pRef, {
-                    stock: 1,
-                    status: 'Διαθέσιμο',
-                    [`checkoutReservations.${ref.id}`]: FieldValue.delete()
-                  });
+                  const patch = releasePatch(pSnap.data(), ref.id);
+                  if (patch) {
+                    const { restored: _restored, ...update } = patch;
+                    tx.update(pRef, update);
+                  }
                 }
               }
               tx.delete(ref);
               tx.delete(db.doc(`orderNotifications/${ref.id}`));
             }).catch(e => console.error('Rollback failed:', e));
 
+            if (stripeErr instanceof OrderError) throw stripeErr;
             throw new OrderError(stripeErr.message || 'Αποτυχία αρχικοποίησης πληρωμής στη Stripe. Δοκιμάστε ξανά.', 502);
           }
         }
-        return reply({ ok: true, order: receipt, checkoutUrl: stripeCheckoutUrl }, 201, origin);
+        const { created: _created, ...publicReceipt } = receipt;
+        return reply({ ok: true, order: publicReceipt, checkoutUrl: stripeCheckoutUrl }, 201, origin);
       }
 
       await notify(db, receipt.id).catch(() => console.error('Order email remains queued'));
-      return reply({ ok: true, order: receipt }, 201, origin);
+      const { created: _created, ...publicReceipt } = receipt;
+      return reply({ ok: true, order: publicReceipt }, 201, origin);
     } catch (error) {
       if (error instanceof OrderError) return reply({ error: error.message }, error.status, origin);
       if (error instanceof SyntaxError) return reply({ error: 'Μη έγκυρα δεδομένα.' }, 400, origin);

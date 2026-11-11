@@ -135,7 +135,7 @@ export function OrdersManager({ onBack }: { onBack: () => void }) {
             </div>
             <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold text-stone-700">{ORDER_STATUSES[order.status]}</span>
           </div>
-          <p className="text-xs text-stone-500">Ειδοποίηση email: {order.emailNotification === 'sent' ? 'Στάλθηκε' : order.emailNotification === 'pending' ? 'Αναμονή / αυτόματη επανάληψη' : 'Παλαιότερη παραγγελία'}</p>
+          <p className="text-xs text-stone-500">Ειδοποίηση email: {{ sent: 'Στάλθηκε', pending: 'Αναμονή / αυτόματη επανάληψη', awaiting_payment: 'Αναμονή πληρωμής', cancelled: 'Ακυρώθηκε' }[order.emailNotification || ''] || 'Παλαιότερη παραγγελία'}</p>
           <p className="text-xs text-stone-500">{new Date(order.createdAt).toLocaleString('el-GR')}</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="min-w-0 space-y-1 text-sm">
