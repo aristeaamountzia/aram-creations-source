@@ -7,6 +7,7 @@ import { portfolioStatusLabel } from '../lib/portfolio-settings';
 import { portfolioMedia, isVideoUrl, videoLink } from '../lib/video-links';
 import { VideoPlayer } from './VideoPlayer';
 import { MediaDownload } from './MediaDownload';
+import { MediaManager } from './media/MediaManager';
 import { CatalogExcelExport } from './CatalogExcelExport';
 import { FirebaseMediaCleanup } from './FirebaseMediaCleanup';
 import { CatalogControls } from './CatalogControls';
@@ -32,6 +33,7 @@ import { auth, db, storage } from '../firebase';
 import { ART_ITEMS } from '../data';
 import { persistHistory } from '../lib/catalog-history';
 import { sortPortfolio, movePortfolio } from '../lib/portfolio-order';
+import { buildPortfolioRecord } from '../lib/portfolio-record';
 import { ArtItem, CategoryId } from '../types';
 
 type PortfolioRecord = ArtItem & {
@@ -664,35 +666,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     setSaving(true);
     setError('');
     try {
-      const first = form.mediaList[0];
-      const record = {
-        title: form.title.trim(),
-        name: form.title.trim(),
-        category: form.category,
-        year: form.year.trim(),
-        medium: form.medium.trim(),
-        dimensions: form.dimensions.trim(),
-        origin: form.origin.trim(),
-        status: form.status.trim(),
-        description: form.description.trim(),
-        details: form.detailsText
-          .split(/\r?\n/)
-          .map(line => line.trim())
-          .filter(Boolean),
-        featured: form.featured,
-        inquiryOnly: form.inquiryOnly,
-        image: first.url,
-        imageUrl: first.url,
-        fileType: first.type,
-        mediaList: form.mediaList,
-        videoUrl:
-          first.type === 'video'
-            ? first.url
-            : form.mediaList.find(media => media.type === 'video')?.url || '',
-        isDeleted: false,
-        deletedAt: null,
-        updatedAt: serverTimestamp()
-      };
+      const record = buildPortfolioRecord(form, serverTimestamp());
       let savedId = form.id;
       const oldRecord = form.id ? allItems.find(item => item.id === form.id) : null;
       if (form.id) {
@@ -1848,25 +1822,41 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
 
               {/* Tab 3: Media */}
               {editorTab === 'media' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1">
-                      Ανέβασμα Φωτογραφιών ή Βίντεο
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      multiple
-                      disabled={uploading}
-                      onChange={e => {
-                        const files = Array.from(e.target.files || []);
-                        e.target.value = '';
-                        if (files.length > 0) upload(files);
-                      }}
-                      className="w-full rounded-xl border border-stone-200 p-3 text-xs bg-stone-50 focus:bg-white"
-                    />
-                    <p className="text-[11px] text-stone-400 mt-1">{VIDEO_UPLOAD_HELP}</p>
-                  </div>
+                <MediaManager
+                  items={form.mediaList}
+                  variant="portfolio"
+                  uploadLabel="Ανέβασμα Φωτογραφιών ή Βίντεο"
+                  uploadHelp={VIDEO_UPLOAD_HELP}
+                  inputClassName="w-full rounded-xl border border-stone-200 p-3 text-xs bg-stone-50 focus:bg-white"
+                  disabled={uploading}
+                  downloadName={form.title || 'aram-portfolio-media'}
+                  orderingHelp="Σύρετε τα media για αλλαγή σειράς ή χρησιμοποιήστε τα πλήκτρα ↑/↓. Το πρώτο media είναι το κεντρικό."
+                  onFiles={upload}
+                  onChange={mediaList => setForm(current => current && { ...current, mediaList })}
+                  canEdit={media => media.type !== 'video'}
+                  onEdit={index => {
+                    const media = form.mediaList[index];
+                    if (/\.gif($|\?)/i.test(media.url)) {
+                      setOrderMessage('Η επεξεργασία αρχείων GIF (animation) δεν υποστηρίζεται.');
+                      return;
+                    }
+                    setImageEditorTarget({ url: media.url, mediaIndex: index, title: form.title });
+                  }}
+                  onRemove={index => {
+                    const media = form.mediaList[index];
+                    void discardPendingUpload(media.url);
+                    setForm(current => current && {
+                      ...current,
+                      mediaList: current.mediaList.filter((_, mediaIndex) => mediaIndex !== index)
+                    });
+                  }}
+                  onCaptionChange={(index, title) => setForm(current => current && {
+                    ...current,
+                    mediaList: current.mediaList.map((media, mediaIndex) =>
+                      mediaIndex === index ? { ...media, title } : media
+                    )
+                  })}
+                >
 
                   <div className="flex gap-2">
                     <input
@@ -1885,124 +1875,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
-                    {form.mediaList.map((media, index) => (
-                      <div
-                        key={`${media.url}-${index}`}
-                        className="overflow-hidden rounded-xl border border-stone-200 p-2 bg-stone-50 space-y-2"
-                      >
-                        <div className="aspect-square w-full rounded-lg bg-stone-200 overflow-hidden relative">
-                          {media.type === 'video' ? (
-                            <VideoPlayer url={media.url} title={media.title || form.title} />
-                          ) : (
-                            <img src={media.url} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                          )}
-                          {index === 0 && (
-                            <span className="absolute top-1 left-1 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
-                              Κεντρική
-                            </span>
-                          )}
-                        </div>
-
-                        <input
-                          aria-label={`Λεζάντα media ${index + 1}`}
-                          value={media.title || ''}
-                          onChange={e =>
-                            setForm(current =>
-                              current && {
-                                ...current,
-                                mediaList: current.mediaList.map((entry, i) =>
-                                  i === index ? { ...entry, title: e.target.value } : entry
-                                )
-                              }
-                            )
-                          }
-                          placeholder="Λεζάντα εικόνας..."
-                          className="w-full rounded-lg border border-stone-200 bg-white p-1.5 text-[11px] outline-none"
-                        />
-
-                        <div className="flex flex-wrap gap-1 text-[10px]">
-                          {media.type !== 'video' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (/\.gif($|\?)/i.test(media.url)) {
-                                  setOrderMessage('Η επεξεργασία αρχείων GIF (animation) δεν υποστηρίζεται.');
-                                  return;
-                                }
-                                setImageEditorTarget({
-                                  url: media.url,
-                                  mediaIndex: index,
-                                  title: form.title
-                                });
-                              }}
-                              className="px-2 py-1 bg-stone-200 hover:bg-stone-300 rounded font-bold"
-                            >
-                              Edit
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            disabled={index === 0}
-                            onClick={() =>
-                              setForm(current => {
-                                if (!current) return current;
-                                const next = [...current.mediaList];
-                                const [chosen] = next.splice(index, 1);
-                                next.unshift(chosen);
-                                return { ...current, mediaList: next };
-                              })
-                            }
-                            className="px-2 py-1 bg-white border border-stone-200 rounded font-bold disabled:opacity-30"
-                          >
-                            Κεντρική
-                          </button>
-                          <button
-                            type="button"
-                            disabled={index === 0}
-                            onClick={() =>
-                              setForm(current => {
-                                if (!current) return current;
-                                const next = [...current.mediaList];
-                                [next[index - 1], next[index]] = [next[index], next[index - 1]];
-                                return { ...current, mediaList: next };
-                              })
-                            }
-                            className="px-2 py-1 bg-white border border-stone-200 rounded font-bold disabled:opacity-30"
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            disabled={index === form.mediaList.length - 1}
-                            onClick={() =>
-                              setForm(current => {
-                                if (!current) return current;
-                                const next = [...current.mediaList];
-                                [next[index + 1], next[index]] = [next[index], next[index + 1]];
-                                return { ...current, mediaList: next };
-                              })
-                            }
-                            className="px-2 py-1 bg-white border border-stone-200 rounded font-bold disabled:opacity-30"
-                          >
-                            ↓
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void discardPendingUpload(media.url);
-                              setForm(current => current && {
-                                ...current,
-                                mediaList: current.mediaList.filter((_, i) => i !== index)
-                              });
-                            }}
-                            className="px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded font-bold ml-auto"
-                          ><X className="w-4 h-4" /></button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
+                </MediaManager>
               )}
 
               {/* Tab 4: AI */}

@@ -40,6 +40,8 @@ export function useMediaOrdering<T>(
       },
       onDragEnd: () => setDraggedIndex(null)
     }),
-    moveToStart: (index: number) => reorder(index, 0)
+    moveToStart: (index: number) => reorder(index, 0),
+    moveUp: (index: number) => reorder(index, Math.max(0, index - 1)),
+    moveDown: (index: number) => reorder(index, Math.min(items.length - 1, index + 1))
   };
 }

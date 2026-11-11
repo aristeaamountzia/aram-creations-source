@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server-dist .netlify",
     "lint": "tsc --noEmit",
-    "test": "npx tsx --test server/orders-core.test.ts server/order-lifecycle.test.ts server/orders-origin.test.ts server/stripe-webhook.test.ts server/video-policy.test.ts server/media-validation.test.ts server/media-ordering.test.ts server/catalog-excel.test.ts server/vinted-refresh.test.ts server/media-path.test.ts server/request-check.test.ts server/backoffice-ai.test.ts server/gemini-config.test.ts tests/portfolio-features.test.ts tests/vinted-sanitizer.test.ts server/vinted-reviews.test.ts server/firebase-media-cleanup.test.ts"
+    "test": "npx tsx --test server/orders-core.test.ts server/order-lifecycle.test.ts server/orders-origin.test.ts server/stripe-webhook.test.ts server/video-policy.test.ts server/media-validation.test.ts server/media-ordering.test.ts server/portfolio-record.test.ts server/catalog-excel.test.ts server/vinted-refresh.test.ts server/media-path.test.ts server/request-check.test.ts server/backoffice-ai.test.ts server/gemini-config.test.ts tests/portfolio-features.test.ts tests/vinted-sanitizer.test.ts server/vinted-reviews.test.ts server/firebase-media-cleanup.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

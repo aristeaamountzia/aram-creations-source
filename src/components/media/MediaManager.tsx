@@ -6,7 +6,7 @@ import { useMediaOrdering } from './useMediaOrdering';
 
 interface MediaManagerProps {
   items: ManagedMedia[];
-  variant: 'shop' | 'private';
+  variant: 'shop' | 'private' | 'portfolio';
   uploadLabel: ReactNode;
   uploadHelp?: ReactNode;
   inputClassName?: string;
@@ -22,6 +22,7 @@ interface MediaManagerProps {
   onEdit?: (index: number) => void;
   onRestore?: (index: number) => void;
   onRemove: (index: number) => void;
+  onCaptionChange?: (index: number, caption: string) => void;
 }
 
 export function MediaManager({ items, onChange, onReorder, ...props }: MediaManagerProps) {
@@ -49,7 +50,10 @@ export function MediaManager({ items, onChange, onReorder, ...props }: MediaMana
             onEdit={props.onEdit}
             onRestore={props.onRestore}
             onRemove={props.onRemove}
-            onMakePrimary={props.variant === 'shop' ? ordering.moveToStart : undefined}
+            onMakePrimary={props.variant !== 'private' ? ordering.moveToStart : undefined}
+            onMoveUp={props.variant === 'portfolio' ? ordering.moveUp : undefined}
+            onMoveDown={props.variant === 'portfolio' ? ordering.moveDown : undefined}
+            onCaptionChange={props.onCaptionChange}
           />
         </div>
       )}
