@@ -4,7 +4,7 @@ import { X, SlidersHorizontal } from 'lucide-react';
 import { usePortfolioDesign } from '../lib/use-portfolio-design';
 import { WixProjectExport } from './WixProjectExport';
 import { portfolioStatusLabel } from '../lib/portfolio-settings';
-import { portfolioMedia, isVideoUrl } from '../lib/video-links';
+import { portfolioMedia, isVideoUrl, videoLink } from '../lib/video-links';
 import { VideoPlayer } from './VideoPlayer';
 import { MediaDownload } from './MediaDownload';
 import { CatalogExcelExport } from './CatalogExcelExport';
@@ -12,7 +12,8 @@ import { FirebaseMediaCleanup } from './FirebaseMediaCleanup';
 import { CatalogControls } from './CatalogControls';
 import { VideoUploadStatus } from './VideoUploadStatus';
 import { prepareVideoUpload, VideoProgress } from '../lib/video-compression';
-import { inferVideoContentType, VIDEO_UPLOAD_HELP, VIDEO_UPLOAD_LIMIT } from '../lib/video-policy';
+import { VIDEO_UPLOAD_HELP } from '../lib/video-policy';
+import { validateMediaFile, validatePreparedMedia, verifyStoredMedia } from '../lib/media-validation';
 import { ImageEditorModal } from './ImageEditorModal';
 import { BulkEditModal } from './BulkEditModal';
 import { ItemDetailModal } from './ItemDetailModal';
@@ -26,7 +27,7 @@ import {
   setDoc,
   writeBatch
 } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes, uploadBytesResumable } from 'firebase/storage';
+import { deleteObject, getDownloadURL, ref, type StorageReference, uploadBytes, uploadBytesResumable } from 'firebase/storage';
 import { auth, db, storage } from '../firebase';
 import { ART_ITEMS } from '../data';
 import { persistHistory } from '../lib/catalog-history';
@@ -172,8 +173,9 @@ export interface PortfolioManagerProps {
 }
 
 async function compressPortfolioImage(file: File): Promise<File> {
-  if (file.type === 'image/gif') return file;
-  return new Promise((resolve) => {
+  const detected = await validateMediaFile(file, 'image');
+  if (detected.mime === 'image/gif') return file;
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
@@ -195,12 +197,12 @@ async function compressPortfolioImage(file: File): Promise<File> {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        if (!ctx) { resolve(file); return; }
+        if (!ctx) { reject(new Error('Δεν ξεκίνησε η επεξεργασία εικόνας.')); return; }
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
         canvas.toBlob((blob) => {
-          if (!blob) { resolve(file); return; }
+          if (!blob) { reject(new Error('Δεν δημιουργήθηκε έγκυρη εικόνα.')); return; }
           const compressed = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
             type: 'image/jpeg',
             lastModified: Date.now()
@@ -208,10 +210,10 @@ async function compressPortfolioImage(file: File): Promise<File> {
           resolve(compressed);
         }, 'image/jpeg', 0.85);
       };
-      img.onerror = () => resolve(file);
+      img.onerror = () => reject(new Error('Η εικόνα δεν αποκωδικοποιείται.'));
       img.src = e.target?.result as string;
     };
-    reader.onerror = () => resolve(file);
+    reader.onerror = () => reject(new Error('Δεν διαβάστηκε η εικόνα.'));
     reader.readAsDataURL(file);
   });
 }
@@ -264,8 +266,31 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   const [videoProgress, setVideoProgress] = useState<VideoProgress | null>(null);
   const [videoCompressing, setVideoCompressing] = useState(false);
   const videoAbort = useRef<AbortController | null>(null);
+  const pendingUploads = useRef<Map<string, StorageReference>>(new Map());
 
-  useEffect(() => () => videoAbort.current?.abort(), []);
+  const discardPendingUpload = async (url: string) => {
+    const storageReference = pendingUploads.current.get(url);
+    if (!storageReference) return;
+    pendingUploads.current.delete(url);
+    await deleteObject(storageReference).catch(() => undefined);
+  };
+
+  const closeEditor = async () => {
+    videoAbort.current?.abort();
+    const references = Array.from(pendingUploads.current.values());
+    pendingUploads.current.clear();
+    await Promise.allSettled(references.map(storageReference => deleteObject(storageReference)));
+    setForm(null);
+    setVideoProgress(null);
+    setError('');
+  };
+
+  useEffect(() => () => {
+    videoAbort.current?.abort();
+    const references = Array.from(pendingUploads.current.values());
+    pendingUploads.current.clear();
+    void Promise.allSettled(references.map(storageReference => deleteObject(storageReference)));
+  }, []);
 
   useEffect(
     () =>
@@ -411,8 +436,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         if (inspectItem) { setInspectItem(null); return; }
         if (isBulkEditOpen) { setIsBulkEditOpen(false); return; }
         if (imageEditorTarget) { setImageEditorTarget(null); return; }
-        if (form && !saving && !uploading) { notifyOperationSuccess(form.id ? 'Ενημέρωση Έργου' : 'Νέο Έργο', `Το έργο «${form.title.trim()}» αποθηκεύτηκε επιτυχώς.`);
-      setForm(null); return; }
+        if (form && !saving && !uploading) { void closeEditor(); return; }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -529,16 +553,21 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     }
   };
 
-  const addMediaUrl = () => {
+  const addMediaUrl = async () => {
     const url = newMediaUrl.trim();
     if (!/^https:\/\//i.test(url)) {
       setError('Το URL αρχείου πρέπει να αρχίζει με https://');
       return;
     }
     const type: Media['type'] = isVideoUrl(url) ? 'video' : 'image';
-    setForm(current => current && { ...current, mediaList: [...current.mediaList, { url, type }] });
-    setNewMediaUrl('');
-    setError('');
+    try {
+      if (!videoLink(url)) await verifyStoredMedia(url, type);
+      setForm(current => current && { ...current, mediaList: [...current.mediaList, { url, type }] });
+      setNewMediaUrl('');
+      setError('');
+    } catch (err: any) {
+      setError(`Το εξωτερικό URL δεν φορτώνει ως ${type === 'video' ? 'βίντεο' : 'εικόνα'}: ${err.message}`);
+    }
   };
 
   const upload = async (files: FileList | File[] | null) => {
@@ -549,9 +578,9 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     try {
       const fileList = Array.isArray(files) ? files : Array.from(files);
       for (const file of fileList) {
-        const isImage = (file.type && file.type.startsWith('image/')) || /\.(jpg|jpeg|png|webp|gif|svg|avif)$/i.test(file.name);
-        const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name);
-        if (!isImage && !isVideo) throw new Error(`Το αρχείο ${file.name} δεν αναγνωρίζεται ως έγκυρη εικόνα ή βίντεο.`);
+        const sourceMedia = await validateMediaFile(file);
+        const isImage = sourceMedia.kind === 'image';
+        const isVideo = sourceMedia.kind === 'video';
         let prepared = file;
         if (isVideo) {
           videoAbort.current = new AbortController();
@@ -562,18 +591,17 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
             setVideoCompressing(false);
             videoAbort.current = null;
           }
-        } else if (isImage) {
+        } else {
           prepared = await compressPortfolioImage(file);
-        } else if (file.size > VIDEO_UPLOAD_LIMIT) {
-          throw new Error('Η εικόνα πρέπει να είναι έως 30 MB.');
         }
+        const validated = await validatePreparedMedia(prepared, sourceMedia.kind);
         const safeName = prepared.name.replace(/[^a-zA-Z0-9._-]/g, '') || 'media';
         const fileRef = ref(
           storage,
           `jewelry/portfolio/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`
         );
         const uploadTask = uploadBytesResumable(fileRef, prepared, {
-          contentType: isVideo ? inferVideoContentType(prepared) || 'video/mp4' : prepared.type || 'image/jpeg',
+          contentType: validated.mime,
           cacheControl: 'public, max-age=31536000, immutable'
         });
         await new Promise<void>((resolve, reject) => {
@@ -593,8 +621,17 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
             () => resolve()
           );
         });
+        let downloadUrl: string;
+        try {
+          downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          await verifyStoredMedia(downloadUrl, sourceMedia.kind);
+        } catch (verificationError) {
+          await deleteObject(uploadTask.snapshot.ref).catch(() => undefined);
+          throw verificationError;
+        }
+        pendingUploads.current.set(downloadUrl, uploadTask.snapshot.ref);
         const uploaded: Media = {
-          url: await getDownloadURL(uploadTask.snapshot.ref),
+          url: downloadUrl,
           type: isVideo ? 'video' : 'image',
           title: file.name
         };
@@ -665,18 +702,24 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           await addDoc(collection(db, 'portfolio'), { ...record, createdAt: serverTimestamp() })
         ).id;
       }
+      pendingUploads.current.clear();
       const { updatedAt, ...snapshotRecord } = record;
-      await persistHistory(db, {
-        type: form.id ? 'PORTFOLIO_UPDATE' : 'ADD',
-        collection: 'portfolio',
-        id: savedId,
-        name: form.title,
-        message: 'Αποθήκευση έργου Portfolio',
-        timestamp: new Date().toISOString(),
-        before: oldRecord || null,
-        after: { ...oldRecord, ...snapshotRecord }
-      });
+      try {
+        await persistHistory(db, {
+          type: form.id ? 'PORTFOLIO_UPDATE' : 'ADD',
+          collection: 'portfolio',
+          id: savedId,
+          name: form.title,
+          message: 'Αποθήκευση έργου Portfolio',
+          timestamp: new Date().toISOString(),
+          before: oldRecord || null,
+          after: { ...oldRecord, ...snapshotRecord }
+        });
+      } catch (historyError) {
+        console.warn('Το έργο αποθηκεύτηκε, αλλά δεν γράφτηκε το ιστορικό:', historyError);
+      }
       setForm(null);
+      notifyOperationSuccess(form.id ? 'Ενημέρωση Έργου' : 'Νέο Έργο', `Το έργο «${form.title.trim()}» αποθηκεύτηκε επιτυχώς.`);
     } catch (err: any) {
       setError(`Δεν αποθηκεύτηκε: ${err.message}`);
       notifyOperationError('Σφάλμα Αποθήκευσης', err.message);
@@ -1561,7 +1604,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           aria-modal="true"
           aria-label={form.id ? 'Επεξεργασία έργου' : 'Νέο έργο'}
           onClick={e => {
-            if (e.target === e.currentTarget && !saving && !uploading) setForm(null);
+            if (e.target === e.currentTarget && !saving && !uploading) void closeEditor();
           }}
           className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm p-4 flex items-center justify-center cursor-pointer"
         >
@@ -1605,7 +1648,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
               <button
                 type="button"
                 disabled={uploading || saving}
-                onClick={() => setForm(null)}
+                onClick={() => void closeEditor()}
                 aria-label="Κλείσιμο"
                 className="p-2 text-stone-400 hover:text-stone-800 rounded-lg hover:bg-stone-200 transition"
               ><X className="w-4 h-4" /></button>
@@ -1835,7 +1878,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                     />
                     <button
                       type="button"
-                      onClick={addMediaUrl}
+                      onClick={() => void addMediaUrl()}
                       className="px-4 py-2 border border-stone-200 bg-stone-100 hover:bg-stone-200 rounded-xl text-xs font-bold text-stone-700 transition"
                     >
                       + Προσθήκη URL
@@ -1946,15 +1989,13 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                           </button>
                           <button
                             type="button"
-                            onClick={() =>
-                              setForm(
-                                current =>
-                                  current && {
-                                    ...current,
-                                    mediaList: current.mediaList.filter((_, i) => i !== index)
-                                  }
-                              )
-                            }
+                            onClick={() => {
+                              void discardPendingUpload(media.url);
+                              setForm(current => current && {
+                                ...current,
+                                mediaList: current.mediaList.filter((_, i) => i !== index)
+                              });
+                            }}
                             className="px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded font-bold ml-auto"
                           ><X className="w-4 h-4" /></button>
                         </div>
@@ -2053,7 +2094,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 <button
                   type="button"
                   disabled={uploading || saving}
-                  onClick={() => setForm(null)}
+                  onClick={() => void closeEditor()}
                   className="px-4 py-2 border border-stone-200 rounded-xl text-xs font-bold text-stone-600 hover:bg-white transition"
                 >
                   Ακύρωση
@@ -2082,37 +2123,48 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
             if (form && imageEditorTarget.mediaIndex !== undefined) {
               const targetIdx = imageEditorTarget.mediaIndex!;
               const prevEntry = form.mediaList[targetIdx];
-              let finalUrl = dataUrl;
               try {
                 const res = await fetch(dataUrl);
                 const blob = await res.blob();
+                const editedFile = new File([blob], 'portfolio-edited.jpg', { type: blob.type || 'image/jpeg' });
+                const validated = await validatePreparedMedia(editedFile, 'image');
                 const storagePath = `jewelry/portfolio/${Date.now()}-edited.jpg`;
                 const storageReference = ref(storage, storagePath);
-                await uploadBytes(storageReference, blob, {
-                  contentType: blob.type || 'image/jpeg',
+                await uploadBytes(storageReference, editedFile, {
+                  contentType: validated.mime,
                   cacheControl: 'public, max-age=31536000, immutable'
                 });
-                finalUrl = await getDownloadURL(storageReference);
-              } catch {
-                // Fallback to dataUrl only if offline/unauthenticated
-              }
+                let finalUrl: string;
+                try {
+                  finalUrl = await getDownloadURL(storageReference);
+                  await verifyStoredMedia(finalUrl, 'image');
+                } catch (verificationError) {
+                  await deleteObject(storageReference).catch(() => undefined);
+                  throw verificationError;
+                }
+                pendingUploads.current.set(finalUrl, storageReference);
 
-              setForm(current => {
-                if (!current) return current;
-                const nextMedia = [...current.mediaList];
-                const preservedOriginalUrl =
-                  prevEntry?.originalUrl ||
-                  (prevEntry?.url && !prevEntry.url.startsWith('data:') ? prevEntry.url : undefined);
-                nextMedia[targetIdx] = {
-                  ...nextMedia[targetIdx],
-                  url: finalUrl,
-                  ...(preservedOriginalUrl ? { originalUrl: preservedOriginalUrl } : {})
-                };
-                return { ...current, mediaList: nextMedia };
-              });
+                setForm(current => {
+                  if (!current) return current;
+                  const nextMedia = [...current.mediaList];
+                  const preservedOriginalUrl =
+                    prevEntry?.originalUrl ||
+                    (prevEntry?.url && !prevEntry.url.startsWith('data:') ? prevEntry.url : undefined);
+                  nextMedia[targetIdx] = {
+                    ...nextMedia[targetIdx],
+                    url: finalUrl,
+                    ...(preservedOriginalUrl ? { originalUrl: preservedOriginalUrl } : {})
+                  };
+                  return { ...current, mediaList: nextMedia };
+                });
+                if (prevEntry?.url) await discardPendingUpload(prevEntry.url);
+                setOrderMessage('Η εικόνα επεξεργάστηκε επιτυχώς!');
+              } catch (err: any) {
+                setError(`Δεν αποθηκεύτηκε η επεξεργασμένη εικόνα: ${err.message}`);
+                notifyOperationError('Σφάλμα Επεξεργασίας Εικόνας', err.message);
+              }
             }
             setImageEditorTarget(null);
-            setOrderMessage('Η εικόνα επεξεργάστηκε επιτυχώς!');
           }}
         />
       )}

@@ -21,6 +21,7 @@ import { VideoUploadStatus } from './VideoUploadStatus';
 import { prepareVideoUpload } from '../lib/video-compression';
 import { inferVideoContentType, VIDEO_UPLOAD_HELP } from '../lib/video-policy';
 import { editableBlob } from '../lib/media-files';
+import { validateMediaFile, validatePreparedMedia, verifyStoredMedia } from '../lib/media-validation';
 import { vintedSourceUrl } from '../lib/vinted-refresh';
 import { db, auth, storage } from "../firebase";
 import {
@@ -173,25 +174,20 @@ interface BackOfficeViewProps {
 
         // --- ΣΥΝΑΡΤΗΣΗ ΑΥΤΟΜΑΤΗΣ ΣΥΜΠΙΕΣΗΣ ΕΙΚΟΝΩΝ ---
         const compressImage = async (file) => {
+            const detected = await validateMediaFile(file, 'image');
             // Canvas converts animated GIFs into one still frame. Keep GIFs intact.
-            if (file?.type === 'image/gif') {
+            if (detected.mime === 'image/gif') {
                 if (file.size > 30 * 1024 * 1024) throw new Error('Το GIF πρέπει να είναι έως 30 MB.');
                 return file;
             }
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onerror = () => {
-                    if (file.size <= 2 * 1024 * 1024) resolve(file);
-                    else reject(new Error('Δεν διαβάστηκε η εικόνα.'));
-                };
+                reader.onerror = () => reject(new Error('Δεν διαβάστηκε η εικόνα.'));
                 reader.onabort = () => reject(new Error('Η ανάγνωση εικόνας ακυρώθηκε.'));
                 reader.readAsDataURL(file);
                 reader.onload = (event) => {
                     const img = new Image();
-                    img.onerror = () => {
-                        if (file.size <= 2 * 1024 * 1024) resolve(file);
-                        else reject(new Error('Δεν άνοιξε η εικόνα. Επίλεξε JPG, PNG, WebP ή GIF.'));
-                    };
+                    img.onerror = () => reject(new Error('Δεν άνοιξε η εικόνα. Επίλεξε έγκυρο JPG, PNG, WebP, AVIF ή GIF.'));
                     img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
@@ -235,7 +231,7 @@ interface BackOfficeViewProps {
             if (!blob || !/^image\//i.test(blob.type || '')) return blob;
             if (blob.type === 'image/gif') return blob;
 
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 const objectUrl = URL.createObjectURL(blob);
                 const img = new Image();
                 img.onload = () => {
@@ -259,12 +255,12 @@ interface BackOfficeViewProps {
                         }, 'image/jpeg', quality);
                     } catch (err) {
                         URL.revokeObjectURL(objectUrl);
-                        resolve(blob);
+                        reject(new Error('Δεν συμπιέστηκε η εικόνα.'));
                     }
                 };
                 img.onerror = () => {
                     URL.revokeObjectURL(objectUrl);
-                    resolve(blob);
+                    reject(new Error('Η εικόνα δεν αποκωδικοποιείται.'));
                 };
                 img.src = objectUrl;
             });
@@ -523,6 +519,15 @@ interface BackOfficeViewProps {
             const [draggedShopIdx, setDraggedShopIdx] = useState(null);
             const [draggedPrivateIdx, setDraggedPrivateIdx] = useState(null);
 
+            const closeItemEditor = () => {
+                for (const media of [...formShopMediaList, ...formPrivateMediaList]) {
+                    for (const candidate of [media?.url, media?.restoreBackup?.url]) {
+                        if (typeof candidate === 'string' && candidate.startsWith('blob:')) URL.revokeObjectURL(candidate);
+                    }
+                }
+                setIsAddOpen(false);
+            };
+
             const [formNotes, setFormNotes] = useState('');
             const [aiProductPrompt, setAiProductPrompt] = useState('');
             const [aiProductDraft, setAiProductDraft] = useState(null);
@@ -547,13 +552,13 @@ interface BackOfficeViewProps {
                         if (isBulkOpen) { setIsBulkOpen(false); return; }
                         if (isVintedImportOpen) { setIsVintedImportOpen(false); return; }
                         if (isSettingsOpen && !mediaPreparing && !isSavingSettings) { setIsSettingsOpen(false); return; }
-                        if (isAddOpen && !isSaving && !mediaPreparing) { setIsAddOpen(false); return; }
+                        if (isAddOpen && !isSaving && !mediaPreparing) { closeItemEditor(); return; }
                         if (isHistoryOpen) { setIsHistoryOpen(false); return; }
                     }
                 };
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [isAddOpen, isBulkOpen, isSettingsOpen, isDetailOpen, isHistoryOpen, isVintedImportOpen, isSaving, mediaPreparing, isSavingSettings]);
+            }, [isAddOpen, isBulkOpen, isSettingsOpen, isDetailOpen, isHistoryOpen, isVintedImportOpen, isSaving, mediaPreparing, isSavingSettings, formShopMediaList, formPrivateMediaList]);
             const [vintedLinksText, setVintedLinksText] = useState('');
             const [vintedImportItems, setVintedImportItems] = useState([]);
             const [vintedImportStatus, setVintedImportStatus] = useState('');
@@ -890,11 +895,12 @@ interface BackOfficeViewProps {
                 setVideoProgress(null);
                 try {
                     const prepared = await prepareLocalVideo(file, { stripAudio: true });
+                    const validated = await validatePreparedMedia(prepared, 'video');
                     setStatus('Ανέβασμα συμπιεσμένου βίντεο...');
                     const safeName = prepared.name.replace(/[^a-zA-Z0-9._-]/g, '') || 'hero-video.mp4';
                     const fileRef = firebaseRef(storage, `jewelry/hero/${section}/${Date.now()}-${safeName}`);
                     const task = uploadBytesResumable(fileRef, prepared, {
-                        contentType: inferVideoContentType(prepared) || 'video/mp4',
+                        contentType: validated.mime,
                         cacheControl: 'public, max-age=31536000, immutable'
                     });
                     await new Promise((resolve, reject) => task.on(
@@ -907,7 +913,14 @@ interface BackOfficeViewProps {
                         reject,
                         resolve
                     ));
-                    const url = await getDownloadURL(task.snapshot.ref);
+                    let url;
+                    try {
+                        url = await getDownloadURL(task.snapshot.ref);
+                        await verifyStoredMedia(url, 'video');
+                    } catch (verificationError) {
+                        await deleteObject(task.snapshot.ref).catch(() => undefined);
+                        throw verificationError;
+                    }
                     setVideoProgress({ text: 'Το βίντεο ανέβηκε επιτυχώς (100%).', percent: 100 });
                     setShopSettings(prev => ({ ...prev, [isPortfolioHero ? 'portfolioHeroVideoUrl' : 'heroVideoUrl']: url }));
                     setStatus(`Το βίντεο ανέβηκε. Πάτησε Αποθήκευση ρυθμίσεων για να εμφανιστεί στο ${isPortfolioHero ? 'Portfolio' : 'Shop'}.`);
@@ -1598,8 +1611,9 @@ interface BackOfficeViewProps {
                 try {
                 for (const file of files) {
                     try {
-                    const isImage = (file.type && file.type.startsWith('image/')) || /\.(jpg|jpeg|png|webp|gif|svg|avif)$/i.test(file.name);
-                    const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name);
+                    const detected = await validateMediaFile(file);
+                    const isImage = detected.kind === 'image';
+                    const isVideo = detected.kind === 'video';
                     if (isImage) {
                         const compressedFile = await compressImage(file);
                         const previewUrl = URL.createObjectURL(compressedFile);
@@ -1610,8 +1624,6 @@ interface BackOfficeViewProps {
                     } else if (isVideo) {
                         const prepared = await prepareLocalVideo(file);
                         newMedia.push({ url: URL.createObjectURL(prepared), type: 'video', isNew: true, fileObj: prepared, showInShop: true });
-                    } else {
-                        errors.push(`${file.name}: Μη υποστηριζόμενος τύπος αρχείου. Επιτρέπονται εικόνες και βίντεο.`);
                     }
                     } catch (error) { errors.push(`${file.name}: ${error.message || 'Αποτυχία προετοιμασίας αρχείου.'}`); if (error.name === 'AbortError') break; }
                 }
@@ -1668,8 +1680,9 @@ interface BackOfficeViewProps {
                 try {
                 for (const file of files) {
                     try {
-                    const isImage = (file.type && file.type.startsWith('image/')) || /\.(jpg|jpeg|png|webp|gif|svg|avif)$/i.test(file.name);
-                    const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name);
+                    const detected = await validateMediaFile(file);
+                    const isImage = detected.kind === 'image';
+                    const isVideo = detected.kind === 'video';
                     if (isImage) {
                         const compressedFile = await compressImage(file);
                         const previewUrl = URL.createObjectURL(compressedFile);
@@ -1678,8 +1691,6 @@ interface BackOfficeViewProps {
                     } else if (isVideo) {
                         const prepared = await prepareLocalVideo(file);
                         newMedia.push({ url: URL.createObjectURL(prepared), type: 'video', isNew: true, fileObj: prepared, showInShop: false });
-                    } else {
-                        errors.push(`${file.name}: Μη υποστηριζόμενος τύπος αρχείου. Επιτρέπονται εικόνες και βίντεο.`);
                     }
                     } catch (error) { errors.push(`${file.name}: ${error.message || 'Αποτυχία προετοιμασίας αρχείου.'}`); if (error.name === 'AbortError') break; }
                 }
@@ -2600,7 +2611,9 @@ interface BackOfficeViewProps {
                 }
 
                 const sourceBlob = await response.blob();
+                await validateMediaFile(sourceBlob, 'image');
                 const blob = await compressImageBlob(sourceBlob, 1400, 0.85);
+                const validated = await validateMediaFile(blob, 'image');
                 const ext = extensionFromContentType(blob.type);
                 const safeName = String(item.sourceId || item.name || 'vinted-item')
                     .toLowerCase()
@@ -2610,7 +2623,7 @@ interface BackOfficeViewProps {
                 const storagePath = `jewelry/vinted-imports/${Date.now()}-${safeName}-${mediaIndex + 1}.${ext}`;
                 const storageRef = firebaseRef(storage, storagePath);
                 const uploadTask = uploadBytesResumable(storageRef, blob, {
-                    contentType: blob.type || 'image/jpeg',
+                    contentType: validated.mime,
                     cacheControl: 'public, max-age=31536000, immutable'
                 });
 
@@ -2618,13 +2631,23 @@ interface BackOfficeViewProps {
                     uploadTask.on('state_changed', null, reject, resolve);
                 });
 
-                const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                let downloadUrl;
+                try {
+                    downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                    await verifyStoredMedia(downloadUrl, 'image');
+                } catch (verificationError) {
+                    await deleteObject(uploadTask.snapshot.ref).catch(() => undefined);
+                    throw verificationError;
+                }
                 return {
-                    url: downloadUrl,
-                    type: 'image',
-                    showInShop: true,
-                    source: 'vinted',
-                    originalUrl: imageUrl
+                    media: {
+                        url: downloadUrl,
+                        type: 'image',
+                        showInShop: true,
+                        source: 'vinted',
+                        originalUrl: imageUrl
+                    },
+                    storageRef: uploadTask.snapshot.ref
                 };
             };
 
@@ -2632,14 +2655,18 @@ interface BackOfficeViewProps {
                 const sourceMedia = item.mediaList || item.media || [];
                 if (!copyVintedImages || !sourceMedia.length) {
                     return {
-                        ...item,
-                        mediaList: sourceMedia.map(media => ({ ...media, showInShop: media.showInShop !== false })),
-                        media: sourceMedia.map(media => ({ ...media, showInShop: media.showInShop !== false })),
-                        imageUrl: sourceMedia[0]?.url || item.imageUrl || ''
+                        item: {
+                            ...item,
+                            mediaList: sourceMedia.map(media => ({ ...media, showInShop: media.showInShop !== false })),
+                            media: sourceMedia.map(media => ({ ...media, showInShop: media.showInShop !== false })),
+                            imageUrl: sourceMedia[0]?.url || item.imageUrl || ''
+                        },
+                        uploadedStorageRefs: []
                     };
                 }
 
                 const uploadedMedia = [];
+                const uploadedStorageRefs = [];
                 const copyWarnings = [];
                 for (let mediaIndex = 0; mediaIndex < sourceMedia.length; mediaIndex += 1) {
                     const media = sourceMedia[mediaIndex];
@@ -2650,7 +2677,9 @@ interface BackOfficeViewProps {
 
                     setVintedImportStatus(`Αντιγράφω εικόνα ${mediaIndex + 1}/${sourceMedia.length} για προϊόν ${itemIndex + 1}/${totalItems}...`);
                     try {
-                        uploadedMedia.push(await uploadVintedExternalImage(media.url, item, mediaIndex));
+                        const uploaded = await uploadVintedExternalImage(media.url, item, mediaIndex);
+                        uploadedMedia.push(uploaded.media);
+                        uploadedStorageRefs.push(uploaded.storageRef);
                     } catch (err) {
                         copyWarnings.push(`εικόνα ${mediaIndex + 1}: ${err.message}`);
                         // Keep the listing usable when Firebase Storage temporarily rejects a copy.
@@ -2659,15 +2688,18 @@ interface BackOfficeViewProps {
                 }
 
                 return {
-                    ...item,
-                    imageUrl: uploadedMedia[0]?.url || item.imageUrl || '',
-                    fileType: uploadedMedia[0]?.type || item.fileType || 'image',
-                    mediaList: uploadedMedia,
-                    media: uploadedMedia,
-                    notes: [
-                        item.notes || '',
-                        copyWarnings.length ? `Προσοχή: Δεν αντιγράφηκαν όλες οι Vinted εικόνες στο Firebase Storage (${copyWarnings.join('; ')}).` : ''
-                    ].filter(Boolean).join('\n')
+                    item: {
+                        ...item,
+                        imageUrl: uploadedMedia[0]?.url || item.imageUrl || '',
+                        fileType: uploadedMedia[0]?.type || item.fileType || 'image',
+                        mediaList: uploadedMedia,
+                        media: uploadedMedia,
+                        notes: [
+                            item.notes || '',
+                            copyWarnings.length ? `Προσοχή: Δεν αντιγράφηκαν όλες οι Vinted εικόνες στο Firebase Storage (${copyWarnings.join('; ')}).` : ''
+                        ].filter(Boolean).join('\n')
+                    },
+                    uploadedStorageRefs
                 };
             };
 
@@ -2684,6 +2716,7 @@ interface BackOfficeViewProps {
                 setIsVintedImportWorking(true);
                 setVintedImportError('');
                 let imported = 0;
+                let pendingImportStorageRefs = [];
 
                 try {
                     for (let index = 0; index < vintedImportItems.length; index += 1) {
@@ -2694,7 +2727,9 @@ interface BackOfficeViewProps {
                         if (!(rawItem.mediaList || []).length) {
                             throw new Error(`Το προϊόν «${rawItem.name || index + 1}» δεν έχει φωτογραφίες. Πρόσθεσε τουλάχιστον μία φωτογραφία ή αφαίρεσέ το από το preview.`);
                         }
-                        const item = await prepareVintedItemForImport(rawItem, index, vintedImportItems.length);
+                        const preparedImport = await prepareVintedItemForImport(rawItem, index, vintedImportItems.length);
+                        const item = preparedImport.item;
+                        pendingImportStorageRefs = preparedImport.uploadedStorageRefs;
                         if (copyVintedImages && !(item.mediaList || []).length) {
                             throw new Error(`Δεν αντιγράφηκαν φωτογραφίες για το προϊόν «${rawItem.name || index + 1}». Το προϊόν δεν αποθηκεύτηκε.`);
                         }
@@ -2723,6 +2758,7 @@ interface BackOfficeViewProps {
                             updatedAt: serverTimestamp()
                         };
                         const docRef = await addDoc(collection(db, 'jewelry'), itemData);
+                        pendingImportStorageRefs = [];
                         pushVersionHistory({
                             type: 'ADD',
                             id: docRef.id,
@@ -2740,6 +2776,9 @@ interface BackOfficeViewProps {
                     setVintedLinksText('');
                     notifyOperationSuccess('Εισαγωγή από Vinted', `Περάστηκαν ${imported} προϊόντα στο Back Office επιτυχώς!`);
                 } catch (err) {
+                    if (pendingImportStorageRefs.length) {
+                        await Promise.allSettled(pendingImportStorageRefs.map(storageRef => deleteObject(storageRef)));
+                    }
                     setVintedImportError(`Σφάλμα import μετά από ${imported} προϊόντα: ${err.message}`);
                     notifyOperationError('Σφάλμα Εισαγωγής Vinted', err.message);
                 } finally {
@@ -2771,6 +2810,8 @@ interface BackOfficeViewProps {
                 setIsSaving(true);
                 setUploadProgress(0);
                 setUploadStatus('Προετοιμασία...');
+                const uploadedStorageRefs = [];
+                let catalogSaved = false;
 
                 try {
                     const catTrimmed = formCategory.trim() || 'Άλλο';
@@ -2798,11 +2839,13 @@ interface BackOfficeViewProps {
                     const isFirebaseStorageUrl = (url = '') => /firebasestorage\.googleapis\.com|firebasestorage\.app/i.test(url);
 
                     const uploadMediaFile = async (fileObj, folder, statusLabel, countLabel) => {
+                        const expectedKind = (await validateMediaFile(fileObj)).kind;
+                        const validated = await validatePreparedMedia(fileObj, expectedKind);
                         const safeName = fileObj.name.replace(/[^a-zA-Z0-9.\-_]/g, '') || 'image.jpg';
                         const uniqueName = Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '_' + safeName;
                         const storageRef = firebaseRef(storage, folder + '/' + uniqueName);
                         const uploadTask = uploadBytesResumable(storageRef, fileObj, {
-                            contentType: inferVideoContentType(fileObj) || fileObj.type || 'image/jpeg',
+                            contentType: validated.mime,
                             cacheControl: 'public, max-age=31536000, immutable'
                         });
 
@@ -2818,7 +2861,16 @@ interface BackOfficeViewProps {
                             );
                         });
 
-                        return getDownloadURL(uploadTask.snapshot.ref);
+                        let downloadUrl;
+                        try {
+                            downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                            await verifyStoredMedia(downloadUrl, expectedKind);
+                        } catch (verificationError) {
+                            await deleteObject(uploadTask.snapshot.ref).catch(() => undefined);
+                            throw verificationError;
+                        }
+                        uploadedStorageRefs.push(uploadTask.snapshot.ref);
+                        return downloadUrl;
                     };
 
                     const buildSavedMediaEntry = (media, url, originalUrl = '') => {
@@ -2898,6 +2950,7 @@ interface BackOfficeViewProps {
 
                     if (isEditMode && currentItem) {
                         await updateDoc(doc(db, "jewelry", currentItem.id), itemData);
+                        catalogSaved = true;
                         const originalMedia = currentItem.mediaList || (currentItem.imageUrl ? [{ url: currentItem.imageUrl, type: currentItem.fileType || 'image' }] : []);
                         const finalMediaReferences = new Set(finalMediaUrls.flatMap(media => [media.url, media.originalUrl].filter(Boolean)));
                         try {
@@ -2921,6 +2974,7 @@ interface BackOfficeViewProps {
                     } else {
                         itemData.createdAt = serverTimestamp();
                         const docRef = await addDoc(collection(db, "jewelry"), itemData);
+                        catalogSaved = true;
                         pushVersionHistory({
                             type: 'ADD',
                             id: docRef.id,
@@ -2932,12 +2986,15 @@ interface BackOfficeViewProps {
                     }
 
                     localStorage.removeItem('aram_draft');
-                    setIsAddOpen(false);
+                    closeItemEditor();
                     notifyOperationSuccess(
                         isEditMode ? 'Ενημέρωση Προϊόντος' : 'Νέο Προϊόν',
                         `Το προϊόν «${formName.trim()}» αποθηκεύτηκε επιτυχώς.`
                     );
                 } catch (err) {
+                    if (!catalogSaved && uploadedStorageRefs.length) {
+                        await Promise.allSettled(uploadedStorageRefs.map(storageRef => deleteObject(storageRef)));
+                    }
                     notifyOperationError('Σφάλμα Αποθήκευσης', err.message);
                     alert("Σφάλμα κατά την αποθήκευση: " + err.message);
                 } finally {
@@ -4502,7 +4559,7 @@ interface BackOfficeViewProps {
                         <div
                             onClick={(e) => {
                                 if (e.target === e.currentTarget && !isSaving && !mediaPreparing) {
-                                    setIsAddOpen(false);
+                                    closeItemEditor();
                                 }
                             }}
                             className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 cursor-pointer overflow-y-auto"
@@ -4589,7 +4646,7 @@ interface BackOfficeViewProps {
                                                 <button
                                                     type="button"
                                                     disabled={mediaPreparing || isSaving}
-                                                    onClick={() => setIsAddOpen(false)}
+                                                    onClick={closeItemEditor}
                                                     className="text-stone-400 hover:text-stone-800 bg-white p-2 rounded-lg border border-stone-200 transition shadow-sm"
                                                     title="Κλείσιμο (Esc)"
                                                 >
@@ -5159,7 +5216,7 @@ interface BackOfficeViewProps {
                                     </form>
                                 </div>
                                 <div className="p-5 border-t border-stone-100 bg-white rounded-b-2xl flex justify-end gap-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
-                                    <button type="button" onClick={() => setIsAddOpen(false)} className="px-6 py-2.5 bg-stone-100 text-stone-700 rounded-lg font-bold hover:bg-stone-200 transition" disabled={isSaving || mediaPreparing}>Ακύρωση</button>
+                                    <button type="button" onClick={closeItemEditor} className="px-6 py-2.5 bg-stone-100 text-stone-700 rounded-lg font-bold hover:bg-stone-200 transition" disabled={isSaving || mediaPreparing}>Ακύρωση</button>
                                     <button type="submit" form="jewelry-form" className="px-8 py-2.5 bg-stone-900 text-white rounded-lg font-bold hover:bg-stone-800 transition shadow-lg flex items-center gap-2" disabled={isSaving || mediaPreparing}>
                                         Αποθήκευση
                                     </button>
