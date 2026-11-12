@@ -499,7 +499,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                       </span>)}
                   </div>
 
-                  <button onClick={closeItemDetail} className="p-1.5 rounded-full transition bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900" title="Κλείσιμο (Esc)">
+                  <button data-detail-close type="button" onClick={closeItemDetail} aria-label="Κλείσιμο παραθύρου" className="p-1.5 rounded-full transition bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900" title="Κλείσιμο (Esc)">
                     <X className="w-5 h-5"/>
                   </button>
                 </div>

@@ -975,6 +975,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
         >
             {/* Close button */}
             <button
+              data-detail-close
+              type="button"
               onClick={() => setSelectedItem(null)}
               className="absolute top-4 right-4 z-30 p-2 rounded-full bg-stone-100 text-stone-600 hover:text-stone-900 hover:bg-stone-200 border border-stone-300 transition shadow-sm"
               aria-label="Κλείσιμο παραθύρου"
