@@ -1,5 +1,5 @@
 export type BackofficeAiMode = 'portfolio_item' | 'product';
-export type BackofficeAiTask = 'full' | 'title' | 'description';
+export type BackofficeAiTask = 'full' | 'title' | 'description' | 'tags';
 
 export interface BackofficeAiInput {
   product?: Record<string, unknown>;
@@ -20,7 +20,7 @@ export function normalizeAiMode(value: unknown): BackofficeAiMode {
 }
 
 export function normalizeAiTask(value: unknown): BackofficeAiTask {
-  if (value === 'title' || value === 'description') return value;
+  if (value === 'title' || value === 'description' || value === 'tags') return value;
   return 'full';
 }
 
@@ -39,11 +39,18 @@ export function buildBackofficeAiPrompt(input: BackofficeAiInput): string {
   const product = input.product || {};
   const task = normalizeAiTask(input.task);
   const extra = text(input.prompt, 800);
+  const taskInstructions = task === 'tags'
+    ? '\n- Για αυτή την εργασία δώσε χρώματα και υλικά ως πίνακες colors και materials. Μην απαιτείς τίτλο ή περιγραφή.'
+    : task === 'title'
+      ? '\n- Για αυτή την εργασία δώσε τίτλο στο πεδίο title.'
+      : task === 'description'
+        ? '\n- Για αυτή την εργασία δώσε περιγραφή στο πεδίο description.'
+        : '\n- Για την πλήρη πρόταση δώσε οπωσδήποτε title και description.';
   const qualityRules = `
 - Μην επαναλαμβάνεις λέξεις ή φράσεις και έλεγξε τη γραμματική πριν απαντήσεις.
 - Σύνδεσε το κείμενο με τουλάχιστον ένα από τα παρεχόμενα στοιχεία.
 - Μην επινοείς υλικά, τεχνικές, διαστάσεις, χρώματα ή προέλευση.
-- Επίστρεψε μόνο τα πεδία που γνωρίζεις, χωρίς Markdown.`;
+- Επίστρεψε μόνο τα πεδία που γνωρίζεις, χωρίς Markdown.${taskInstructions}`;
 
   if (normalizeAiMode(input.mode) === 'portfolio_item') {
     return `Είσαι επιμελητής εικαστικού Portfolio για το Aram Creations. Γράψε φυσικά και συγκεκριμένα στα Ελληνικά.
@@ -164,6 +171,9 @@ export function validateBackofficeAiSuggestion(raw: Record<string, unknown>, inp
   for (const key of ['colors', 'materials', 'tags']) {
     const value = validatedList(raw, key);
     if (value !== undefined) output[key] = value;
+  }
+  if (task === 'tags' && !((output.colors as string[] | undefined)?.length || (output.materials as string[] | undefined)?.length)) {
+    throw new AiSuggestionValidationError('Το AI δεν επέστρεψε χρώματα ή υλικά.');
   }
   return output;
 }

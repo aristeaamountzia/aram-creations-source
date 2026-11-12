@@ -45,3 +45,12 @@ test('title-only tasks do not require a description', () => {
     { title: 'Κυκλαδικό ίχνος' }
   );
 });
+
+test('colors and materials task accepts lists without requiring a title or description', () => {
+  const input = { mode: 'backoffice_product', task: 'tags', product: { name: 'Κολιέ' } };
+  assert.match(buildBackofficeAiPrompt(input), /Εργασία: tags/);
+  assert.deepEqual(validateBackofficeAiSuggestion({ colors: [' Μπλε '], materials: ['Γυαλί'] }, input), {
+    colors: ['Μπλε'], materials: ['Γυαλί']
+  });
+  assert.throws(() => validateBackofficeAiSuggestion({ tags: ['χειροποίητο'] }, input), /χρώματα ή υλικά/);
+});
