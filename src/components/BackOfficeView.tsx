@@ -25,6 +25,7 @@ import { inferVideoContentType, VIDEO_UPLOAD_HELP } from '../lib/video-policy';
 import { editableBlob } from '../lib/media-files';
 import { validateMediaFile, validatePreparedMedia, verifyStoredMedia } from '../lib/media-validation';
 import { vintedSourceUrl } from '../lib/vinted-refresh';
+import { findVintedImportDuplicate } from '../lib/vinted-import';
 import { db, auth, storage } from "../firebase";
 import {
   collection,
@@ -2388,14 +2389,6 @@ interface BackOfficeViewProps {
                 ? `${getVintedApis().image}?url=${encodeURIComponent(url)}`
                 : url);
 
-            const vintedPreviewKey = (item) => [
-                item.sourcePlatform || '',
-                item.sourceId || '',
-                item.sourceUrl || '',
-                item.name || '',
-                item.price || ''
-            ].join('|').toLowerCase();
-
             const mapVintedRowToAram = (row) => {
                 const sourceUrl = String(row.url || '').trim();
                 const condition = String(row.condition || '').trim();
@@ -2468,10 +2461,10 @@ interface BackOfficeViewProps {
             };
 
             const handleFetchVintedLinks = async () => {
-                const links = vintedLinksText
+                const links = uniqueVintedUrls(vintedLinksText
                     .split(/\r?\n/)
                     .map(line => line.trim())
-                    .filter(Boolean);
+                    .filter(Boolean));
 
                 if (!links.length) {
                     setVintedImportError('Βάλε πρώτα ένα ή περισσότερα Vinted links.');
@@ -2482,11 +2475,19 @@ interface BackOfficeViewProps {
                 setVintedImportError('');
                 const fetchedItems = [];
                 const errors = [];
-                const existingKeys = new Set(vintedImportItems.map(vintedPreviewKey));
+                const skippedDuplicates = [];
 
                 try {
                     for (let index = 0; index < links.length; index += 1) {
                         const link = links[index];
+                        const knownBeforeFetch = findVintedImportDuplicate(
+                            { sourcePlatform: 'vinted', sourceUrl: link },
+                            [...jewelryList, ...vintedImportItems, ...fetchedItems]
+                        );
+                        if (knownBeforeFetch) {
+                            skippedDuplicates.push(knownBeforeFetch.item.name || knownBeforeFetch.item.title || link);
+                            continue;
+                        }
                         if (index > 0) await waitForVintedRequestWindow();
                         setVintedImportStatus(`Τραβάω στοιχεία από Vinted link ${index + 1}/${links.length}...`);
                         try {
@@ -2516,10 +2517,14 @@ interface BackOfficeViewProps {
                             };
                             item.vintedFavorites = Number(data.item?.favorites ?? data.item?.favoritesCount ?? 0) || 0;
                             item.vintedViews = Number(data.item?.views ?? data.item?.viewCount ?? 0) || 0;
-                            const key = vintedPreviewKey(item);
-                            if (item.name && !existingKeys.has(key)) {
-                                existingKeys.add(key);
+                            const duplicate = findVintedImportDuplicate(
+                                item,
+                                [...jewelryList, ...vintedImportItems, ...fetchedItems]
+                            );
+                            if (item.name && !duplicate) {
                                 fetchedItems.push(item);
+                            } else if (duplicate) {
+                                skippedDuplicates.push(duplicate.item.name || duplicate.item.title || item.name || link);
                             } else if (!item.name) {
                                 errors.push(`${link}: δεν βρέθηκε τίτλος καταχώρησης.`);
                             }
@@ -2530,7 +2535,10 @@ interface BackOfficeViewProps {
 
                     setVintedImportItems(prev => [...prev, ...fetchedItems]);
                     const suffix = errors.length ? ` Σφάλματα: ${errors.join(' | ')}` : '';
-                    setVintedImportStatus(`Βρέθηκαν ${fetchedItems.length} νέα προϊόντα. Σύνολο preview: ${vintedImportItems.length + fetchedItems.length}.${suffix}`);
+                    const duplicateSummary = skippedDuplicates.length
+                        ? ` Παραλείφθηκαν ${skippedDuplicates.length} ήδη υπάρχοντα: ${skippedDuplicates.join(', ')}.`
+                        : '';
+                    setVintedImportStatus(`Βρέθηκαν ${fetchedItems.length} νέα προϊόντα. Σύνολο preview: ${vintedImportItems.length + fetchedItems.length}.${duplicateSummary}${suffix}`);
                     if (errors.length) setVintedImportError(errors.join(' | '));
                 } finally {
                     setIsVintedImportWorking(false);
@@ -2658,11 +2666,19 @@ interface BackOfficeViewProps {
                 setIsVintedImportWorking(true);
                 setVintedImportError('');
                 let imported = 0;
+                let skippedDuplicates = 0;
                 let pendingImportStorageRefs = [];
+                const importedInRun = [];
 
                 try {
                     for (let index = 0; index < vintedImportItems.length; index += 1) {
                         const rawItem = vintedImportItems[index];
+                        const duplicate = findVintedImportDuplicate(rawItem, [...jewelryList, ...importedInRun]);
+                        if (duplicate) {
+                            skippedDuplicates += 1;
+                            setVintedImportStatus(`Import σε εξέλιξη: ${imported} νέα, ${skippedDuplicates} ήδη υπάρχοντα`);
+                            continue;
+                        }
                         if (!(Number(rawItem.price) > 0)) {
                             throw new Error(`Το προϊόν «${rawItem.name || index + 1}» δεν έχει έγκυρη τιμή. Συμπλήρωσε τιμή στην προεπισκόπηση.`);
                         }
@@ -2710,13 +2726,15 @@ interface BackOfficeViewProps {
                             after: { ...itemData, id: docRef.id }
                         });
                         imported += 1;
+                        importedInRun.push(rawItem);
                         setVintedImportStatus(`Import σε εξέλιξη: ${imported}/${vintedImportItems.length}`);
                     }
 
-                    setVintedImportStatus(`Έτοιμο. Περάστηκαν ${imported} προϊόντα στο Back Office.`);
+                    const skippedSummary = skippedDuplicates ? ` Παραλείφθηκαν ${skippedDuplicates} ήδη υπάρχοντα.` : '';
+                    setVintedImportStatus(`Έτοιμο. Περάστηκαν ${imported} νέα προϊόντα στο Back Office.${skippedSummary}`);
                     setVintedImportItems([]);
                     setVintedLinksText('');
-                    notifyOperationSuccess('Εισαγωγή από Vinted', `Περάστηκαν ${imported} προϊόντα στο Back Office επιτυχώς!`);
+                    notifyOperationSuccess('Εισαγωγή από Vinted', `Περάστηκαν ${imported} νέα προϊόντα.${skippedSummary}`);
                 } catch (err) {
                     if (pendingImportStorageRefs.length) {
                         await Promise.allSettled(pendingImportStorageRefs.map(storageRef => deleteObject(storageRef)));

@@ -61,3 +61,20 @@ export function sanitizeVintedDescription(
 export function sanitizeVintedReview(text: string | null | undefined): string {
   return sanitizeVintedDescription(text, { preserveEmojis: true });
 }
+
+const AUTOMATED_REVIEW_PATTERNS = [
+  /^επιβεβαιωμένη παράδοση παραγγελίας μέσω vinted[.!]?$/i,
+  /^αυτόματη θετική αξιολόγηση(?: από το vinted)?[.!]?$/i,
+  /^automatic positive feedback(?: from vinted)?[.!]?$/i,
+  /^(?:the )?transaction (?:was |has been )?completed successfully[.!]?$/i,
+];
+
+/** Keeps customer-written feedback and rejects platform-generated confirmations. */
+export function isAuthenticVintedReview(review: {
+  feedback?: string | null;
+  systemFeedback?: boolean | null;
+} | null | undefined): boolean {
+  if (!review || review.systemFeedback) return false;
+  const feedback = sanitizeVintedReview(review.feedback).trim();
+  return Boolean(feedback) && !AUTOMATED_REVIEW_PATTERNS.some(pattern => pattern.test(feedback));
+}

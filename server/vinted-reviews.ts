@@ -1,4 +1,4 @@
-import { sanitizeVintedReview } from '../src/lib/vinted-sanitizer';
+import { isAuthenticVintedReview, sanitizeVintedReview } from '../src/lib/vinted-sanitizer';
 import { VintedReview, VintedReviewsStats, VintedReviewsPayload } from '../src/types/vinted-reviews';
 import { adminDatabase } from './admin-database';
 
@@ -27,7 +27,7 @@ export function formatGreekDate(dateString: string): string {
  * Guarantees zero latency on initial load and complete offline/network resilience.
  * Preserves authentic customer emojis (❤️, 🌸, ✨, 😍) expressing real emotional connection.
  */
-export const BUNDLED_VINTED_REVIEWS: VintedReview[] = [
+const RAW_BUNDLED_VINTED_REVIEWS: VintedReview[] = [
   {
     id: 4632468837,
     date: '2026-10-27T16:18:36+01:00',
@@ -139,6 +139,8 @@ export const BUNDLED_VINTED_REVIEWS: VintedReview[] = [
     feedbackUserId: 221345902
   }
 ];
+
+export const BUNDLED_VINTED_REVIEWS = RAW_BUNDLED_VINTED_REVIEWS.filter(isAuthenticVintedReview);
 
 export const BUNDLED_VINTED_STATS: VintedReviewsStats = {
   memberId: DEFAULT_VINTED_MEMBER_ID,
@@ -287,7 +289,7 @@ export async function fetchLiveVintedReviews(memberId = DEFAULT_VINTED_MEMBER_ID
       sellerReply: cleanReply,
       feedbackUserId: item.feedback_user_id
     };
-  });
+  }).filter(isAuthenticVintedReview);
 
   return { stats: userStats, reviews };
 }
@@ -304,7 +306,7 @@ export async function persistVintedReviewsToFirestore(
     const { db } = adminDatabase();
     await db.collection('settings').doc('vinted_reviews').set({
       stats,
-      reviews,
+      reviews: reviews.filter(isAuthenticVintedReview),
       updatedAt: new Date().toISOString()
     }, { merge: true });
 
@@ -339,7 +341,7 @@ export async function loadVintedReviewsFromFirestore(): Promise<{
       if (Array.isArray(data?.reviews) && data.reviews.length > 0) {
         return {
           stats: data.stats || BUNDLED_VINTED_STATS,
-          reviews: data.reviews,
+          reviews: data.reviews.filter(isAuthenticVintedReview),
           updatedAt: data.updatedAt
         };
       }

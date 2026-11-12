@@ -16,13 +16,14 @@ test('formatGreekDate converts ISO timestamps to Greek date format', () => {
 });
 
 test('bundled Vinted reviews preserve authentic customer emojis and strip condition boilerplate', () => {
-  assert.ok(BUNDLED_VINTED_REVIEWS.length >= 10, 'Should have at least 10 real reviews');
+  assert.equal(BUNDLED_VINTED_REVIEWS.length, 8, 'Only customer-written reviews should be bundled');
 
   for (const review of BUNDLED_VINTED_REVIEWS) {
     assert.ok(review.id, 'Review must have an id');
     assert.equal(review.rating, 5, 'Every Aram Creations review is 5 stars');
     assert.ok(review.userLogin, 'Review must have buyer userLogin');
     assert.ok(review.feedback, 'Review must have feedback text');
+    assert.equal(review.systemFeedback, false, 'Automated platform feedback must not reach the payload');
 
     // Rule 5: No boilerplate condition phrases
     assert.doesNotMatch(review.feedback, /καινούργιο με ετικέτα/i);
@@ -48,7 +49,7 @@ test('bundled Vinted stats match authentic seller profile metrics', () => {
 test('getVintedReviews returns valid payload with fallback', async () => {
   const payload = await getVintedReviews();
   assert.equal(payload.ok, true);
-  assert.ok(payload.reviews.length >= 10);
+  assert.equal(payload.reviews.length, 8);
   assert.equal(payload.stats.ratingScore, 5.0);
   assert.ok(['live', 'firestore', 'bundle', 'cache'].includes(payload.source));
 });

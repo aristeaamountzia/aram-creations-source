@@ -1,4 +1,4 @@
-import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
+import { isAuthenticVintedReview, sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Star,
@@ -179,9 +179,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
 
   // Only display authentic customer reviews with actual feedback text, filtering out automated system confirmations
   const authenticReviews = useMemo(() => {
-    return reviews.filter(
-      (r) => !r.systemFeedback && r.feedback && r.feedback.trim().length > 0
-    );
+    return reviews.filter(isAuthenticVintedReview);
   }, [reviews]);
 
   // 3. Dynamically keep Schema.org JSON-LD in <head> synchronized with live Vinted stats & reviews

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sanitizeVintedDescription } from '../src/lib/vinted-sanitizer';
+import { isAuthenticVintedReview, sanitizeVintedDescription } from '../src/lib/vinted-sanitizer';
 
 test('Vinted Content Sanitization (GEMINI.md Rule 5)', async (t) => {
   await t.test('strips Greek condition boilerplate "Καινούργιο με ετικέτα"', () => {
@@ -37,5 +37,13 @@ test('Vinted Content Sanitization (GEMINI.md Rule 5)', async (t) => {
     const result = sanitizeVintedDescription(input);
     assert.strictEqual(result, 'Χαρακτηριστικά:\nΥλικό: Ρητίνη\nΙδανικό για layering');
   });
+});
+
+test('filters automated Vinted feedback by flag or exact platform text', () => {
+  assert.equal(isAuthenticVintedReview({ feedback: 'Υπέροχη συσκευασία, ευχαριστώ!', systemFeedback: false }), true);
+  assert.equal(isAuthenticVintedReview({ feedback: 'Προσωπικό σχόλιο', systemFeedback: true }), false);
+  assert.equal(isAuthenticVintedReview({ feedback: 'Επιβεβαιωμένη παράδοση παραγγελίας μέσω Vinted' }), false);
+  assert.equal(isAuthenticVintedReview({ feedback: 'Automatic positive feedback from Vinted.' }), false);
+  assert.equal(isAuthenticVintedReview({ feedback: '   ' }), false);
 });
 
