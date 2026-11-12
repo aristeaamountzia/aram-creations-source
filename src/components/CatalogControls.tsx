@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, X } from 'lucide-react';
 
-interface CatalogControlsProps {
+export interface CatalogControlsProps {
   label: string;
   search: string;
   onSearch: (value: string) => void;

@@ -1,6 +1,11 @@
 import { ImageLightbox } from './ImageLightbox';
-import { CatalogControls } from './CatalogControls';
 import { VintedReviewsSection } from './VintedReviewsSection';
+import { ContentCard } from './content/ContentCard';
+import { DetailView } from './content/DetailView';
+import { FilterBar } from './content/FilterBar';
+import { MediaGallery } from './content/MediaGallery';
+import { SectionShell } from './content/SectionShell';
+import { StatusBadge } from './content/StatusBadge';
 import React, { useState, useEffect, useMemo } from 'react';
 import { JewelryItem } from '../types';
 import { JEWELRY_CATALOG } from '../data';
@@ -9,6 +14,7 @@ import { DEFAULT_SHOP_SETTINGS, normalizeShopSettings, ShopSettings } from '../s
 import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import { portfolioHeroVideoUrl, heroPosterFor, initialHeroSnapshot, cacheHeroSnapshot } from '../lib/hero-media';
+import { isUnconfirmedEmptyCatalog } from '../lib/catalog-snapshot';
 import {
   collection,
   doc,
@@ -20,16 +26,10 @@ import {
   ShoppingBag,
   ExternalLink,
   Heart,
-  ZoomIn,
-  Search,
   X,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   Eye,
   Check,
-  Play,
-  Maximize2,
   Star
 } from 'lucide-react';
 
@@ -313,6 +313,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
     try {
       const jewelryColl = collection(db, 'jewelry');
       const unsubscribe = onSnapshot(jewelryColl, (snapshot) => {
+        if (isUnconfirmedEmptyCatalog(snapshot)) return;
         if (fallbackTimer) clearTimeout(fallbackTimer);
         const items = snapshot.docs.map((docSnap) => ({
           id: docSnap.id,
@@ -483,15 +484,13 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const hasPrevModalItem = currentModalIndex > 0;
   const hasNextModalItem = currentModalIndex !== -1 && currentModalIndex < filteredItems.length - 1;
 
-  const handlePrevModalItem = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handlePrevModalItem = () => {
     if (hasPrevModalItem) {
       handleOpenDetail(filteredItems[currentModalIndex - 1]);
     }
   };
 
-  const handleNextModalItem = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleNextModalItem = () => {
     if (hasNextModalItem) {
       handleOpenDetail(filteredItems[currentModalIndex + 1]);
     }
@@ -536,7 +535,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   };
 
   return (
-    <div className="catalog-view shop-view min-h-screen" style={{ backgroundColor: ds.pageBackground || shopSettings.bgColor, color: ds.ink || shopSettings.textColor, fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif` }}>
+    <SectionShell section="shop" className="catalog-view" style={{ backgroundColor: ds.pageBackground || shopSettings.bgColor, color: ds.ink || shopSettings.textColor, fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif` }}>
       {/* Authentic Artisan Hero Banner */}
       <section
         className={`shop-hero ${hasHeroVideo ? 'catalog-hero--video bg-stone-950' : 'bg-stone-950'} min-h-[520px] h-[62svh] max-h-[680px] flex flex-col justify-center items-center relative overflow-hidden py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center transition-colors`}
@@ -640,7 +639,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       {/* Main Content Area */}
       <div id="shop-catalog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
 
-        <CatalogControls label="Φίλτρα Shop" search={searchQuery} onSearch={setSearchQuery}
+        <FilterBar label="Φίλτρα Shop" search={searchQuery} onSearch={setSearchQuery}
           placeholder="Αναζήτηση με όνομα, υλικό, χρώμα..."
           categories={visibleCategories.map(category => ({ id: category, label: category }))}
           selectedCategory={selectedCategory} onCategory={setSelectedCategory} accent={shopSettings.primaryColor}
@@ -762,7 +761,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
               const viewsCount = getItemViews(item);
 
               return (
-                <div
+                <ContentCard
                   key={item.id}
                   onClick={() => handleOpenDetail(item)}
                   onKeyDown={(event) => {
@@ -774,9 +773,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   role="group"
                   tabIndex={0}
                   aria-label={`${item.name || item.title || 'Κόσμημα'}. Πατήστε Enter για λεπτομέρειες.`}
-                  className={`catalog-card group bg-white border border-stone-200/80 rounded-xl overflow-hidden hover:border-stone-400/80 hover:shadow-xs transition-all duration-300 flex flex-col justify-between cursor-pointer ${
-                    !isAvailable ? 'opacity-85' : ''
-                  }`}
+                  muted={!isAvailable}
+                  className="border-stone-200/80 hover:border-stone-400/80"
                   style={{ borderRadius: ds.cardRadius || "12px", backgroundColor: ds.surface || "#ffffff", borderColor: ds.line || "#e4e4e7" }}
                 >
                   {/* Media Container (Clean 4:5 Luxury Jewelry Aspect) */}
@@ -810,9 +808,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     {/* Discreet Luxury Sold Overlay */}
                     {isSold && (
                       <div className="absolute inset-0 bg-stone-950/30 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none transition-all duration-300 group-hover:bg-stone-950/20">
-                        <span className="px-3.5 py-1.5 rounded-full bg-stone-900/85 backdrop-blur-md border border-white/20 text-stone-100 text-[10px] sm:text-[11px] font-bold tracking-[0.2em] uppercase shadow-md">
-                          Πουλήθηκε
-                        </span>
+                        <StatusBadge className="px-3.5 py-1.5 tracking-[0.2em]">Πουλήθηκε</StatusBadge>
                       </div>
                     )}
 
@@ -828,9 +824,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     {/* Discreet status badge if not available and NOT sold */}
                     {!isAvailable && !isSold && (
                       <div className="absolute top-2.5 left-2.5 z-10">
-                        <span className="px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase rounded-full backdrop-blur-xs bg-stone-800/80 text-stone-200">
-                          {item.status || 'Μη διαθέσιμο'}
-                        </span>
+                        <StatusBadge>{item.status || 'Μη διαθέσιμο'}</StatusBadge>
                       </div>
                     )}
 
@@ -962,7 +956,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </ContentCard>
               );
             })}
           </div>
@@ -971,38 +965,14 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
       {/* Comprehensive Product Detail Modal with Full Media & Metrics Support */}
       {selectedItem && (
-        <div
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedItem(null);
-          }}
+        <DetailView
+          title={`Λεπτομέρειες: ${selectedItem.name || selectedItem.title || 'Κόσμημα'}`}
+          onClose={() => setSelectedItem(null)}
+          onPrevious={hasPrevModalItem ? handlePrevModalItem : undefined}
+          onNext={hasNextModalItem ? handleNextModalItem : undefined}
+          previousLabel="Προηγούμενο κόσμημα"
+          nextLabel="Επόμενο κόσμημα"
         >
-          {/* Previous product catalog arrow */}
-          {hasPrevModalItem && (
-            <button
-              onClick={handlePrevModalItem}
-              className="hidden lg:flex fixed left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white text-stone-900 shadow-2xl items-center justify-center hover:bg-stone-100 transition z-50 border border-stone-200"
-              title="Προηγούμενο κόσμημα"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
-
-          {/* Next product catalog arrow */}
-          {hasNextModalItem && (
-            <button
-              onClick={handleNextModalItem}
-              className="hidden lg:flex fixed right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white text-stone-900 shadow-2xl items-center justify-center hover:bg-stone-100 transition z-50 border border-stone-200"
-              title="Επόμενο κόσμημα"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          )}
-
-          <div
-            className="bg-white border border-stone-200 rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col md:flex-row overflow-hidden text-stone-900 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
             {/* Close button */}
             <button
               onClick={() => setSelectedItem(null)}
@@ -1013,115 +983,14 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             </button>
 
             {/* LEFT COLUMN: Rich Media Stage (Images & Videos) */}
-            <div className="w-full md:w-1/2 bg-stone-100 p-4 sm:p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-stone-200">
-              {/* Primary Active Media Display */}
-              <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-stone-200 border border-stone-300 flex items-center justify-center">
-                {activeMedia ? (
-                  activeMedia.type === 'video' ? (
-                    <video
-                      key={activeMedia.url}
-                      src={activeMedia.url}
-                      controls
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      className="w-full h-full object-contain bg-black"
-                    />
-                  ) : (
-                    <img
-                      key={activeMedia.url}
-                      src={activeMedia.url}
-                      alt={selectedItem.name || selectedItem.title}
-                      referrerPolicy="no-referrer"
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-contain"
-                    />
-                  )
-                ) : null}
-
-                {/* Lightbox / Zoom full size button */}
-                {activeMedia && activeMedia.type !== 'video' && (
-                  <button
-                    onClick={() => setIsLightboxOpen(true)}
-                    className="absolute top-3 left-3 p-2 rounded-xl bg-white/80 backdrop-blur-md text-stone-700 hover:text-stone-900 hover:bg-white border border-stone-200 shadow-sm transition"
-                    title="Πλήρης μεγέθυνση εικόνας"
-                  >
-                    <Maximize2 className="w-4 h-4" />
-                  </button>
-                )}
-
-                {/* Previous/Next media navigation inside the item */}
-                {selectedMediaList.length > 1 && (
-                  <>
-                    <button
-                      onClick={() =>
-                        setActiveMediaIndex((prev) =>
-                          prev > 0 ? prev - 1 : selectedMediaList.length - 1
-                        )
-                      }
-                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 backdrop-blur-md text-stone-800 hover:bg-white shadow-sm border border-stone-200 transition"
-                      title="Προηγούμενη φωτογραφία"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() =>
-                        setActiveMediaIndex((prev) =>
-                          prev < selectedMediaList.length - 1 ? prev + 1 : 0
-                        )
-                      }
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 backdrop-blur-md text-stone-800 hover:bg-white shadow-sm border border-stone-200 transition"
-                      title="Επόμενη φωτογραφία"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
-
-                {/* Media Counter Badge */}
-                {selectedMediaList.length > 1 && (
-                  <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white text-[11px] font-bold">
-                    {activeMediaIndex + 1} / {selectedMediaList.length}
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Thumbnail Strip */}
-              {selectedMediaList.length > 1 && (
-                <div className="flex gap-2.5 mt-3.5 overflow-x-auto pb-1 horizontal-scrollbar">
-                  {selectedMediaList.map((media, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setActiveMediaIndex(idx)}
-                      aria-label={`Εμφάνιση ${media.type === 'video' ? 'βίντεο' : 'εικόνας'} ${idx + 1}`}
-                      aria-pressed={activeMediaIndex === idx}
-                      className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
-                        activeMediaIndex === idx
-                          ? 'border-stone-900 scale-105 shadow-sm'
-                          : 'border-stone-300 opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      {media.type === 'video' ? (
-                        <div className="w-full h-full bg-stone-900 text-white flex items-center justify-center">
-                          <Play className="w-4 h-4 fill-white" />
-                        </div>
-                      ) : (
-                        <img
-                          src={media.url}
-                          alt={`Thumbnail ${idx + 1}`}
-                          referrerPolicy="no-referrer"
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <div className="w-full shrink-0 border-b border-stone-200 bg-stone-100 p-4 sm:p-6 md:w-1/2 md:border-b-0 md:border-r">
+              <MediaGallery
+                media={selectedMediaList}
+                activeIndex={activeMediaIndex}
+                onActiveIndex={setActiveMediaIndex}
+                title={selectedItem.name || selectedItem.title || 'Κόσμημα'}
+                onOpen={activeMedia?.type === 'video' ? undefined : () => setIsLightboxOpen(true)}
+              />
             </div>
 
             {/* RIGHT COLUMN: Product Details, Metrics, Materials & Actions */}
@@ -1304,8 +1173,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
+        </DetailView>
       )}
 
       {isLightboxOpen && selectedItem && zoomImages.length > 0 && (
@@ -1320,6 +1188,6 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
         theme={shopSettings.visualTheme}
         fontFamily={shopSettings.fontFamily}
       />
-    </div>
+    </SectionShell>
   );
 };

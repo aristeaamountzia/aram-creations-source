@@ -2,10 +2,14 @@ import { usePortfolioDesign } from '../lib/use-portfolio-design';
 import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from '../lib/design-studio';
 import { portfolioStatusLabel } from '../lib/portfolio-settings';
 import { portfolioMedia } from '../lib/video-links';
-import { VideoPlayer } from './VideoPlayer';
 import { ImageLightbox } from './ImageLightbox';
-import { CatalogControls } from './CatalogControls';
 import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
+import { ContentCard } from './content/ContentCard';
+import { DetailView } from './content/DetailView';
+import { FilterBar } from './content/FilterBar';
+import { MediaGallery } from './content/MediaGallery';
+import { SectionShell } from './content/SectionShell';
+import { StatusBadge } from './content/StatusBadge';
 import { initialHeroSnapshot, cacheHeroSnapshot } from '../lib/hero-media';
 import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -14,7 +18,7 @@ import { CATEGORIES, ART_ITEMS } from '../data';
 import { sortPortfolio } from '../lib/portfolio-order';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
-import { Palette, Eye, Mail, ArrowUpRight, Sparkles, Filter, Search, Film, Image as ImageIcon, Heart, Share2, ChevronLeft, ChevronRight, X, Maximize2, ZoomIn, Play, Layers, Compass, SlidersHorizontal, Check, ExternalLink, Info } from 'lucide-react';
+import { Palette, Mail, ArrowUpRight, Filter, Search, Heart, Share2, X, Play, Compass, Check, Info } from 'lucide-react';
 interface PortfolioViewProps {
     onContactArtist: (item?: ArtItem) => void;
 }
@@ -270,7 +274,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     const totalVideoCount = items.filter(itemHasVideo).length;
     const zoomImages = (selectedItem ? getItemMediaList(selectedItem) : [])
         .map((media, index) => ({ ...media, mediaIndex: index }));
-    return (<div className="portfolio-view min-h-screen pb-24 font-sans transition-colors duration-300 bg-[#fafaf9] text-[#18181b]"
+    return (<SectionShell section="portfolio" className="pb-24 font-sans transition-colors duration-300 bg-[#fafaf9] text-[#18181b]"
       style={{
         backgroundColor: designStudio.pageBackground || '#fafaf9',
         color: designStudio.ink || '#18181b',
@@ -290,7 +294,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
         videoCount={totalVideoCount} onContactArtist={() => onContactArtist()} />
 
       <div id="portfolio-catalog" className="catalog-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        <CatalogControls label="Φίλτρα Portfolio" search={searchTerm} onSearch={setSearchTerm}
+        <FilterBar label="Φίλτρα Portfolio" search={searchTerm} onSearch={setSearchTerm}
           placeholder="Αναζήτηση σε τίτλο, υλικά, διαστάσεις, τεχνική..."
           categories={[{ id: 'all', label: 'Όλες οι Κατηγορίες' }, ...artCategories.map(category => ({ id: category.id, label: category.title, count: items.filter(item => item.category === category.id).length }))]}
           selectedCategory={selectedCatId} onCategory={id => setSelectedCatId(id as CategoryId | 'all')}
@@ -302,7 +306,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
             </select></div>
           </>}>
           {activeCategoryMeta && <p className="catalog-category-note"><strong>{activeCategoryMeta.title}:</strong> {activeCategoryMeta.description}</p>}
-        </CatalogControls>
+        </FilterBar>
       </div>
 
       {/* 3. Artwork Grid */}
@@ -337,7 +341,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 const hasVideo = itemHasVideo(item);
                 const isFav = favorites.includes(item.id);
                 return (
-                  <div
+                  <ContentCard
                     key={item.id}
                     id={`art-card-${item.id}`}
                     onClick={() => {
@@ -354,7 +358,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                     role="group"
                     tabIndex={0}
                     aria-label={`${item.title}. Πατήστε Enter για άνοιγμα έργου.`}
-                    className="catalog-card group cursor-pointer bg-white border border-stone-200/80 rounded-xl overflow-hidden hover:border-stone-400/80 hover:shadow-xs transition-all duration-300 flex flex-col justify-between"
+                    className="border-stone-200/80 hover:border-stone-400/80"
                     style={{
                       borderRadius: designStudio.cardRadius || '12px',
                       backgroundColor: designStudio.surface || '#ffffff',
@@ -383,9 +387,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                       {/* Discreet Luxury Sold Overlay for Portfolio */}
                       {item.status && (item.status.trim().toLowerCase() === 'πουλήθηκε' || item.status.trim().toLowerCase() === 'sold') && (
                         <div className="absolute inset-0 bg-stone-950/30 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none transition-all duration-300 group-hover:bg-stone-950/20">
-                          <span className="px-3.5 py-1.5 rounded-full bg-stone-900/85 backdrop-blur-md border border-white/20 text-stone-100 text-[10px] sm:text-[11px] font-bold tracking-[0.2em] uppercase shadow-md">
-                            Πουλήθηκε
-                          </span>
+                          <StatusBadge className="px-3.5 py-1.5 tracking-[0.2em]">Πουλήθηκε</StatusBadge>
                         </div>
                       )}
 
@@ -406,9 +408,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                       {/* Discreet status badge if present and NOT sold */}
                       {item.status && item.status.trim().toLowerCase() !== 'πουλήθηκε' && item.status.trim().toLowerCase() !== 'sold' && (
                         <div className="absolute top-2.5 left-2.5 z-10">
-                          <span className="px-2.5 py-0.5 rounded-full bg-stone-900/90 text-stone-100 text-[10px] font-semibold tracking-wider uppercase shadow-xs backdrop-blur-xs">
-                            {portfolioStatusLabel(design, item.status)}
-                          </span>
+                          <StatusBadge>{portfolioStatusLabel(design, item.status)}</StatusBadge>
                         </div>
                       )}
                     </div>
@@ -456,81 +456,30 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </ContentCard>
                 );
             })}
           </div>)}
       </section>
 
       {/* 4. Rich Artwork Detail Modal (Shop-like experience with Video and Gallery) */}
-      {selectedItem && (<div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto" onClick={closeItemDetail}>
-          {/* Side Floating Arrow: Previous */}
-          {hasPrev && (<button onClick={(e) => {
-                    e.stopPropagation();
-                    goToPrev();
-                }} className="hidden lg:flex fixed left-4 top-1/2 -translate-y-1/2 p-3.5 bg-stone-900/90 hover:bg-stone-800 text-stone-100 rounded-full shadow-2xl z-50 border border-stone-700 transition" title="Προηγούμενο έργο (Αριστερό βέλος)">
-              <ChevronLeft className="w-6 h-6"/>
-            </button>)}
-
-          {/* Side Floating Arrow: Next */}
-          {hasNext && (<button onClick={(e) => {
-                    e.stopPropagation();
-                    goToNext();
-                }} className="hidden lg:flex fixed right-4 top-1/2 -translate-y-1/2 p-3.5 bg-stone-900/90 hover:bg-stone-800 text-stone-100 rounded-full shadow-2xl z-50 border border-stone-700 transition" title="Επόμενο έργο (Δεξί βέλος)">
-              <ChevronRight className="w-6 h-6"/>
-            </button>)}
-
-          {/* Modal Container */}
-          <div onClick={(e) => e.stopPropagation()} className={`border max-w-4xl w-full rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col md:flex-row my-auto max-h-[92vh] ${'bg-white border-[#e5def3] text-[#252134]'}`}>
+      {selectedItem && (<DetailView
+          title={`Λεπτομέρειες: ${selectedItem.title}`}
+          onClose={closeItemDetail}
+          onPrevious={hasPrev ? goToPrev : undefined}
+          onNext={hasNext ? goToNext : undefined}
+          previousLabel="Προηγούμενο έργο"
+          nextLabel="Επόμενο έργο"
+        >
             {/* Left Column: Media Stage & Thumbnails Strip */}
-            <div className={`w-full md:w-1/2 p-4 flex flex-col justify-between border-b md:border-b-0 md:border-r shrink-0 ${'bg-stone-100 border-[#e5def3]'}`}>
-              {(() => {
-                const mediaList = getItemMediaList(selectedItem);
-                const currentMedia = mediaList[activeMediaIdx] || mediaList[0];
-                const isVideo = currentMedia?.type === 'video';
-                const rawUrl = currentMedia?.url || selectedItem.image;
-                const normalizedUrl = rawUrl;
-                return (<div className="flex flex-col h-full justify-between">
-                    {/* Main Media Stage */}
-                    <div className="aspect-[4/3] sm:aspect-square w-full bg-black rounded-xl overflow-hidden relative flex items-center justify-center border border-stone-800/80 shadow-inner group">
-                      {isVideo ? (<VideoPlayer url={normalizedUrl} title={selectedItem.title} autoPlay />) : (<>
-                          <img src={normalizedUrl} alt={selectedItem.title} referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-contain cursor-zoom-in" onClick={() => setIsZoomOpen(true)}/>
-                          <button onClick={() => setIsZoomOpen(true)} className="absolute bottom-3 right-3 p-2 rounded-lg bg-stone-900/80 hover:bg-stone-800 text-stone-200 border border-stone-700/80 text-xs flex items-center gap-1.5 transition opacity-90 group-hover:opacity-100" title="Μεγέθυνση σε πλήρη οθόνη">
-                            <Maximize2 className="w-3.5 h-3.5"/>
-                            <span>Zoom</span>
-                          </button>
-                        </>)}
-
-                      {/* Media Counter Pill */}
-                      <div className="absolute top-3 left-3 bg-stone-900/85 backdrop-blur-md px-2.5 py-1 rounded-md text-[11px] font-sans text-stone-300 border border-stone-700/80">
-                        {isVideo ? 'Βίντεο' : `Εικόνα ${activeMediaIdx + 1} / ${mediaList.length}`}
-                      </div>
-                    </div>
-
-                    {isVideo && <button type="button" onClick={() => setIsZoomOpen(true)} className="mt-2 rounded-lg border px-3 py-2 text-sm">Προβολή βίντεο σε πλήρη οθόνη</button>}
-                    {/* Thumbnails Gallery Strip */}
-                    {mediaList.length > 1 && (<div className="mt-3 pt-3 border-t border-stone-200">
-                        <div className="text-[11px] font-sans mb-2 flex items-center justify-between text-stone-500">
-                          <span>Διαθέσιμα Media ({mediaList.length})</span>
-                          <span className="text-[10px] text-stone-500">Κάντε κλικ για εναλλαγή</span>
-                        </div>
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 horizontal-scrollbar">
-                          {mediaList.map((media, idx) => {
-                            const isThumbVideo = media.type === 'video';
-                            const isActive = idx === activeMediaIdx;
-                            return (<button key={idx} type="button" onClick={() => setActiveMediaIdx(idx)} aria-label={`Εμφάνιση ${media.type === 'video' ? 'βίντεο' : 'εικόνας'} ${idx + 1}`} aria-pressed={isActive} className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border transition-all ${isActive
-                                    ? 'border-stone-900 ring-2 ring-stone-900/20 scale-105'
-                                    : 'border-stone-200 hover:border-stone-400 opacity-80 hover:opacity-100'}`}>
-                                {isThumbVideo ? (<div className="w-full h-full bg-stone-900 flex flex-col items-center justify-center text-red-400">
-                                    <Play className="w-4 h-4 fill-current"/>
-                                    <span className="text-[8px] font-sans mt-0.5">VIDEO</span>
-                                  </div>) : (<img src={media.url} alt={media.title || `Thumb ${idx + 1}`} referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-cover"/>)}
-                              </button>);
-                        })}
-                        </div>
-                      </div>)}
-                  </div>);
-            })()}
+            <div className="w-full shrink-0 border-b border-stone-200 bg-stone-100 p-4 md:w-1/2 md:border-b-0 md:border-r">
+              <MediaGallery
+                media={getItemMediaList(selectedItem)}
+                activeIndex={activeMediaIdx}
+                onActiveIndex={setActiveMediaIdx}
+                title={selectedItem.title}
+                onOpen={() => setIsZoomOpen(true)}
+              />
             </div>
 
             {/* Right Column: Curatorial & Artwork Metadata */}
@@ -625,8 +574,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 </button>
               </div>
             </div>
-          </div>
-        </div>)}
+        </DetailView>)}
 
       {isZoomOpen && selectedItem && zoomImages.length > 0 && (
         <ImageLightbox images={zoomImages} title={selectedItem.title}
@@ -635,5 +583,5 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
           onClose={() => setIsZoomOpen(false)} />
       )}
 
-    </div>);
+    </SectionShell>);
 };
