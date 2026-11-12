@@ -6,12 +6,14 @@ import {
   generateBackofficeAiJson,
   getBackofficeAiAccessCode,
 } from "../../server/backoffice-ai";
+import {
+  AiSuggestionValidationError,
+  BackofficeAiInput,
+  buildBackofficeAiPrompt,
+  validateBackofficeAiSuggestion,
+} from "../../server/ai-suggestion";
 
-type AiInput = {
-  product?: Record<string, unknown>;
-  task?: string;
-  prompt?: string;
-  mode?: string;
+type AiInput = BackofficeAiInput & {
   imageDataUrl?: string;
   imageDataUrls?: string[];
 };
@@ -38,24 +40,6 @@ async function isAuthorized(request: Request): Promise<boolean> {
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
-function promptFor(input: AiInput): string {
-  const product = input.product || {};
-  const field = (key: string) => String(product[key] ?? "(κενό)");
-  const extra = input.prompt ? `\nΕιδική απαίτηση: ${input.prompt}` : "";
-  if (input.mode === "portfolio_item") {
-    return `Είσαι επιμελητής εικαστικού Portfolio για το Aram Creations. Γράψε στα Ελληνικά με ακρίβεια, χωρίς να εφευρίσκεις χαρακτηριστικά.
-Τίτλος: ${field("name")}; κατηγορία: ${field("category")}; έτος: ${field("year")}; υλικό/τεχνική: ${field("medium")}; διαστάσεις: ${field("dimensions")}; περιγραφή: ${field("description")}.
-Εργασία: ${input.task || "full"}.${extra}
-Απάντησε αποκλειστικά με έγκυρο JSON: title, description, shortDescription, tags (array), altText. Χωρίς Markdown.`;
-  }
-  const colors = Array.isArray(product.colors) ? product.colors.join(", ") : "(κενό)";
-  const materials = Array.isArray(product.materials) ? product.materials.join(", ") : "(κενό)";
-  return `Είσαι copywriter και catalog manager για τα χειροποίητα κοσμήματα Aram Creations. Γράψε κομψά, στα Ελληνικά, χωρίς να επινοείς μη διαθέσιμα στοιχεία.
-Τίτλος: ${field("name")}; κατηγορία: ${field("category")}; συλλογή: ${field("collection")}; περιγραφή: ${field("description")}; τιμή: ${field("price")}; υλικά: ${materials}; χρώματα: ${colors}.
-Εργασία: ${input.task || "full"}.${extra}
-Απάντησε αποκλειστικά με έγκυρο JSON με πεδία title, description, category, status, colors (array), materials (array), tags (array), shortDescription, instagramCaption, altText. Χωρίς Markdown.`;
-}
-
 export default async function handleRequest(request: Request) {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
@@ -70,10 +54,12 @@ export default async function handleRequest(request: Request) {
     }
     const images = Array.isArray(input.imageDataUrls) && input.imageDataUrls.length
       ? input.imageDataUrls : input.imageDataUrl ? [input.imageDataUrl] : [];
-    return json(await generateBackofficeAiJson(promptFor(input), images));
+    const suggestion = await generateBackofficeAiJson(buildBackofficeAiPrompt(input), images);
+    return json(validateBackofficeAiSuggestion(suggestion, input));
   } catch (error) {
     console.error("Back Office AI failed", error);
     if (error instanceof BackofficeAiConfigurationError) return json({ error: error.message }, 503);
+    if (error instanceof AiSuggestionValidationError) return json({ error: error.message }, 422);
     const detail = error instanceof Error ? error.message : String(error);
     return json({ error: `Η δημιουργία AI απέτυχε: ${detail}` }, 502);
   }

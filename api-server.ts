@@ -28,6 +28,11 @@ import {
   generateBackofficeAiJson,
   getBackofficeAiAccessCode,
 } from "./server/backoffice-ai";
+import {
+  AiSuggestionValidationError,
+  buildBackofficeAiPrompt,
+  validateBackofficeAiSuggestion,
+} from "./server/ai-suggestion";
 
 const app = express();
 
@@ -94,46 +99,11 @@ async function handleBackofficeAi(req: Request, res: Response) {
       ? imageDataUrls
       : imageDataUrl ? [imageDataUrl] : [];
 
-    const systemPrompt = req.body?.mode === 'portfolio_item' ? `Είσαι επιμελητής εικαστικού Portfolio για το Aram Creations. Γράψε στα Ελληνικά, με ακρίβεια και χωρίς να εφευρίσκεις άγνωστα χαρακτηριστικά.
-Στοιχεία έργου:
-- Τίτλος: ${product.name || product.title || '(κενό)'}
-- Κατηγορία: ${product.category || '(κενό)'}
-- Έτος: ${product.year || '(κενό)'}
-- Υλικό/τεχνική: ${product.medium || '(κενό)'}
-- Διαστάσεις: ${product.dimensions || '(κενό)'}
-- Περιγραφή: ${product.description || '(κενό)'}
-${prompt ? `Ειδική απαίτηση: ${prompt}` : ''}
-${task ? `Τύπος εργασίας: ${task}` : ''}
-Απάντησε ΑΠΟΚΛΕΙΣΤΙΚΑ σε έγκυρο JSON με πεδία title, description, shortDescription, tags, altText. Μη βάζεις Markdown.` : `Είσαι εξειδικευμένος copywriter και ειδικός catalog manager για το brand χειροποίητων κοσμημάτων και έργων τέχνης "Aram Creations".
-Παράγεις ελκυστικούς, κομψούς, επαγγελματικούς τίτλους, περιγραφές, κατηγορίες, υλικά, χρώματα, tags και Instagram captions στα Ελληνικά.
-
-Στοιχεία προϊόντος:
-- Τίτλος/Όνομα: ${product.name || product.title || "(κενό)"}
-- Κατηγορία: ${product.category || "(κενό)"}
-- Συλλογή: ${product.collection || "(κενό)"}
-- Περιγραφή/Σημειώσεις: ${product.description || product.notes || "(κενό)"}
-- Τιμή: ${product.price ? product.price + "€" : "(κενό)"}
-- Υλικά: ${Array.isArray(product.materials) ? product.materials.join(", ") : "(κενό)"}
-- Χρώματα: ${Array.isArray(product.colors) ? product.colors.join(", ") : "(κενό)"}
-${prompt ? `Ειδική απαίτηση: ${prompt}` : ""}
-${task ? `Τύπος εργασίας: ${task}` : ""}
-
-Απάντησε ΑΠΟΚΛΕΙΣΤΙΚΑ σε έγκυρο JSON (χωρίς backticks) με τη δομή:
-{
-  "title": "Ελκυστικός τίτλος στα Ελληνικά",
-  "description": "Πλούσια, καλαίσθητη περιγραφή του κοσμήματος στα Ελληνικά",
-  "category": "Κολιέ | Σκουλαρίκια | Βραχιόλια | Δαχτυλίδια | Σετ | Καρφίτσες | Θήκες Κινητών | Άλλα",
-  "status": "Διαθέσιμο",
-  "colors": ["Χρώμα 1", "Χρώμα 2"],
-  "materials": ["Υλικό 1", "Υλικό 2"],
-  "tags": ["χειροποίητο", "κόσμημα", "aramcreations", "handmade"],
-  "shortDescription": "Σύντομη περιγραφή μίας γραμμής στα Ελληνικά",
-  "instagramCaption": "Ελκυστικό caption με hashtags για social media",
-  "altText": "Περιγραφικό alt text εικόνας στα Ελληνικά"
-}`;
+    const aiInput = { product, task, prompt, mode: req.body?.mode };
+    const systemPrompt = buildBackofficeAiPrompt(aiInput);
 
     const parsedData = await generateBackofficeAiJson(systemPrompt, imageList);
-    return res.json(parsedData);
+    return res.json(validateBackofficeAiSuggestion(parsedData, aiInput));
   } catch (error: any) {
     console.error("Error in backoffice-ai:", error);
     if (error instanceof BackofficeAiConfigurationError) {
@@ -142,6 +112,13 @@ ${task ? `Τύπος εργασίας: ${task}` : ""}
         error: "Δεν έχει οριστεί GEMINI_API_KEY (ή OPENAI_API_KEY) στο αρχείο .env του server.",
         code: "AI_KEY_MISSING",
         help: "Ελέγξτε τις ρυθμίσεις στο αρχείο .env ή στις παραμέτρους περιβάλλοντος του Netlify."
+      });
+    }
+    if (error instanceof AiSuggestionValidationError) {
+      return res.status(422).json({
+        ok: false,
+        error: error.message,
+        code: "AI_SUGGESTION_INVALID",
       });
     }
     return res.status(502).json({
