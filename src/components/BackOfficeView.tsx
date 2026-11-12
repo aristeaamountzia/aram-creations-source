@@ -26,6 +26,7 @@ import { editableBlob } from '../lib/media-files';
 import { validateMediaFile, validatePreparedMedia, verifyStoredMedia } from '../lib/media-validation';
 import { vintedSourceUrl } from '../lib/vinted-refresh';
 import { findVintedImportDuplicate } from '../lib/vinted-import';
+import { buildCsv, downloadCsv } from '../lib/csv-export';
 import { db, auth, storage } from "../firebase";
 import {
   collection,
@@ -2310,35 +2311,28 @@ interface BackOfficeViewProps {
 
             const exportToCSV = () => {
                 const headers = ['Όνομα', 'Κατηγορία', 'Συλλογή', 'Κατάσταση', 'Απόθεμα', 'Τιμή Πώλησης (€)', 'Κόστος (€)', 'Χρώματα', 'Υλικά', 'Κωδ. Αποθήκευσης', 'Links Αγοράς', 'Πλατφόρμες Ανάρτησης', 'Κεντρική Φωτογραφία'];
-                const csvRows = [headers.join(';')];
-
-                jewelryList.forEach(item => {
+                const rows = jewelryList.map(item => {
                     const linksStr = (item.purchaseLinks || item.productLinks || []).map(l => `${l.site}: ${l.url}`).join(' | ');
                     const postedStr = (item.postedPlatforms || []).map(p => `${p.site} ${p.url ? `(${p.url})` : ''} - [${p.showInShop ? 'Ορατό' : 'Κρυφό'}]`).join(' | ');
-                    const row = [
-                        `"${(item.name || '').replace(/"/g, '""')}"`,
-                        `"${(item.category || '').replace(/"/g, '""')}"`,
-                        `"${(item.collection || '').replace(/"/g, '""')}"`,
-                        `"${(item.status || '').replace(/"/g, '""')}"`,
+                    return [
+                        item.name || '',
+                        item.category || '',
+                        item.collection || '',
+                        item.status || '',
                         item.stock || 0,
                         item.price || 0,
                         item.cost || 0,
-                        `"${(item.colors || []).join(', ')}"`,
-                        `"${(item.materials || []).join(', ')}"`,
-                        `"${(item.storage || '').replace(/"/g, '""')}"`,
-                        `"${linksStr.replace(/"/g, '""')}"`,
-                        `"${postedStr.replace(/"/g, '""')}"`,
-                        `"${(item.imageUrl || '').replace(/"/g, '""')}"`
+                        (item.colors || []).join(', '),
+                        (item.materials || []).join(', '),
+                        item.storage || '',
+                        linksStr,
+                        postedStr,
+                        item.imageUrl || ''
                     ];
-                    csvRows.push(row.join(';'));
                 });
 
-                const csvString = csvRows.join('\n');
-                const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `katalogos_aram_creations_${new Date().toISOString().split('T')[0]}.csv`;
-                link.click();
+                const csvString = buildCsv(headers, rows, ';');
+                downloadCsv(csvString, `katalogos_aram_creations_${new Date().toISOString().split('T')[0]}.csv`);
                 notifyOperationSuccess('Εξαγωγή CSV', `Ο κατάλογος (${jewelryList.length} προϊόντα) εξήχθη επιτυχώς σε CSV.`);
             };
 

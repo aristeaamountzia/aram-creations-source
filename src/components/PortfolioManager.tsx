@@ -9,6 +9,7 @@ import { VideoPlayer } from './VideoPlayer';
 import { MediaDownload } from './MediaDownload';
 import { MediaManager } from './media/MediaManager';
 import { CatalogExcelExport } from './CatalogExcelExport';
+import { buildCsv, downloadCsv } from '../lib/csv-export';
 import { FirebaseMediaCleanup } from './FirebaseMediaCleanup';
 import { CatalogControls } from './CatalogControls';
 import { VideoUploadStatus } from './VideoUploadStatus';
@@ -832,17 +833,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       'inquiryOnly',
       'image'
     ];
-    const quote = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-    const csv = [
-      columns.join(','),
-      ...items.map(item => columns.map(key => quote((item as any)[key])).join(','))
-    ].join('\r\n');
-    const href = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = href;
-    link.download = 'aram-portfolio.csv';
-    link.click();
-    URL.revokeObjectURL(href);
+    const csv = buildCsv(columns, items.map(item => columns.map(key => (item as any)[key])));
+    downloadCsv(csv, 'aram-portfolio.csv');
     notifyOperationSuccess('Εξαγωγή CSV', 'Το αρχείο aram-portfolio.csv δημιουργήθηκε και ξεκίνησε η λήψη.');
   };
 
