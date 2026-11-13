@@ -496,6 +496,7 @@ export function buildFirebaseMediaCleanupPlan(
     const safeDuplicates: StorageFileEntry[] = [];
 
     for (const dup of duplicates) {
+      if (protectHistoryFiles && protectedHistoryPaths.has(dup.fullPath)) continue;
       const isReferenced = referencedPaths.has(dup.fullPath);
       if (isReferenced && !canonicalUrl) {
         continue;

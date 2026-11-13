@@ -105,7 +105,6 @@ async function handleBackofficeAi(req: Request, res: Response) {
     const parsedData = await generateBackofficeAiJson(systemPrompt, imageList);
     return res.json(validateBackofficeAiSuggestion(parsedData, aiInput));
   } catch (error: any) {
-    console.error("Error in backoffice-ai:", error);
     if (error instanceof BackofficeAiConfigurationError) {
       return res.status(503).json({
         ok: false,
@@ -121,9 +120,10 @@ async function handleBackofficeAi(req: Request, res: Response) {
         code: "AI_SUGGESTION_INVALID",
       });
     }
+    console.error("Back Office AI generation failed (502).");
     return res.status(502).json({
       ok: false,
-      error: error.message || "Η δημιουργία AI απέτυχε προσωρινά.",
+      error: "Δεν λήφθηκε έγκυρη πρόταση από τον πάροχο AI. Δοκίμασε ξανά.",
     });
   }
 }

@@ -1,3 +1,5 @@
+import { hasPortfolioAiContext, portfolioContextMessage } from '../src/lib/portfolio-ai-context';
+
 export type BackofficeAiMode = 'portfolio_item' | 'product';
 export type BackofficeAiTask = 'full' | 'title' | 'description' | 'tags';
 
@@ -53,6 +55,7 @@ export function buildBackofficeAiPrompt(input: BackofficeAiInput): string {
 - Επίστρεψε μόνο τα πεδία που γνωρίζεις, χωρίς Markdown.${taskInstructions}`;
 
   if (normalizeAiMode(input.mode) === 'portfolio_item') {
+    if (!hasPortfolioAiContext(product, extra)) throw new AiSuggestionValidationError(portfolioContextMessage);
     return `Είσαι επιμελητής εικαστικού Portfolio για το Aram Creations. Γράψε φυσικά και συγκεκριμένα στα Ελληνικά.
 Στοιχεία έργου:
 - Τίτλος: ${productField(product, 'name', 'title')}

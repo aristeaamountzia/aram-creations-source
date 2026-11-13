@@ -68,3 +68,16 @@ test('auto mode falls back from Gemini when only OpenAI is configured', () => {
 test('auto mode uses Gemini by default when its key is configured', () => {
   assert.deepEqual(getAiProviderPlan({ GEMINI_API_KEY: 'gemini-key' }), ['gemini']);
 });
+
+test('provider errors keep upstream request details out of logs and client messages', async t => {
+  const warning = t.mock.method(console, 'warn', () => {});
+  const errorLog = t.mock.method(console, 'error', () => {});
+  const marker = 'CODEX TEST private upstream detail';
+  await assert.rejects(generateBackofficeAiJson('test', [], {
+    AI_PROVIDER: 'openai', OPENAI_API_KEY: 'test',
+  }, async () => { throw new Error(marker); }), error =>
+    error instanceof Error && !error.message.includes(marker) && error.message.includes('πάροχο AI'));
+  assert.ok(warning.mock.callCount() > 0);
+  assert.equal(errorLog.mock.callCount(), 0);
+  assert.ok(warning.mock.calls.every(call => !call.arguments.join(' ').includes(marker)));
+});

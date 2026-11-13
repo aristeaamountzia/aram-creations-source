@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectMediaSignature, validateMediaFile } from '../src/lib/media-validation';
+import { detectMediaSignature, IMAGE_UPLOAD_LIMIT, validateMediaFile } from '../src/lib/media-validation';
+
+test('automatic upload detection enforces the image size limit', async () => {
+  const oversized = new Blob([new Uint8Array([0xff, 0xd8, 0xff]), new Uint8Array(IMAGE_UPLOAD_LIMIT)]);
+  await assert.rejects(() => validateMediaFile(oversized), /30 MB/);
+});
 
 const file = (bytes: number[], type: string, name: string) => Object.assign(new Blob([new Uint8Array(bytes)], { type }), { name });
 

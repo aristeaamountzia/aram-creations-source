@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 import { X, SlidersHorizontal } from 'lucide-react';
 import { usePortfolioDesign } from '../lib/use-portfolio-design';
+import { hasPortfolioAiContext, portfolioContextMessage } from '../lib/portfolio-ai-context';
+import { requestBackofficeAi } from '../lib/backoffice-ai-client';
 import { WixProjectExport } from './WixProjectExport';
 import { portfolioStatusLabel } from '../lib/portfolio-settings';
 import { portfolioMedia, isVideoUrl, videoLink } from '../lib/video-links';
@@ -840,16 +842,17 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
 
   const generateAiSuggestion = async (task: 'full' | 'title' | 'description') => {
     if (!form) return;
+    setAiSuggestion(null);
+    if (!hasPortfolioAiContext(form, aiPrompt)) {
+      setError(portfolioContextMessage);
+      return;
+    }
     setAiWorking(true);
     setError('');
-    setAiSuggestion(null);
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('Συνδέσου ξανά ως διαχειριστής.');
-      const response = await fetch('/api/backoffice-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
+      const data = await requestBackofficeAi({
           mode: 'portfolio_item',
           task,
           prompt: aiPrompt,
@@ -861,10 +864,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
             dimensions: form.dimensions,
             description: form.description
           }
-        })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Το AI endpoint δεν απάντησε σωστά.');
+      }, { Authorization: `Bearer ${token}` });
       setAiSuggestion({ title: data.title, description: data.description });
     } catch (err: any) {
       setError(`AI: ${err.message}`);
@@ -970,7 +970,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       </header>
 
       {/* Error message */}
-      {error && (
+      {error && !form && (
         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800 mb-6">
           {error}
         </div>
@@ -1652,6 +1652,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
             </div>
 
             <div className="overflow-y-auto p-6 space-y-4 flex-1">
+              {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-800">{error}</div>}
               <VideoUploadStatus
                 value={videoProgress}
                 busy={videoCompressing}

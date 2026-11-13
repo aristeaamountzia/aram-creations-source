@@ -4,9 +4,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  limit,
-  orderBy,
-  query,
   updateDoc,
   deleteDoc
 } from 'firebase/firestore';
@@ -140,6 +137,7 @@ export function FirebaseMediaCleanup({
 
   const startScan = async () => {
     setIsScanning(true);
+    setStorageFiles(null);
     setErrorMessage(null);
     setExecutionSummary(null);
     setProgress({
@@ -155,9 +153,7 @@ export function FirebaseMediaCleanup({
         getDocs(collection(db, 'jewelry')),
         getDocs(collection(db, 'portfolio')),
         getDoc(doc(db, 'settings', 'shop')),
-        getDocs(query(collection(db, 'catalogHistory'), orderBy('timestamp', 'desc'), limit(40))).catch(
-          () => null
-        )
+        getDocs(collection(db, 'catalogHistory'))
       ]);
 
       const docsList: FirestoreMediaDoc[] = [];
@@ -243,18 +239,12 @@ export function FirebaseMediaCleanup({
         // Ignore malformed localStorage
       }
 
-      if (historySnap && !historySnap.empty) {
-        const historyEntries = historySnap.docs.map(d => d.data());
-        await Promise.all(
-          historyEntries.slice(0, 25).map(async entry => {
-            try {
-              const fullEntry = await loadHistory(db, entry);
-              extractAllStoragePathsDeep(fullEntry, historyPaths);
-            } catch {
-              extractAllStoragePathsDeep(entry, historyPaths);
-            }
-          })
-        );
+      for (let i = 0; i < historySnap.docs.length; i += 10) {
+        await Promise.all(historySnap.docs.slice(i, i + 10).map(async snapshot => {
+          const entry = snapshot.data();
+          const fullEntry = await loadHistory(db, entry.parts ? { ...entry, cloudId: snapshot.id } : entry);
+          extractAllStoragePathsDeep(fullEntry, historyPaths);
+        }));
       }
 
       const knownUrlMap = collectKnownUrlByPath(docsList);

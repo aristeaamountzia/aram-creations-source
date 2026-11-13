@@ -14,6 +14,14 @@ const portfolioInput = {
   }
 };
 
+test('Portfolio requests with only the default year and category ask for details before generation', () => {
+  const input = { mode: 'portfolio_item', product: { year: '2026', category: 'handcrafted-memories' } };
+  assert.throws(() => buildBackofficeAiPrompt(input), /Πρόσθεσε/);
+  assert.doesNotThrow(() => buildBackofficeAiPrompt({ ...input, product: { ...input.product, medium: 'Πηλός' } }));
+  assert.doesNotThrow(() => buildBackofficeAiPrompt({ ...input, prompt: 'Ανάγλυφο με κλαδιά ελιάς σε πηλό' }));
+  assert.doesNotThrow(() => buildBackofficeAiPrompt({ ...input, mode: 'product' }));
+});
+
 test('portfolio prompt includes context and explicit quality constraints', () => {
   const prompt = buildBackofficeAiPrompt(portfolioInput);
   assert.match(prompt, /Κυκλαδικό ειδώλιο/);

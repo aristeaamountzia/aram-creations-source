@@ -18,6 +18,7 @@ import { OrdersManager } from './OrdersManager';
 import { VintedRefresh } from './VintedRefresh';
 import { MediaDownload } from './MediaDownload';
 import { MediaManager } from './media/MediaManager';
+import { requestBackofficeAi } from '../lib/backoffice-ai-client';
 import { useMediaUpload } from './media/useMediaUpload';
 import { VideoUploadStatus } from './VideoUploadStatus';
 import { prepareVideoUpload } from '../lib/video-compression';
@@ -1136,10 +1137,7 @@ interface BackOfficeViewProps {
                     const signedInUser = currentUser || auth?.currentUser || null;
                     if (signedInUser?.getIdToken) headers.Authorization = `Bearer ${await signedInUser.getIdToken()}`;
                     if (aiAccessCode.trim()) headers['X-Aram-AI-Secret'] = aiAccessCode.trim();
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify({
+                    const data = await requestBackofficeAi({
                             mode: 'backoffice_product',
                             task,
                             language: 'el',
@@ -1154,16 +1152,7 @@ interface BackOfficeViewProps {
                             },
                             imageDataUrl,
                             imageDataUrls
-                        })
-                    });
-                    const responseText = await response.text();
-                    let data = {};
-                    try {
-                        data = JSON.parse(responseText);
-                    } catch (err) {
-                        data = { error: responseText };
-                    }
-                    if (!response.ok) throw new Error(data.error || data.message || 'Το AI endpoint δεν απάντησε σωστά.');
+                    }, headers, endpoint);
                     setAiProductDraft(normalizeAiDraft(data));
                 } catch (err) {
                     setAiProductError(err.message || 'Αποτυχία AI πρότασης.');

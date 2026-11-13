@@ -43,10 +43,10 @@ const declaredKind = (mime = ''): MediaKind | null =>
 
 export async function validateMediaFile(file: Blob & { name?: string }, expectedKind?: MediaKind) {
   if (!file?.size) throw new Error('Το αρχείο είναι κενό.');
-  if (file.size > IMAGE_UPLOAD_LIMIT && expectedKind === 'image') throw new Error('Η εικόνα πρέπει να είναι έως 30 MB.');
   const bytes = new Uint8Array(await file.slice(0, 64).arrayBuffer());
   const detected = detectMediaSignature(bytes);
   if (!detected) throw new Error('Το πραγματικό περιεχόμενο του αρχείου δεν είναι υποστηριζόμενη εικόνα ή βίντεο.');
+  if (detected.kind === 'image' && file.size > IMAGE_UPLOAD_LIMIT) throw new Error('Η εικόνα πρέπει να είναι έως 30 MB.');
   const claimed = declaredKind(file.type);
   if (claimed && claimed !== detected.kind) throw new Error('Ο δηλωμένος τύπος του αρχείου δεν συμφωνεί με το πραγματικό περιεχόμενό του.');
   if (expectedKind && expectedKind !== detected.kind) throw new Error(`Το αρχείο δεν είναι έγκυρο ${expectedKind === 'image' ? 'αρχείο εικόνας' : 'αρχείο βίντεο'}.`);

@@ -57,10 +57,9 @@ export default async function handleRequest(request: Request) {
     const suggestion = await generateBackofficeAiJson(buildBackofficeAiPrompt(input), images);
     return json(validateBackofficeAiSuggestion(suggestion, input));
   } catch (error) {
-    console.error("Back Office AI failed", error);
     if (error instanceof BackofficeAiConfigurationError) return json({ error: error.message }, 503);
     if (error instanceof AiSuggestionValidationError) return json({ error: error.message }, 422);
-    const detail = error instanceof Error ? error.message : String(error);
-    return json({ error: `Η δημιουργία AI απέτυχε: ${detail}` }, 502);
+    console.error("Back Office AI generation failed (502).");
+    return json({ error: "Δεν λήφθηκε έγκυρη πρόταση από τον πάροχο AI. Δοκίμασε ξανά." }, 502);
   }
 }

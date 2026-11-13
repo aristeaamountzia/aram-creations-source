@@ -194,4 +194,9 @@ test('buildFirebaseMediaCleanupPlan detects orphaned files, 2x/3x/4x duplicates,
 
   // 6. Document updates
   assert.equal(plan.documentUpdates.length, 2);
+
+  protectedHistoryPaths.add(dupPath2);
+  const protectedPlan = buildFirebaseMediaCleanupPlan(storageFiles, docs, { protectedHistoryPaths, protectHistoryFiles: true });
+  assert.ok(protectedPlan.duplicateGroups.every(group => group.duplicates.every(file => file.fullPath !== dupPath2)));
+  assert.ok(protectedPlan.orphanedFiles.every(file => file.fullPath !== dupPath2));
 });

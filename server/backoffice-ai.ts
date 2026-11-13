@@ -137,7 +137,6 @@ export async function generateBackofficeAiJson(
   fetcher: typeof fetch = fetch,
 ): Promise<Record<string, unknown>> {
   const providers = getAiProviderPlan(environment);
-  const failures: string[] = [];
 
   for (const provider of providers) {
     for (const model of getAiModelOrder(provider, environment)) {
@@ -147,11 +146,9 @@ export async function generateBackofficeAiJson(
           : await generateWithOpenAi(prompt, images, model, environment, fetcher);
       } catch (error) {
         if (error instanceof BackofficeAiConfigurationError) throw error;
-        const reason = error instanceof Error ? error.message : String(error);
-        failures.push(`${provider} (${model}): ${reason}`);
-        console.error(`Back Office AI provider ${provider} failed for model ${model}.`, error);
+        console.warn(`Back Office AI: απέτυχε η κλήση στον πάροχο ${provider}.`);
       }
     }
   }
-  throw new BackofficeAiGenerationError(`AI generation failed: ${failures.join("; ")}.`);
+  throw new BackofficeAiGenerationError('Δεν λήφθηκε έγκυρη πρόταση από τον πάροχο AI. Δοκίμασε ξανά.');
 }
