@@ -24,6 +24,7 @@ export interface CategoryInfo {
 }
 
 export interface ArtMediaItem {
+  originalUrl?: string;
   url: string;
   type: 'image' | 'video';
   title?: string;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useReducer } from 'react';
 import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 import { X, SlidersHorizontal } from 'lucide-react';
 import { usePortfolioDesign } from '../lib/use-portfolio-design';
@@ -22,21 +22,19 @@ import { ImageEditorModal } from './ImageEditorModal';
 import { BulkEditModal } from './BulkEditModal';
 import { ItemDetailModal } from './ItemDetailModal';
 import {
-  addDoc,
+  Timestamp,
   collection,
-  getDoc,
   doc,
   onSnapshot,
   serverTimestamp,
-  setDoc,
-  writeBatch
+  runTransaction
 } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, type StorageReference, uploadBytes, uploadBytesResumable } from 'firebase/storage';
 import { auth, db, storage } from '../firebase';
 import { ART_ITEMS } from '../data';
-import { persistHistory } from '../lib/catalog-history';
+import { equalHistoryValue, loadHistory, restoreHistory, stageHistory } from '../lib/catalog-history';
 import { sortPortfolio, movePortfolio } from '../lib/portfolio-order';
-import { buildPortfolioRecord } from '../lib/portfolio-record';
+import { buildPortfolioRecord, replacePortfolioImage, portfolioMediaFields } from '../lib/portfolio-record';
 import { ArtItem, CategoryId } from '../types';
 
 type PortfolioRecord = ArtItem & {
@@ -65,6 +63,27 @@ const emptyForm = () => ({
   inquiryOnly: true,
   mediaList: [] as Media[]
 });
+
+type Form = ReturnType<typeof emptyForm>;
+type Draft = { form: Form | null; past: Media[][]; future: Media[][] };
+type DraftAction = { update: React.SetStateAction<Form | null> } | 'undo' | 'redo';
+
+function editDraft(state: Draft, action: DraftAction): Draft {
+  if (action === 'undo' || action === 'redo') {
+    const undo = action === 'undo';
+    const list = (undo ? state.past : state.future).at(-1);
+    if (!list || !state.form) return state;
+    return {
+      form: { ...state.form, mediaList: list },
+      past: undo ? state.past.slice(0, -1) : [...state.past, state.form.mediaList],
+      future: undo ? [...state.future, state.form.mediaList] : state.future.slice(0, -1)
+    };
+  }
+  const form = typeof action.update === 'function' ? action.update(state.form) : action.update;
+  if (!form || !state.form || form.id !== state.form.id) return { form, past: [], future: [] };
+  if (form.mediaList === state.form.mediaList) return { ...state, form };
+  return { form, past: [...state.past, state.form.mediaList].slice(-30), future: [] };
+}
 
 const IconPlus = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,6 +189,7 @@ const IconUndo = () => (
 );
 
 export interface PortfolioManagerProps {
+  history?: any[];
   onBack: () => void;
   onNavigateOrders?: () => void;
   onOpenSettings?: () => void;
@@ -224,6 +244,7 @@ async function compressPortfolioImage(file: File): Promise<File> {
 }
 
 export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
+  history = [],
   onBack,
   onNavigateOrders,
   onOpenSettings,
@@ -247,13 +268,17 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   const [view, setView] = useState<'grid' | 'list'>('grid');
 
   // Modals & Editing state
-  const [form, setForm] = useState<ReturnType<typeof emptyForm> | null>(null);
+  const [draft, dispatchDraft] = useReducer(editDraft, { form: null, past: [], future: [] });
+  const form = draft.form;
+  const setForm = (update: React.SetStateAction<Form | null>) => dispatchDraft({ update });
   const [editorTab, setEditorTab] = useState<EditorTab>('basics');
   const [inspectItem, setInspectItem] = useState<PortfolioRecord | null>(null);
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const [imageEditorTarget, setImageEditorTarget] = useState<{
     url: string;
-    mediaIndex?: number;
+    mediaIndex: number;
+    itemId?: string;
+    originalUrl?: string;
     title?: string;
   } | null>(null);
 
@@ -271,6 +296,40 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   const [videoProgress, setVideoProgress] = useState<VideoProgress | null>(null);
   const [videoCompressing, setVideoCompressing] = useState(false);
   const videoAbort = useRef<AbortController | null>(null);
+  const formBaseline = useRef<PortfolioRecord | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const historyBusy = useRef(false);
+  const [restoringHistory, setRestoringHistory] = useState(false);
+  const changes = history.filter(entry => entry.collection === 'portfolio' && entry.cloudId);
+  const undo: any[] = [], redo: any[] = [];
+  for (const entry of [...changes].reverse()) {
+    if (entry.type === 'PORTFOLIO_UNDO') {
+      if (undo.at(-1)?.cloudId === entry.sourceId) redo.push(undo.pop());
+    } else if (entry.type === 'PORTFOLIO_REDO') {
+      if (redo.at(-1)?.cloudId === entry.sourceId) undo.push(redo.pop());
+    } else {
+      undo.push(entry);
+      redo.length = 0;
+    }
+  }
+  async function replay(forward: boolean) {
+    const summary = (forward ? redo : undo).at(-1);
+    if (!summary || historyBusy.current) return;
+    historyBusy.current = true;
+    setRestoringHistory(true);
+    setError('');
+    try {
+      const entry = await loadHistory(db, summary);
+      const inverse = { ...entry, before: entry.after ?? null, after: entry.before ?? null };
+      const action = forward ? entry : inverse;
+      await restoreHistory(db, forward ? inverse : entry, {
+        ...action, type: forward ? 'PORTFOLIO_REDO' : 'PORTFOLIO_UNDO', sourceId: summary.cloudId,
+        message: (forward ? 'Επανάληψη: ' : 'Αναίρεση: ') + entry.message, timestamp: new Date().toISOString()
+      });
+    } catch (err) { setError(err instanceof Error ? err.message : 'Απέτυχε η επαναφορά.'); }
+    finally { historyBusy.current = false; setRestoringHistory(false); }
+  }
+
   const pendingUploads = useRef<Map<string, StorageReference>>(new Map());
 
   const discardPendingUpload = async (url: string) => {
@@ -438,9 +497,9 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (imageEditorTarget) { if (!uploading) setImageEditorTarget(null); return; }
         if (inspectItem) { setInspectItem(null); return; }
         if (isBulkEditOpen) { setIsBulkEditOpen(false); return; }
-        if (imageEditorTarget) { setImageEditorTarget(null); return; }
         if (form && !saving && !uploading) { void closeEditor(); return; }
       }
     };
@@ -458,27 +517,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     setError('');
     setOrderMessage('Αποθήκευση σειράς…');
     try {
-      if (ordered.length > 500) throw new Error('Η σειρά περιέχει πάνω από 500 έργα.');
-      const batch = writeBatch(db);
-      ordered.forEach((item, index) =>
-        batch.set(
-          doc(db, 'portfolio', item.id),
-          { portfolioOrder: index, updatedAt: serverTimestamp() },
-          { merge: true }
-        )
-      );
-      await batch.commit();
-      await persistHistory(db, {
-        type: 'PORTFOLIO_ORDER',
-        collection: 'portfolio',
-        message: 'Αλλαγή σειράς Portfolio',
-        timestamp: new Date().toISOString(),
-        before: active.map(item => ({
-          id: item.id,
-          ...(item.portfolioOrder !== undefined ? { portfolioOrder: item.portfolioOrder } : {})
-        })),
-        after: ordered.map((item, index) => ({ id: item.id, portfolioOrder: index }))
-      });
+      await savePatches(ordered.map((item, index) => ({ id: item.id, fields: { portfolioOrder: index } })),
+        'PORTFOLIO_ORDER', 'Αλλαγή σειράς Portfolio');
       setOrderMessage('Η σειρά αποθηκεύτηκε και εφαρμόστηκε στο Portfolio.');
     } catch (err: any) {
       setError(`Δεν άλλαξε η σειρά: ${err.message}`);
@@ -489,7 +529,28 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     }
   };
 
+  async function savePatches(changes: Array<{ id: string; fields: Record<string, any> }>, type: string, message: string, name = '') {
+    if (!changes.length) return;
+    await runTransaction(db, async tx => {
+      const snapshots = await Promise.all(changes.map(change => tx.get(doc(db, 'portfolio', change.id))));
+      const before = [], after = [];
+      for (const [index, snapshot] of snapshots.entries()) {
+        const { id, fields } = changes[index];
+        const previous = snapshot.data();
+        const prior: Record<string, any> = { id };
+        for (const key of Object.keys(fields)) if (previous && key in previous) prior[key] = previous[key];
+        if (previous) before.push(prior);
+        after.push({ id, ...fields });
+        tx.set(snapshot.ref, { ...fields, updatedAt: serverTimestamp() }, { merge: true });
+      }
+      const single = changes.length === 1;
+      stageHistory(db, tx, { type, collection: 'portfolio', id: single ? changes[0].id : '', name, message,
+        timestamp: new Date().toISOString(), before: single ? before[0] || null : before, after: single ? after[0] : after });
+    });
+  }
+
   const edit = (item: PortfolioRecord) => {
+    formBaseline.current = item;
     const mediaList = portfolioMedia(item);
     setForm({
       id: item.id,
@@ -539,17 +600,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
-      const newDoc = await addDoc(collection(db, 'portfolio'), record);
-      await persistHistory(db, {
-        type: 'ADD',
-        collection: 'portfolio',
-        id: newDoc.id,
-        name: newTitle,
-        message: 'Κλωνοποίηση έργου Portfolio',
-        timestamp: new Date().toISOString(),
-        before: null,
-        after: record
-      });
+      const { updatedAt, createdAt, ...fields } = record;
+      await savePatches([{ id: doc(collection(db, 'portfolio')).id, fields: { ...fields, createdAt: Timestamp.now() } }], 'ADD', 'Κλωνοποίηση έργου Portfolio', newTitle);
       setOrderMessage(`Το έργο «${newTitle}» δημιουργήθηκε με επιτυχία!`);
       notifyOperationSuccess('Κλωνοποίηση Έργου', `Το έργο «${newTitle}» δημιουργήθηκε με επιτυχία!`);
     } catch (err: any) {
@@ -673,31 +725,28 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     setError('');
     try {
       const record = buildPortfolioRecord(form, serverTimestamp());
-      let savedId = form.id;
-      const oldRecord = form.id ? allItems.find(item => item.id === form.id) : null;
-      if (form.id) {
-        await setDoc(doc(db, 'portfolio', form.id), record, { merge: true });
-      } else {
-        savedId = (
-          await addDoc(collection(db, 'portfolio'), { ...record, createdAt: serverTimestamp() })
-        ).id;
-      }
-      pendingUploads.current.clear();
-      const { updatedAt, ...snapshotRecord } = record;
-      try {
-        await persistHistory(db, {
-          type: form.id ? 'PORTFOLIO_UPDATE' : 'ADD',
-          collection: 'portfolio',
-          id: savedId,
-          name: form.title,
-          message: 'Αποθήκευση έργου Portfolio',
-          timestamp: new Date().toISOString(),
-          before: oldRecord || null,
-          after: { ...oldRecord, ...snapshotRecord }
+      const target = form.id ? doc(db, 'portfolio', form.id) : doc(collection(db, 'portfolio'));
+      const seed = ART_ITEMS.find(item => item.id === form.id);
+      await runTransaction(db, async tx => {
+        const snap = await tx.get(target);
+        const before = snap.data() || null;
+        if (form.id && !before && !seed) throw new Error('Το έργο έχει διαγραφεί.');
+        const current = { ...seed, ...before } as PortfolioRecord;
+        const baseline = formBaseline.current;
+        if (form.id && baseline && !equalHistoryValue(portfolioMedia(baseline), portfolioMedia(current))) {
+          throw new Error('Οι εικόνες του έργου άλλαξαν. Άνοιξε ξανά τη φόρμα.');
+        }
+        const { updatedAt, ...fields } = record;
+        tx.set(target, { ...record, ...(!snap.exists() ? { createdAt: serverTimestamp() } : {}) }, { merge: true });
+        stageHistory(db, tx, {
+          type: form.id ? 'PORTFOLIO_UPDATE' : 'ADD', collection: 'portfolio', id: target.id, name: form.title,
+          message: form.id && !equalHistoryValue(portfolioMedia(current), form.mediaList) ? 'Αλλαγή εικόνων έργου Portfolio' : 'Αποθήκευση έργου Portfolio',
+          timestamp: new Date().toISOString(), before, after: { ...before, ...fields }
         });
-      } catch (historyError) {
-        console.warn('Το έργο αποθηκεύτηκε, αλλά δεν γράφτηκε το ιστορικό:', historyError);
-      }
+      });
+      const kept = new Set(form.mediaList.flatMap(media => [media.url, media.originalUrl]));
+      await Promise.all([...pendingUploads.current.keys()].filter(url => !kept.has(url)).map(discardPendingUpload));
+      pendingUploads.current.clear();
       setForm(null);
       notifyOperationSuccess(form.id ? 'Ενημέρωση Έργου' : 'Νέο Έργο', `Το έργο «${form.title.trim()}» αποθηκεύτηκε επιτυχώς.`);
     } catch (err: any) {
@@ -712,22 +761,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     if (!window.confirm(`Να αρχειοθετηθεί το έργο «${item.title || item.name}» από το Portfolio;`))
       return;
     try {
-      const itemRef = doc(db, 'portfolio', item.id);
-      await setDoc(
-        itemRef,
-        { isDeleted: true, deletedAt: serverTimestamp(), updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-      await persistHistory(db, {
-        type: 'PORTFOLIO_ARCHIVE',
-        collection: 'portfolio',
-        id: item.id,
-        name: item.title,
-        message: 'Αρχειοθέτηση έργου Portfolio',
-        timestamp: new Date().toISOString(),
-        before: item,
-        after: { ...item, ...(await getDoc(itemRef)).data() }
-      });
+      await savePatches([{ id: item.id, fields: { isDeleted: true, deletedAt: Timestamp.now() } }], 'PORTFOLIO_UPDATE', 'Αρχειοθέτηση έργου', item.title);
       notifyOperationSuccess('Αρχειοθέτηση Έργου', `Το έργο «${item.title || item.name}» αρχειοθετήθηκε.`);
     } catch (err: any) {
       setError(`Δεν αφαιρέθηκε: ${err.message}`);
@@ -737,21 +771,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
 
   const restore = async (item: PortfolioRecord) => {
     try {
-      await setDoc(
-        doc(db, 'portfolio', item.id),
-        { isDeleted: false, deletedAt: null, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-      await persistHistory(db, {
-        type: 'PORTFOLIO_RESTORE',
-        collection: 'portfolio',
-        id: item.id,
-        name: item.title,
-        message: 'Επαναφορά έργου Portfolio',
-        timestamp: new Date().toISOString(),
-        before: item,
-        after: { ...item, isDeleted: false, deletedAt: null }
-      });
+      await savePatches([{ id: item.id, fields: { isDeleted: false, deletedAt: null } }], 'PORTFOLIO_UPDATE', 'Επαναφορά έργου', item.title);
       notifyOperationSuccess('Επαναφορά Έργου', `Το έργο «${item.title || item.name}» επανήλθε στην ενεργή έκθεση.`);
     } catch (err: any) {
       setError(`Δεν έγινε επαναφορά: ${err.message}`);
@@ -763,15 +783,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     if (!selectedItems.length || !window.confirm(`Να αρχειοθετηθούν ${selectedItems.length} έργα;`))
       return;
     try {
-      const batch = writeBatch(db);
-      selectedItems.forEach(item =>
-        batch.set(
-          doc(db, 'portfolio', item.id),
-          { isDeleted: true, deletedAt: serverTimestamp(), updatedAt: serverTimestamp() },
-          { merge: true }
-        )
-      );
-      await batch.commit();
+      await savePatches(selectedItems.map(item => ({ id: item.id, fields: { isDeleted: true, deletedAt: Timestamp.now() } })), 'PORTFOLIO_UPDATE', 'Μαζική αρχειοθέτηση έργων');
       setSelectedIds([]);
       setOrderMessage(`Αρχειοθετήθηκαν ${selectedItems.length} έργα.`);
       notifyOperationSuccess('Μαζική Αρχειοθέτηση', `Αρχειοθετήθηκαν ${selectedItems.length} έργα.`);
@@ -785,15 +797,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     if (!selectedItems.length || !window.confirm(`Να επαναφερθούν ${selectedItems.length} έργα;`))
       return;
     try {
-      const batch = writeBatch(db);
-      selectedItems.forEach(item =>
-        batch.set(
-          doc(db, 'portfolio', item.id),
-          { isDeleted: false, deletedAt: null, updatedAt: serverTimestamp() },
-          { merge: true }
-        )
-      );
-      await batch.commit();
+      await savePatches(selectedItems.map(item => ({ id: item.id, fields: { isDeleted: false, deletedAt: null } })), 'PORTFOLIO_UPDATE', 'Μαζική επαναφορά έργων');
       setSelectedIds([]);
       setOrderMessage(`Επαναφέρθηκαν ${selectedItems.length} έργα.`);
       notifyOperationSuccess('Μαζική Επαναφορά', `Επαναφέρθηκαν ${selectedItems.length} έργα.`);
@@ -805,15 +809,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
 
   const handleApplyBulkEdit = async (patch: any) => {
     try {
-      const batch = writeBatch(db);
-      selectedItems.forEach(item =>
-        batch.set(
-          doc(db, 'portfolio', item.id),
-          { ...patch, updatedAt: serverTimestamp() },
-          { merge: true }
-        )
-      );
-      await batch.commit();
+      await savePatches(selectedItems.map(item => ({ id: item.id, fields: patch })), 'PORTFOLIO_UPDATE', 'Μαζική επεξεργασία έργων');
       setSelectedIds([]);
       setOrderMessage(`Ενημερώθηκαν ${selectedItems.length} έργα με επιτυχία!`);
       notifyOperationSuccess('Μαζική Επεξεργασία', `Ενημερώθηκαν ${selectedItems.length} έργα με επιτυχία!`);
@@ -949,6 +945,9 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
 
           {/* Utility Action Row */}
           <div className="backoffice-utility-actions flex flex-wrap items-center justify-start lg:justify-end gap-2 pt-3 border-t border-stone-100">
+            <button type="button" disabled={!undo.length || restoringHistory} onClick={() => void replay(false)} className="px-3 py-2 text-xs font-bold disabled:opacity-40">Αναίρεση</button>
+            <button type="button" disabled={!redo.length || restoringHistory} onClick={() => void replay(true)} className="px-3 py-2 text-xs font-bold disabled:opacity-40">Επανάληψη</button>
+            <button type="button" aria-expanded={showHistory} onClick={() => setShowHistory(!showHistory)} className="px-3 py-2 text-xs font-bold">Ιστορικό</button>
             <FirebaseMediaCleanup />
             <CatalogExcelExport />
             <WixProjectExport />
@@ -971,6 +970,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           </div>
         </div>
       </header>
+      {showHistory && <section aria-label="Ιστορικό Portfolio" className="p-4 mb-4 border rounded-xl max-h-64 overflow-auto">
+        <h2 className="font-bold">Ιστορικό Portfolio</h2>
+        {changes.length ? changes.map(entry => <p key={entry.cloudId} className="text-sm py-1">{new Date(entry.timestamp).toLocaleString('el-GR')} · {entry.message} · {entry.name}</p>) : <p>Δεν υπάρχουν καταγεγραμμένες αλλαγές.</p>}
+      </section>}
 
       {/* Error message */}
       {error && !form && (
@@ -1406,7 +1409,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                               return;
                             }
                             setImageEditorTarget({
-                              url: first.url,
+                              url: first.url, originalUrl: first.originalUrl, itemId: item.id, mediaIndex: 0,
                               title: item.title || item.name
                             });
                           }}
@@ -1829,6 +1832,12 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                   orderingHelp="Σύρετε τα media για αλλαγή σειράς ή χρησιμοποιήστε τα πλήκτρα ↑/↓. Το πρώτο media είναι το κεντρικό."
                   onFiles={upload}
                   onChange={mediaList => setForm(current => current && { ...current, mediaList })}
+                  canRestore={media => Boolean(media.originalUrl && media.originalUrl !== media.url)}
+                  onRestore={index => setForm(current => {
+                    const media = current?.mediaList[index];
+                    if (!current || !media?.originalUrl) return current;
+                    return { ...current, mediaList: replacePortfolioImage(current.mediaList, index, media.url, media.originalUrl) };
+                  })}
                   canEdit={media => media.type !== 'video'}
                   onEdit={index => {
                     const media = form.mediaList[index];
@@ -1836,11 +1845,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                       setOrderMessage('Η επεξεργασία αρχείων GIF (animation) δεν υποστηρίζεται.');
                       return;
                     }
-                    setImageEditorTarget({ url: media.url, mediaIndex: index, title: form.title });
+                    setImageEditorTarget({ url: media.url, originalUrl: media.originalUrl, mediaIndex: index, title: form.title });
                   }}
                   onRemove={index => {
-                    const media = form.mediaList[index];
-                    void discardPendingUpload(media.url);
+                    // Pending objects are reconciled with the entire gallery on Save or Cancel.
                     setForm(current => current && {
                       ...current,
                       mediaList: current.mediaList.filter((_, mediaIndex) => mediaIndex !== index)
@@ -1853,6 +1861,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                     )
                   })}
                 >
+                <div className="flex gap-3">
+                  <button type="button" disabled={uploading || !draft.past.length} onClick={() => dispatchDraft('undo')} className="text-xs disabled:opacity-40">Αναίρεση αλλαγής media</button>
+                  <button type="button" disabled={uploading || !draft.future.length} onClick={() => dispatchDraft('redo')} className="text-xs disabled:opacity-40">Επανάληψη αλλαγής media</button>
+                </div>
 
                   <div className="flex gap-2">
                     <input
@@ -1988,52 +2000,55 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           imageUrl={imageEditorTarget.url}
           title={imageEditorTarget.title}
           onClose={() => setImageEditorTarget(null)}
-          onSave={async dataUrl => {
-            if (form && imageEditorTarget.mediaIndex !== undefined) {
-              const targetIdx = imageEditorTarget.mediaIndex!;
-              const prevEntry = form.mediaList[targetIdx];
-              try {
-                const res = await fetch(dataUrl);
-                const blob = await res.blob();
-                const editedFile = new File([blob], 'portfolio-edited.jpg', { type: blob.type || 'image/jpeg' });
-                const validated = await validatePreparedMedia(editedFile, 'image');
-                const storagePath = `jewelry/portfolio/${Date.now()}-edited.jpg`;
-                const storageReference = ref(storage, storagePath);
-                await uploadBytes(storageReference, editedFile, {
-                  contentType: validated.mime,
-                  cacheControl: 'public, max-age=31536000, immutable'
-                });
-                let finalUrl: string;
-                try {
-                  finalUrl = await getDownloadURL(storageReference);
-                  await verifyStoredMedia(finalUrl, 'image');
-                } catch (verificationError) {
-                  await deleteObject(storageReference).catch(() => undefined);
-                  throw verificationError;
-                }
-                pendingUploads.current.set(finalUrl, storageReference);
-
-                setForm(current => {
-                  if (!current) return current;
-                  const nextMedia = [...current.mediaList];
-                  const preservedOriginalUrl =
-                    prevEntry?.originalUrl ||
-                    (prevEntry?.url && !prevEntry.url.startsWith('data:') ? prevEntry.url : undefined);
-                  nextMedia[targetIdx] = {
-                    ...nextMedia[targetIdx],
-                    url: finalUrl,
-                    ...(preservedOriginalUrl ? { originalUrl: preservedOriginalUrl } : {})
-                  };
-                  return { ...current, mediaList: nextMedia };
-                });
-                if (prevEntry?.url) await discardPendingUpload(prevEntry.url);
-                setOrderMessage('Η εικόνα επεξεργάστηκε επιτυχώς!');
-              } catch (err: any) {
-                setError(`Δεν αποθηκεύτηκε η επεξεργασμένη εικόνα: ${err.message}`);
-                notifyOperationError('Σφάλμα Επεξεργασίας Εικόνας', err.message);
+          originalUrl={imageEditorTarget.originalUrl}
+          onSave={async image => {
+            const target = imageEditorTarget;
+            let newObject: StorageReference | undefined;
+            setUploading(true);
+            try {
+              let url: string;
+              if (typeof image === 'string') {
+                if (image !== target.originalUrl) throw new Error('Δεν βρέθηκε η αρχική εικόνα.');
+                url = image;
+              } else {
+                const file = new File([image], 'portfolio-edited.jpg', { type: image.type });
+                const validated = await validatePreparedMedia(file, 'image');
+                const storageRef = ref(storage, 'jewelry/portfolio/' + crypto.randomUUID() + '-edited.jpg');
+                await uploadBytes(storageRef, file, { contentType: validated.mime, cacheControl: 'public, max-age=31536000, immutable' });
+                newObject = storageRef;
+                url = await getDownloadURL(storageRef);
+                await verifyStoredMedia(url, 'image');
               }
+
+              if (target.itemId) {
+                const project = doc(db, 'portfolio', target.itemId);
+                const seed = ART_ITEMS.find(item => item.id === target.itemId);
+                await runTransaction(db, async tx => {
+                  const snapshot = await tx.get(project);
+                  const before = snapshot.data() || null;
+                  if (!before && !seed) throw new Error('Το έργο έχει διαγραφεί.');
+                  const current = { ...seed, ...before } as PortfolioRecord;
+                  const media = replacePortfolioImage(portfolioMedia(current), target.mediaIndex, target.url, url);
+                  const fields = portfolioMediaFields(media);
+                  tx.set(project, { ...fields, updatedAt: serverTimestamp() }, { merge: true });
+                  stageHistory(db, tx, {
+                    type: 'PORTFOLIO_IMAGE_EDIT', collection: 'portfolio', id: project.id, name: current.title || current.name || '',
+                    message: typeof image === 'string' ? 'Επαναφορά αρχικής εικόνας' : 'Επεξεργασία εικόνας Portfolio',
+                    timestamp: new Date().toISOString(), before, after: { ...before, ...fields }
+                  });
+                });
+                setOrderMessage('Η αλλαγή εικόνας αποθηκεύτηκε στο έργο.');
+              } else if (form) {
+                const mediaList = replacePortfolioImage(form.mediaList, target.mediaIndex, target.url, url);
+                if (newObject) pendingUploads.current.set(url, newObject);
+                setForm(current => current && { ...current, mediaList });
+              } else throw new Error('Η φόρμα έκλεισε.');
+            } catch (error) {
+              if (newObject) await deleteObject(newObject).catch(() => undefined);
+              throw error;
+            } finally {
+              setUploading(false);
             }
-            setImageEditorTarget(null);
           }}
         />
       )}
@@ -2057,7 +2072,12 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
               setOrderMessage('Η επεξεργασία αρχείων GIF (animation) δεν υποστηρίζεται.');
               return;
             }
-            setImageEditorTarget({ url: imgUrl, title: inspectItem.title || inspectItem.name });
+            const list = portfolioMedia(inspectItem);
+            const index = list.findIndex(media => media.url === imgUrl);
+            if (index >= 0) {
+              setImageEditorTarget({ url: imgUrl, mediaIndex: index, originalUrl: list[index].originalUrl, itemId: inspectItem.id, title: inspectItem.title || inspectItem.name });
+              setInspectItem(null);
+            }
           }}
         />
       )}

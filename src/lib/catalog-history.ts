@@ -1,20 +1,28 @@
-import { collection, doc, Firestore, getDoc, runTransaction, serverTimestamp, writeBatch, deleteField, Timestamp } from 'firebase/firestore';
+import { collection, doc, Firestore, getDoc, runTransaction, serverTimestamp, writeBatch, deleteField, Timestamp, type DocumentReference, type DocumentData } from 'firebase/firestore';
 
 const plain = (value: any) => JSON.parse(JSON.stringify(value ?? null));
-const equal = (a: any, b: any) => JSON.stringify(plain(a)) === JSON.stringify(plain(b));
+function comparable(value: any): any {
+  if (Array.isArray(value)) return value.map(comparable);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(key => [key, comparable(value[key])]));
+  return value;
+}
+export const equalHistoryValue = (a: any, b: any) => JSON.stringify(comparable(plain(a))) === JSON.stringify(comparable(plain(b)));
 function revive(value: any): any {
   if (value && typeof value === 'object' && value.type === 'firestore/timestamp/1.0' && Number.isInteger(value.seconds) && Number.isInteger(value.nanoseconds)) return new Timestamp(value.seconds, value.nanoseconds);
   return Array.isArray(value) ? value.map(revive) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, revive(item)])) : value;
 }
-export async function persistHistory(db: Firestore, entry: any) {
+export function stageHistory(db: Firestore, batch: { set(ref: DocumentReference, fields: DocumentData): unknown }, entry: any) {
   const ref = doc(collection(db, 'catalogHistory'));
   const data = JSON.stringify(entry);
   // Bounded chunk size also works for bulk changes with long descriptions.
   const chunks = Array.from({ length: Math.ceil(data.length / 100000) }, (_, i) => data.slice(i * 100000, (i + 1) * 100000));
   if (chunks.length > 490) throw new Error('Το ιστορικό είναι πολύ μεγάλο.');
-  const batch = writeBatch(db);
   chunks.forEach((text, index) => batch.set(doc(db, 'catalogHistory', ref.id, 'parts', String(index)), { text }));
-  batch.set(ref, { type: entry.type || 'ACTION', id: entry.id || '', name: entry.name || '', message: entry.message || '', timestamp: entry.timestamp, collection: entry.collection || 'jewelry', parts: chunks.length, hasBefore: Boolean(entry.before), hasAfter: Boolean(entry.after), cloudId: ref.id });
+  batch.set(ref, { type: entry.type || 'ACTION', id: entry.id || '', name: entry.name || '', message: entry.message || '', timestamp: entry.timestamp, collection: entry.collection || 'jewelry', parts: chunks.length, hasBefore: Boolean(entry.before), hasAfter: Boolean(entry.after), sourceId: entry.sourceId || '', cloudId: ref.id });
+}
+export async function persistHistory(db: Firestore, entry: any) {
+  const batch = writeBatch(db);
+  stageHistory(db, batch, entry);
   await batch.commit();
 }
 export async function loadHistory(db: Firestore, entry: any) {
@@ -38,13 +46,13 @@ export function restorationFields(before: any, after: any, latest: any) {
   if (Object.values(latest?.checkoutReservations || {}).some(q => Number(q) > 0)) throw new Error('Υπάρχει ενεργή παραγγελία. Η επαναφορά δεν επιτρέπεται.');
   const patch: Record<string, any> = {};
   for (const key of new Set([...Object.keys(before || {}), ...Object.keys(after || {})])) {
-    if (ignored.has(key) || equal(before?.[key], after?.[key])) continue;
-    if (!equal(latest?.[key], after?.[key])) throw new Error(`Το πεδίο «${key}» άλλαξε μετά την καταγραφή. Η επαναφορά σταμάτησε.`);
+    if (ignored.has(key) || equalHistoryValue(before?.[key], after?.[key])) continue;
+    if (!equalHistoryValue(latest?.[key], after?.[key])) throw new Error(`Το πεδίο «${key}» άλλαξε μετά την καταγραφή. Η επαναφορά σταμάτησε.`);
     patch[key] = before && Object.hasOwn(before, key) ? before[key] : undefined;
   }
   return patch;
 }
-export async function restoreHistory(db: Firestore, entry: any) {
+export async function restoreHistory(db: Firestore, entry: any, audit?: any) {
   const records = historyRecords(entry);
   if (!records.length || records.length > 500) throw new Error('Η εγγραφή δεν μπορεί να επαναφερθεί.');
   await runTransaction(db, async tx => {
@@ -54,6 +62,9 @@ export async function restoreHistory(db: Firestore, entry: any) {
       const latest = snapshots[i].exists() ? snapshots[i].data() : undefined;
       if (!r.after && latest) throw new Error('Η καταχώρηση υπάρχει ήδη και έχει αλλάξει.');
       if (r.after && !latest) throw new Error('Η καταχώρηση έχει αφαιρεθεί από άλλη ενέργεια.');
+      if (!r.before && latest && Object.keys(latest).some(key => !['id', 'createdAt', 'updatedAt'].includes(key) && !Object.hasOwn(r.after || {}, key))) {
+        throw new Error('Η καταχώρηση άλλαξε μετά την καταγραφή. Η επαναφορά σταμάτησε.');
+      }
       return restorationFields(r.before, r.after, latest);
     });
     records.forEach((r, i) => {
@@ -62,5 +73,6 @@ export async function restoreHistory(db: Firestore, entry: any) {
       if (snapshots[i].exists()) tx.update(refs[i], { ...patch, updatedAt: serverTimestamp() });
       else { const { id, checkoutReservations, ...data } = r.before; tx.set(refs[i], { ...revive(data), updatedAt: serverTimestamp() }); }
     });
+    if (audit) stageHistory(db, tx, audit);
   });
 }

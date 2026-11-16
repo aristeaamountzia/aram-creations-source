@@ -1,12 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
+import { editableBlob } from '../lib/media-files';
 import { X } from 'lucide-react';
 
 export interface ImageEditorModalProps {
   open: boolean;
   imageUrl: string;
+  originalUrl?: string;
   title?: string;
   onClose: () => void;
-  onSave: (editedDataUrl: string) => void;
+  onSave: (image: Blob | string) => Promise<void>;
 }
 
 type AspectRatio = 'free' | '1:1' | '4:5' | '16:9';
@@ -14,126 +16,77 @@ type AspectRatio = 'free' | '1:1' | '4:5' | '16:9';
 export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   open,
   imageUrl,
+  originalUrl,
   title = 'Εικόνα',
   onClose,
   onSave
 }) => {
-  const [rotation, setRotation] = useState<number>(0);
-  const [zoom, setZoom] = useState<number>(100);
-  const [aspect, setAspect] = useState<AspectRatio>('free');
-  const [brightness, setBrightness] = useState<number>(100);
-  const [contrast, setContrast] = useState<number>(100);
-  const [saturation, setSaturation] = useState<number>(100);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const initial = { source: imageUrl, rotation: 0, zoom: 100, aspect: 'free' as AspectRatio, brightness: 100, contrast: 100, saturation: 100 };
+  const [history, setHistory] = useState({ steps: [initial], index: 0 });
+  const settings = history.steps[history.index];
+  const { source, rotation, zoom, aspect, brightness, contrast, saturation } = settings;
+  const [isProcessing, setIsProcessing] = useState(false);
+  const busy = useRef(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const isGif = /\.gif(?:$|[?#])/i.test(source);
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-
-  const isGif = /\.gif($|\?)/i.test(imageUrl);
-
-  // Reset adjustments whenever a new image opens
-  useEffect(() => {
-    if (open) {
-      setRotation(0);
-      setZoom(100);
-      setAspect('free');
-      setBrightness(100);
-      setContrast(100);
-      setSaturation(100);
-      setErrorMessage(isGif ? 'Προσοχή: Τα αρχεία κινούμενου GIF (animation) δεν υποστηρίζονται για περικοπή/επεξεργασία, καθώς θα απολεσθεί η κίνηση.' : null);
-    }
-  }, [open, imageUrl, isGif]);
+  function adjust(patch: Partial<typeof initial>) {
+    setHistory(previous => {
+      const current = previous.steps[previous.index];
+      const next = { ...current, ...patch };
+      if (Object.keys(patch).every(key => next[key as keyof typeof next] === current[key as keyof typeof next])) return previous;
+      const steps = [...previous.steps.slice(0, previous.index + 1), next].slice(-100);
+      return { steps, index: steps.length - 1 };
+    });
+  }
 
   if (!open || !imageUrl) return null;
 
-  const handleApplyChanges = () => {
-    if (isGif) {
-      alert('Η επεξεργασία αρχείων GIF (animation) δεν υποστηρίζεται για αποφυγή απώλειας κίνησης.');
-      return;
-    }
+  const handleApplyChanges = async () => {
+    if (busy.current || isGif) return;
+    busy.current = true;
     setIsProcessing(true);
+    setErrorMessage('');
+    let temporaryUrl: string | undefined;
     try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.referrerPolicy = 'no-referrer';
-      img.onload = () => {
+      if (rotation === 0 && zoom === 100 && aspect === 'free' && brightness === 100 && contrast === 100 && saturation === 100) {
+        if (source !== imageUrl) await onSave(source);
+      } else {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = source;
+        try {
+          await img.decode();
+        } catch {
+          temporaryUrl = URL.createObjectURL(await editableBlob({ url: source }));
+          img.src = temporaryUrl;
+          await img.decode();
+        }
+        const sideways = Math.abs(rotation % 180) === 90;
+        const width = sideways ? img.naturalHeight : img.naturalWidth;
+        const height = sideways ? img.naturalWidth : img.naturalHeight;
+        const ratio = aspect === 'free' ? width / height : { '1:1': 1, '4:5': 4 / 5, '16:9': 16 / 9 }[aspect];
         const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(Math.min(width, height * ratio)));
+        canvas.height = Math.max(1, Math.round(Math.min(height, width / ratio)));
         const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          setIsProcessing(false);
-          return;
-        }
-
-        // Determine dimensions based on rotation
-        const isRotated = Math.abs(rotation % 180) === 90;
-        const sourceWidth = isRotated ? img.naturalHeight : img.naturalWidth;
-        const sourceHeight = isRotated ? img.naturalWidth : img.naturalHeight;
-
-        let targetWidth = sourceWidth;
-        let targetHeight = sourceHeight;
-
-        if (aspect === '1:1') {
-          const size = Math.min(sourceWidth, sourceHeight);
-          targetWidth = size;
-          targetHeight = size;
-        } else if (aspect === '4:5') {
-          targetWidth = sourceWidth;
-          targetHeight = Math.round(sourceWidth * 1.25);
-        } else if (aspect === '16:9') {
-          targetWidth = sourceWidth;
-          targetHeight = Math.round(sourceWidth * (9 / 16));
-        }
-
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-
-        // Apply filters
+        if (!ctx) throw new Error('Δεν ήταν δυνατή η επεξεργασία της εικόνας.');
         ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
-
-        // Transform for rotation and zoom
-        ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((rotation * Math.PI) / 180);
-        const scale = zoom / 100;
-        ctx.scale(scale, scale);
-
-        ctx.drawImage(
-          img,
-          -img.naturalWidth / 2,
-          -img.naturalHeight / 2,
-          img.naturalWidth,
-          img.naturalHeight
-        );
-        ctx.restore();
-
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-        onSave(dataUrl);
-        setIsProcessing(false);
-        onClose();
-      };
-
-      img.onerror = () => {
-        setIsProcessing(false);
-        // Fallback: save existing url
-        onSave(imageUrl);
-        onClose();
-      };
-
-      img.src = imageUrl;
-    } catch {
-      setIsProcessing(false);
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.scale(zoom / 100, zoom / 100);
+        ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+        const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(result => result ? resolve(result) : reject(new Error('Η εικόνα δεν εξήχθη.')), 'image/jpeg', 0.92));
+        await onSave(blob);
+      }
       onClose();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Η αποθήκευση της εικόνας απέτυχε.');
+    } finally {
+      if (temporaryUrl) URL.revokeObjectURL(temporaryUrl);
+      busy.current = false;
+      setIsProcessing(false);
     }
-  };
-
-  const handleReset = () => {
-    setRotation(0);
-    setZoom(100);
-    setBrightness(100);
-    setContrast(100);
-    setSaturation(100);
-    setAspect('free');
   };
 
   return (
@@ -155,6 +108,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            disabled={isProcessing}
             aria-label="Κλείσιμο"
             className="p-2 text-stone-400 hover:text-stone-800 hover:bg-stone-200 rounded-lg transition"
           ><X className="w-4 h-4" /></button>
@@ -183,8 +137,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               }`}
             >
               <img
-                ref={imageRef}
-                src={imageUrl}
+                src={source}
                 alt={title}
                 referrerPolicy="no-referrer"
                 className="max-h-full max-w-full object-contain transition-transform duration-150"
@@ -232,7 +185,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   <button
                     key={val}
                     type="button"
-                    onClick={() => setAspect(val)}
+                    onClick={() => adjust({ aspect: val })}
                     className={`px-2.5 py-2 text-xs font-bold rounded-lg border transition ${
                       aspect === val
                         ? 'bg-stone-900 border-stone-900 text-white shadow-sm'
@@ -256,14 +209,14 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setRotation(r => (r - 90) % 360)}
+                  onClick={() => adjust({ rotation: (rotation - 90) % 360 })}
                   className="flex-1 py-2 px-3 border border-stone-200 rounded-lg text-xs font-bold hover:bg-stone-50 transition flex items-center justify-center gap-1.5"
                 >
                   ↺ -90° Αριστερά
                 </button>
                 <button
                   type="button"
-                  onClick={() => setRotation(r => (r + 90) % 360)}
+                  onClick={() => adjust({ rotation: (rotation + 90) % 360 })}
                   className="flex-1 py-2 px-3 border border-stone-200 rounded-lg text-xs font-bold hover:bg-stone-50 transition flex items-center justify-center gap-1.5"
                 >
                   ↻ +90° Δεξιά
@@ -285,7 +238,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                 max="250"
                 step="5"
                 value={zoom}
-                onChange={e => setZoom(Number(e.target.value))}
+                onChange={e => adjust({ zoom: Number(e.target.value) })}
                 className="w-full accent-stone-900 cursor-pointer"
               />
             </div>
@@ -307,7 +260,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   max="150"
                   step="2"
                   value={brightness}
-                  onChange={e => setBrightness(Number(e.target.value))}
+                  onChange={e => adjust({ brightness: Number(e.target.value) })}
                   className="w-full accent-stone-900 cursor-pointer"
                 />
               </div>
@@ -323,7 +276,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   max="150"
                   step="2"
                   value={contrast}
-                  onChange={e => setContrast(Number(e.target.value))}
+                  onChange={e => adjust({ contrast: Number(e.target.value) })}
                   className="w-full accent-stone-900 cursor-pointer"
                 />
               </div>
@@ -339,7 +292,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   max="200"
                   step="5"
                   value={saturation}
-                  onChange={e => setSaturation(Number(e.target.value))}
+                  onChange={e => adjust({ saturation: Number(e.target.value) })}
                   className="w-full accent-stone-900 cursor-pointer"
                 />
               </div>
@@ -347,12 +300,16 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
             {/* Reset Button */}
             <div className="pt-2">
+              <div className="flex gap-3">
+                <button type="button" disabled={isProcessing || history.index === 0} onClick={() => setHistory(h => ({ ...h, index: h.index - 1 }))} className="text-xs disabled:opacity-40">Αναίρεση</button>
+                <button type="button" disabled={isProcessing || history.index === history.steps.length - 1} onClick={() => setHistory(h => ({ ...h, index: h.index + 1 }))} className="text-xs disabled:opacity-40">Επανάληψη</button>
+              </div>
               <button
                 type="button"
-                onClick={handleReset}
+                onClick={() => adjust({ ...initial, source: originalUrl || imageUrl })}
                 className="w-full py-1.5 text-xs font-bold text-stone-600 border border-stone-200 rounded-lg hover:bg-stone-50 transition"
               >
-                Επαναφορά Αρχικών Ρυθμίσεων
+                Επαναφορά αρχικής εικόνας
               </button>
             </div>
           </div>

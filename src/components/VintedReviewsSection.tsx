@@ -4,8 +4,7 @@ import {
   Star,
   BadgeCheck,
   Quote,
-  ExternalLink,
-  CornerDownRight
+  ExternalLink
 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -377,20 +376,6 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
                   </p>
                 </div>
 
-                {/* Seller Reply if present */}
-                {review.sellerReply && (
-                  <div className="mt-4 pt-3 border-t border-stone-100 flex items-start gap-2 text-xs text-stone-600 bg-stone-50/80 p-2.5 rounded-xl">
-                    <CornerDownRight className="w-3.5 h-3.5 text-stone-400 shrink-0 mt-0.5" strokeWidth={1.5} />
-                    <div className="space-y-0.5">
-                      <div className="text-[10px] uppercase font-bold text-stone-500 tracking-wider">
-                        Aram Creations
-                      </div>
-                      <p className="text-[11px] text-stone-700 font-sans italic">
-                        {sanitizeVintedDescription(review.sellerReply)}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}

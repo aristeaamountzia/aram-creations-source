@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { sanitizeVintedDescription as stripVintedCondition } from '../lib/vinted-sanitizer';
-import { assertUnchangedInventory, compareSoldLast, isSoldItem } from '../lib/stock-edit';
+import { assertUnchangedInventory, compareSoldLast, inventoryLabel, isSoldItem, stockForSelectedStatus } from '../lib/stock-edit';
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import { PortfolioDesignSettings } from './PortfolioDesignSettings';
@@ -8,9 +8,9 @@ import { DesignStudioSettings } from './DesignStudioSettings';
 import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, validatePortfolioDesign } from '../lib/portfolio-settings';
 import { PortfolioHero, portfolioHeroVideoUrl, isKnownUnplayableHevcHeroUrl, TRANSCODED_HERO_H264_PATH } from './PortfolioHero';
-import { Check, X, Star, BadgeCheck, RefreshCw, MessageSquare, ExternalLink, CornerDownRight, AlertTriangle } from 'lucide-react';
+import { Check, X, Star, BadgeCheck, RefreshCw, MessageSquare, ExternalLink, AlertTriangle } from 'lucide-react';
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
+import { stageHistory, equalHistoryValue, persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
 import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 import { CatalogBackups } from './CatalogBackups';
 import { CatalogExcelExport } from './CatalogExcelExport';
@@ -1179,6 +1179,7 @@ interface BackOfficeViewProps {
                 const trimmed = (value || '').trim();
                 if (!trimmed) return;
                 setFormStatus(trimmed);
+                setFormStock(stockForSelectedStatus(trimmed, Number(formStock)));
                 setIsCustomStatus(!allFormStatuses.includes(trimmed));
             };
 
@@ -2192,7 +2193,7 @@ interface BackOfficeViewProps {
                             setFormDate(draft.formDate || new Date().toISOString().split('T')[0]);
                             setFormPrice(draft.formPrice || '');
                             setFormCost(draft.formCost || '');
-                            setFormStock(draft.formStock || 1);
+                            setFormStock(draft.formStock ?? 1);
                             setFormShopOrder(0);
                             setFormWeight(draft.formWeight || '');
                             setFormDimensions(draft.formDimensions || '');
@@ -2217,7 +2218,7 @@ interface BackOfficeViewProps {
                 setIsEditMode(true); setCurrentItem(item);
                 setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
 
-                setFormName(item.name || ''); setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status || 'Διαθέσιμο'); setFormDate(item.creationDate || '');
+                setFormName(item.name || ''); setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status ? inventoryLabel(item) : 'Διαθέσιμο'); setFormDate(item.creationDate || '');
                 setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock ?? 1); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
                 setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
                 setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(stripVintedCondition(item.notes || ''));
@@ -2779,7 +2780,6 @@ interface BackOfficeViewProps {
                     let filesUploadedCount = 0;
                     let originalFilesUploadedCount = 0;
 
-                    const isFirebaseStorageUrl = (url = '') => /firebasestorage\.googleapis\.com|firebasestorage\.app/i.test(url);
 
                     const uploadMediaFile = async (fileObj, folder, statusLabel, countLabel) => {
                         const expectedKind = (await validateMediaFile(fileObj)).kind;
@@ -2863,12 +2863,12 @@ interface BackOfficeViewProps {
                         name: formName.trim(),
                         category: catTrimmed,
                         collection: colTrimmed,
-                        status: statTrimmed,
+                        status: statTrimmed === 'Διαθέσιμο' && parsedStock === 0 ? 'Πουλήθηκε' : statTrimmed,
                         creationDate: formDate,
                         price: parsedPrice,
                         originalPrice: parsedOriginalPrice && parsedOriginalPrice > parsedPrice ? parsedOriginalPrice : null,
                         cost: parsedCost,
-                        stock: parsedStock,
+                        stock: statTrimmed === 'Πουλήθηκε' ? 0 : parsedStock,
                         shopOrder: parsedShopOrder,
                         shopFavorites: Math.max(0, Math.trunc(Number(formManualLikes) || 0)),
                         likes: Math.max(0, Math.trunc(Number(formManualLikes) || 0)),
@@ -2891,35 +2891,24 @@ interface BackOfficeViewProps {
                     };
 
                     if (isEditMode && currentItem) {
-                        await runTransaction(db, async tx => {
+                        const action = await runTransaction(db, async tx => {
                             const productRef = doc(db, "jewelry", currentItem.id);
                             const snapshot = await tx.get(productRef);
                             if (!snapshot.exists()) throw new Error('Το προϊόν δεν υπάρχει πλέον.');
                             const latest = snapshot.data();
                             assertUnchangedInventory(currentItem, latest);
+                            if (!equalHistoryValue(currentItem.mediaList, latest.mediaList) || currentItem.imageUrl !== latest.imageUrl) {
+                                throw new Error('Οι εικόνες του προϊόντος άλλαξαν. Άνοιξε ξανά τη φόρμα.');
+                            }
+                            const mediaChanged = !equalHistoryValue(latest.mediaList, itemData.mediaList) || latest.imageUrl !== itemData.imageUrl;
+                            const change = { type: 'UPDATE', id: currentItem.id, name: formName.trim(), oldData: latest, newData: itemData,
+                                message: mediaChanged ? 'Αλλαγή εικόνων προϊόντος' : 'Επεξεργασία προϊόντος' };
                             tx.update(productRef, itemData);
+                            stageHistory(db, tx, { ...buildHistoryEntryFromAction(change), timestamp: new Date().toISOString() });
+                            return change;
                         });
                         catalogSaved = true;
-                        const originalMedia = currentItem.mediaList || (currentItem.imageUrl ? [{ url: currentItem.imageUrl, type: currentItem.fileType || 'image' }] : []);
-                        const finalMediaReferences = new Set(finalMediaUrls.flatMap(media => [media.url, media.originalUrl].filter(Boolean)));
-                        try {
-                            const originalMedia = currentItem.mediaList || (currentItem.imageUrl ? [{ url: currentItem.imageUrl, type: currentItem.fileType || 'image' }] : []);
-                            for (const mediaUrl of new Set(originalMedia.flatMap(media => [media.url, media.originalUrl].filter(Boolean)))) {
-                                if (!finalMediaReferences.has(mediaUrl) && isFirebaseStorageUrl(mediaUrl)) {
-                                    await deleteObject(firebaseRef(storage, mediaUrl));
-                                }
-                            }
-                        } catch (cleanupError) {
-                            console.warn('Το προϊόν αποθηκεύτηκε, αλλά δεν καθαρίστηκαν όλα τα παλιά αρχεία:', cleanupError);
-                        }
-                        pushVersionHistory({
-                            type: 'UPDATE',
-                            id: currentItem.id,
-                            name: formName.trim(),
-                            message: 'Επεξεργασία προϊόντος',
-                            before: currentItem,
-                            after: { ...itemData, id: currentItem.id }
-                        });
+                        pushUndoAction(action, false);
                     } else {
                         itemData.createdAt = serverTimestamp();
                         const docRef = await addDoc(collection(db, "jewelry"), itemData);
@@ -3409,6 +3398,7 @@ interface BackOfficeViewProps {
                         if (parsedStock === 0) updates.status = 'Πουλήθηκε';
                     }
                 }
+                if (updates.status === 'Πουλήθηκε') updates.stock = 0;
                 if (bulkDraft.notes.trim()) updates.notes = bulkDraft.notes.trim();
                 const shopOrderUpdates = getBulkShopOrderUpdates(bulkDraft.shopPlacement);
                 if (Object.keys(updates).length === 0 && !bulkDraft.shopPlacement) {
@@ -3432,6 +3422,7 @@ interface BackOfficeViewProps {
                 // Process selected items with field updates, pricing adjustments, and tag additions/removals
                 selectedItems.forEach(item => {
                     const itemUpdates = { ...updates };
+                    if (updates.status === 'Διαθέσιμο' && updates.stock === undefined && Number(item.stock) <= 0) itemUpdates.stock = 1;
 
                     // Handle price percentage or fixed amount adjustment
                     if (bulkPriceAdjustmentMode !== 'none' && bulkPriceAdjustmentValue !== '') {
@@ -3489,12 +3480,16 @@ interface BackOfficeViewProps {
 
                 try {
                     if (undoItems.length > 500) throw new Error('Επιτρέπονται έως 500 προϊόντα ανά μαζική ενέργεια.');
-                    const batch = writeBatch(db);
-                    undoItems.forEach(item => batch.update(doc(db, "jewelry", item.id), {
-                        ...item.newData,
-                        updatedAt: serverTimestamp()
-                    }));
-                    await batch.commit();
+                    await runTransaction(db, async tx => {
+                        const inventoryChanges = undoItems.filter(item => 'stock' in item.newData || 'status' in item.newData);
+                        const snapshots = await Promise.all(inventoryChanges.map(item => tx.get(doc(db, 'jewelry', item.id))));
+                        snapshots.forEach((snapshot, index) => {
+                            const original = selectedItems.find(item => item.id === inventoryChanges[index].id);
+                            if (!snapshot.exists() || !original) throw new Error('Το προϊόν δεν υπάρχει πλέον.');
+                            assertUnchangedInventory(original, snapshot.data());
+                        });
+                        undoItems.forEach(item => tx.update(doc(db, 'jewelry', item.id), { ...item.newData, updatedAt: serverTimestamp() }));
+                    });
                     pushUndoAction({ type: 'BULK_UPDATE', items: undoItems, message: bulkDraft.shopPlacement ? 'Ενημερώθηκε η μαζική επεξεργασία και η σειρά Shop.' : 'Ενημερώθηκαν ' + selectedItems.length + ' προϊόντα.' });
                     if (updates.category && !BASE_CATEGORIES.includes(updates.category) && !customCategories.includes(updates.category)) setCustomCategories(prev => [...prev, updates.category]);
                     if (updates.colors) updates.colors.forEach(color => {
@@ -3885,6 +3880,7 @@ interface BackOfficeViewProps {
             if (activeCollection === 'portfolio') {
                 return (
                     <PortfolioManager
+                        history={versionHistory}
                         onBack={() => setActiveCollection('jewelry')}
                         onNavigateOrders={() => setActiveCollection('orders')}
                         onOpenSettings={() => { setIsSettingsOpen(true); setActiveSettingsTab('portfolio'); }}
@@ -4091,8 +4087,8 @@ interface BackOfficeViewProps {
                                             <div className="p-4 flex-1 flex flex-col">
                                                 <div className="flex justify-between items-start mb-1">
                                                     <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">{item.category}</span>
-                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(item.status)}`}>
-                                                        {item.status}
+                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(inventoryLabel(item))}`}>
+                                                        {inventoryLabel(item)}
                                                     </span>
                                                 </div>
                                                 <h3 className={`font-bold text-lg leading-tight mb-1 ${isSold ? 'text-stone-500 line-through' : 'text-stone-800'}`}>{item.name}</h3>
@@ -4155,7 +4151,7 @@ interface BackOfficeViewProps {
                                             <div className="flex-1 min-w-0">
                                                 <h3 className={`font-bold truncate ${isSold ? 'text-stone-500 line-through' : 'text-stone-800'}`}>{item.name}</h3>
                                                 <div className="flex items-center gap-2 mt-1">
-                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(item.status)}`}>{item.status}</span>
+                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(inventoryLabel(item))}`}>{inventoryLabel(item)}</span>
                                                     <span className="text-xs font-bold text-stone-500 uppercase">{item.category}</span>
                                                 </div>
                                             </div>
@@ -4816,7 +4812,7 @@ interface BackOfficeViewProps {
                                                     ) : (
                                                         <select required className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formStatus} onChange={e => {
                                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomStatus(true); setFormStatus(''); }
-                                                            else { setFormStatus(e.target.value); }
+                                                            else { setFormStatus(e.target.value); setFormStock(stockForSelectedStatus(e.target.value, Number(formStock))); }
                                                         }}>
                                                             {allFormStatuses.map(stat => <option key={stat} value={stat}>{stat}</option>)}
                                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">+ Προσθήκη Νέας...</option>
@@ -4863,7 +4859,12 @@ interface BackOfficeViewProps {
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-bold text-stone-600 mb-1">Απόθεμα (Τεμ.)</label>
-                                                    <input type="number" min="0" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formStock} onChange={e => setFormStock(e.target.value)} />
+                                                    <input type="number" min="0" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formStock} onChange={e => {
+                                                        const value = e.target.value;
+                                                        setFormStock(value);
+                                                        if (value !== '' && Number(value) > 0 && formStatus === 'Πουλήθηκε') setFormStatus('Διαθέσιμο');
+                                                        if (value === '0' && formStatus === 'Διαθέσιμο') setFormStatus('Πουλήθηκε');
+                                                    }} />
                                                 </div>
                                             </div>
                                         </section>
@@ -5229,8 +5230,14 @@ interface BackOfficeViewProps {
                                         </label>
 
                                         <button type="button" onClick={() => setImageEditorSettings({ rotate: 0, zoom: 1, panX: 0, panY: 0, brightness: 100, contrast: 100, cropAspect: 'square' })} className="w-full px-4 py-2.5 bg-white border border-stone-200 text-stone-700 rounded-lg text-sm font-bold hover:bg-stone-50 transition">
-                                            Reset
+                                            Μηδενισμός ρυθμίσεων
                                         </button>
+                                        {canRestoreMediaOriginal(imageEditorMedia) && (
+                                            <button type="button" disabled={isApplyingImageEdit} onClick={async () => {
+                                                await handleRestoreEditedMedia(imageEditorTarget.scope, imageEditorTarget.index);
+                                                closeImageEditor();
+                                            }} className="w-full px-4 py-2.5 border rounded-lg text-sm font-bold">Επαναφορά αρχικής εικόνας</button>
+                                        )}
 
                                         <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs font-bold text-amber-900 leading-relaxed">
                                             Η αλλαγή εφαρμόζεται στο αρχείο που θα ανέβει. Αν την εφαρμόσεις, θα εμφανιστεί κουμπί επαναφοράς στην εικόνα.
@@ -5316,8 +5323,8 @@ interface BackOfficeViewProps {
 
                                     <div className="mb-6 pr-20">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(currentItem.status)}`}>
-                                                {currentItem.status}
+                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(inventoryLabel(currentItem))}`}>
+                                                {inventoryLabel(currentItem)}
                                             </span>
                                             <p className="text-[10px] uppercase font-bold text-stone-400 tracking-wider">{currentItem.category} {currentItem.collection && `| ${currentItem.collection}`}</p>
                                         </div>
@@ -6383,12 +6390,6 @@ interface BackOfficeViewProps {
                                                                 </div>
                                                             </div>
                                                             <p className="text-stone-700 italic">"{rev.feedback}"</p>
-                                                            {rev.sellerReply && (
-                                                                <div className="pt-1.5 pl-3 border-l-2 border-stone-300 text-[11px] text-stone-600 flex items-center gap-1.5">
-                                                                    <CornerDownRight className="w-3 h-3 text-stone-400 shrink-0" />
-                                                                    <span>Απάντηση: <em>{rev.sellerReply}</em></span>
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>

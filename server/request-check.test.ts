@@ -5,7 +5,7 @@ import { chooseRefreshPatch, RefreshChoice, refreshBaseline } from '../src/lib/v
 import { restorationFields, historyRecords } from '../src/lib/catalog-history';
 import { sortPortfolio, movePortfolio } from '../src/lib/portfolio-order';
 import { sendOrderEmail, resolveAdminUrl } from './order-notifications';
-import { assertUnchangedInventory, compareSoldLast } from '../src/lib/stock-edit';
+import { assertUnchangedInventory, compareSoldLast, inventoryLabel, stockForSelectedStatus } from '../src/lib/stock-edit';
 
 test('sold cards follow available and reserved cards, with the selected sort preserved in each group', () => {
   const cards = [
@@ -96,4 +96,14 @@ test('order mail goes only to owner, uses canonical Back Office URL, and has an 
     if (beforePublicUrl === undefined) delete process.env.PUBLIC_SITE_URL; else process.env.PUBLIC_SITE_URL = beforePublicUrl;
     if (beforeUrl === undefined) delete process.env.URL; else process.env.URL = beforeUrl;
   }
+});
+
+test('selecting available restocks zero once and badges agree with legacy stock', () => {
+  assert.equal(stockForSelectedStatus('Διαθέσιμο', 0), 1);
+  assert.equal(stockForSelectedStatus('Διαθέσιμο', 7), 7);
+  assert.equal(stockForSelectedStatus('Πουλήθηκε', 7), 0);
+  assert.equal(inventoryLabel({ status: 'Διαθέσιμο', stock: 0 }), 'Πουλήθηκε');
+  assert.equal(inventoryLabel({ status: 'Διαθέσιμο', stock: 1 }), 'Διαθέσιμο');
+  assert.equal(inventoryLabel({ status: 'Κρατημένο', stock: 0 }), 'Κρατημένο');
+  assert.equal(inventoryLabel({ status: 'Δωρίστηκε', stock: 0 }), 'Δωρίστηκε');
 });

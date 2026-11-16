@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPortfolioRecord, type PortfolioRecordForm } from '../src/lib/portfolio-record';
+import { replacePortfolioImage, buildPortfolioRecord, type PortfolioRecordForm } from '../src/lib/portfolio-record';
 
 const form = (mediaList: PortfolioRecordForm['mediaList']): PortfolioRecordForm => ({
   title: ' CODEX TEST έργο ',
@@ -40,4 +40,18 @@ test('portfolio persistence finds a secondary video without changing the image c
   assert.equal(record.imageUrl, 'https://example.test/cover.jpg');
   assert.equal(record.fileType, 'image');
   assert.equal(record.videoUrl, 'https://example.test/video.mp4');
+});
+
+test('edits keep the earliest original and caption through save, undo and another edit', () => {
+  const original = [{ url: 'a.jpg', type: 'image' as const, title: 'Πρώτη' }, { url: 'b.mp4', type: 'video' as const }];
+  const first = replacePortfolioImage(original, 0, 'a.jpg', 'v1.jpg');
+  const saved = buildPortfolioRecord(form(first), 1);
+  const second = replacePortfolioImage(saved.mediaList, 0, 'v1.jpg', 'v2.jpg');
+  assert.equal(first[0].originalUrl, 'a.jpg');
+  assert.equal(second[0].originalUrl, 'a.jpg');
+  assert.equal(second[0].title, 'Πρώτη');
+  assert.equal(saved.imageUrl, 'v1.jpg');
+  assert.deepEqual(replacePortfolioImage(second, 0, 'v2.jpg', 'a.jpg'), original);
+  assert.throws(() => replacePortfolioImage(second, 0, 'v1.jpg', 'stale.jpg'));
+  assert.throws(() => replacePortfolioImage(second, 1, 'b.mp4', 'bad.jpg'));
 });

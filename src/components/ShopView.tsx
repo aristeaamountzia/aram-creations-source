@@ -1,5 +1,5 @@
 import { ImageLightbox } from './ImageLightbox';
-import { compareSoldLast, isSoldItem } from '../lib/stock-edit';
+import { compareSoldLast, inventoryLabel, isSoldItem } from '../lib/stock-edit';
 import { VintedReviewsSection } from './VintedReviewsSection';
 import { ContentCard } from './content/ContentCard';
 import { DetailView } from './content/DetailView';
@@ -822,7 +822,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     {/* Discreet status badge if not available and NOT sold */}
                     {!isAvailable && !isSold && (
                       <div className="absolute top-2.5 left-2.5 z-10">
-                        <StatusBadge>{item.status || 'Μη διαθέσιμο'}</StatusBadge>
+                        <StatusBadge>{inventoryLabel(item)}</StatusBadge>
                       </div>
                     )}
 
@@ -1057,7 +1057,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                           : 'bg-amber-100 text-amber-900'
                         : 'bg-emerald-100 text-emerald-800'
                     }`}>
-                      {selectedItem.status || 'Διαθέσιμο'}
+                      {inventoryLabel(selectedItem)}
                     </span>
                   </div>
                   {isSoldItem(selectedItem) ? (
