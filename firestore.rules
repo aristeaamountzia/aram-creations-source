@@ -4,35 +4,54 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null
         && (request.auth.token.get('admin', false) == true
-          || request.auth.token.get('email', '') == "aristeaamnta@gmail.com");
+          || (request.auth.token.get('email', '') == "aristeaamnta@gmail.com"
+            && request.auth.token.get('email_verified', false) == true));
     }
 
-    // Public catalog content; only the store administrator may change it.
-    match /jewelry/{itemId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
+    function validJewelry(data) {
+      return data.name is string && data.price is number && data.price >= 0
+        && data.stock is int && data.stock >= 0 && data.status is string
+        && data.get('checkoutReservations', {}) is map;
     }
+    function noHolds(data) { return data.get('checkoutReservations', {}).size() == 0; }
+    // Complete inventory records are private. Checkout owns the reservation map.
+    match /jewelry/{itemId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && validJewelry(request.resource.data) && noHolds(request.resource.data);
+      allow update: if isAdmin() && validJewelry(request.resource.data)
+        && request.resource.data.get('checkoutReservations', {}) == resource.data.get('checkoutReservations', {})
+        && (noHolds(resource.data) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['stock', 'status']));
+      allow delete: if isAdmin() && noHolds(resource.data);
+    }
+
+    // Only the server-side publisher writes the sanitized public projection.
+    match /shopCatalog/{itemId} { allow read: if true; allow write: if false; }
+    function validSettings(data) { return data is map; }
 
     match /settings/shop {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() && validSettings(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // Public Vinted social proof & reviews cache
     match /settings/vinted_reviews {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() && validSettings(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // Portfolio pages subscribe to this collection from the public site.
+    function validPortfolio(data) { return data is map && data.get('title', '') is string; }
     match /portfolio/{itemId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() && validPortfolio(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // Keep any other existing app collections private to the administrator.
-    match /{document=**} {
-      allow read, write: if isAdmin();
+    match /{topLevel}/{document=**} {
+      allow read, write: if !(topLevel in ['jewelry', 'shopCatalog', 'portfolio']) && isAdmin();
     }
   }
 }

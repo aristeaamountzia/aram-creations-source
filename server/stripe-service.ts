@@ -15,6 +15,7 @@ interface CreateSessionParams {
   shippingCost: number;
   customerEmail: string;
   origin: string;
+  cancelToken?: string;
 }
 
 const SHIPPING_LABELS: Record<string, string> = {
@@ -31,7 +32,7 @@ export async function createStripeCheckoutSession(params: CreateSessionParams): 
   const rawOrigin = (params.origin || process.env.PUBLIC_SITE_URL || process.env.URL || 'https://aramcreationsofficial.netlify.app').trim().replace(/\/$/, '');
   const baseOrigin = rawOrigin || 'https://aramcreationsofficial.netlify.app';
   const successUrl = `${baseOrigin}/?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(params.orderId)}#order-success`;
-  const cancelUrl = `${baseOrigin}/?order_cancelled=${encodeURIComponent(params.orderId)}#cart`;
+  const cancelUrl = `${baseOrigin}/?order_cancelled=${encodeURIComponent(params.orderId)}${params.cancelToken ? `&cancel_token=${encodeURIComponent(params.cancelToken)}` : ''}#cart`;
 
   const body = new URLSearchParams();
   body.append('mode', 'payment');
@@ -68,9 +69,11 @@ export async function createStripeCheckoutSession(params: CreateSessionParams): 
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${secretKey}`,
+      'Idempotency-Key': `aram-checkout-${params.orderId}`,
       'Content-Type': 'application/x-www-form-urlencoded'
     },
-    body: body.toString()
+    body: body.toString(),
+    signal: AbortSignal.timeout(20_000)
   });
 
   const data = await response.json().catch(() => ({}));
@@ -78,7 +81,8 @@ export async function createStripeCheckoutSession(params: CreateSessionParams): 
   if (!response.ok || !data.id || !data.url) {
     const errorMsg = data?.error?.message || 'Αποτυχία αρχικοποίησης πληρωμής στη Stripe.';
     console.error('Stripe Checkout creation error:', data);
-    throw new OrderError(`Σφάλμα Stripe: ${errorMsg}`, 502);
+    const definitelyRejected = [400, 401, 403, 404, 422].includes(response.status) && data?.error?.type !== 'idempotency_error';
+    throw new OrderError(`Σφάλμα Stripe: ${errorMsg}`, 502, definitelyRejected ? 'STRIPE_SESSION_REJECTED' : undefined);
   }
 
   return { id: data.id, url: data.url };
@@ -92,6 +96,7 @@ export async function retrieveStripeCheckoutSession(sessionId: string): Promise<
 
   const response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
     method: 'GET',
+    signal: AbortSignal.timeout(20_000),
     headers: {
       'Authorization': `Bearer ${secretKey}`
     }
@@ -103,6 +108,19 @@ export async function retrieveStripeCheckoutSession(sessionId: string): Promise<
     throw new OrderError(`Σφάλμα Stripe: ${errorMsg}`, 502);
   }
 
+  return data;
+}
+
+export async function expireStripeCheckoutSession(sessionId: string): Promise<any> {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) throw new OrderError('Μη διαθέσιμο κλειδί Stripe.', 503);
+  const response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}/expire`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${secretKey}` },
+    signal: AbortSignal.timeout(20_000)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.status !== 'expired') throw new OrderError(data?.error?.message || 'Η συνεδρία Stripe δεν επιβεβαιώθηκε ως ληγμένη.', 409);
   return data;
 }
 

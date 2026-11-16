@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { CartItem, OrderCustomerInfo } from '../types';
 import { ShippingSettings } from '../shopSettings';
+import { normalizeShippingSettings } from '../lib/shipping';
 import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
 import {
   X,
@@ -37,20 +38,23 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onOpenLegal,
   shippingSettings,
 }) => {
-  const shippingOptions = useMemo(() => [
+  const shippingOptions = useMemo(() => {
+    const settings = normalizeShippingSettings(shippingSettings);
+    return [
     {
       id: 'boxnow',
       label: 'BoxNow Locker 24/7',
-      price: Number(shippingSettings?.boxnowPrice ?? 2.5),
-      freeThreshold: Number(shippingSettings?.boxnowFreeThreshold ?? 45)
+      price: settings.boxnowPrice,
+      freeThreshold: settings.boxnowFreeThreshold
     },
     {
       id: 'courier',
       label: 'Courier (ACS / Speedex)',
-      price: Number(shippingSettings?.courierPrice ?? 4.0),
-      freeThreshold: Number(shippingSettings?.courierFreeThreshold ?? 50)
+      price: settings.courierPrice,
+      freeThreshold: settings.courierFreeThreshold
     }
-  ], [shippingSettings]);
+    ];
+  }, [shippingSettings]);
 
   const [selectedShipping, setSelectedShipping] = useState('boxnow');
   const [isCheckoutStep, setIsCheckoutStep] = useState(false);
@@ -133,6 +137,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       const result = await response.json().catch(() => ({ ok: false, error: 'Ο διακομιστής δεν επέστρεψε έγκυρη απάντηση JSON.' }));
 
       if (!response.ok || !result.ok) {
+        if (result.code === 'ORDER_CANCELLED') {
+          try {
+            const previous = JSON.parse(localStorage.getItem('aram_checkout_request') || 'null');
+            if (previous?.requestId === requestId) localStorage.removeItem('aram_checkout_request');
+          } catch { /* optional */ }
+        }
         const errMessage = result.error || result.message || 'Η παραγγελία δεν μπόρεσε να καταχωρηθεί.';
         const errReason = result.reason ? ` (${result.reason})` : '';
         throw new Error(`${errMessage}${errReason}`);

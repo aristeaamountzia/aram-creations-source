@@ -1,20 +1,6 @@
 import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from './lib/design-studio';
-
-export interface ShippingSettings {
-  boxnowPrice: number;
-  boxnowFreeThreshold: number;
-  courierPrice: number;
-  courierFreeThreshold: number;
-  customNotes?: string;
-}
-
-export const DEFAULT_SHIPPING_SETTINGS: ShippingSettings = {
-  boxnowPrice: 2.50,
-  boxnowFreeThreshold: 45.00,
-  courierPrice: 4.00,
-  courierFreeThreshold: 50.00,
-  customNotes: ''
-};
+import { DEFAULT_SHIPPING_SETTINGS, normalizeShippingSettings, type ShippingSettings } from './lib/shipping';
+export { DEFAULT_SHIPPING_SETTINGS, type ShippingSettings } from './lib/shipping';
 
 export interface ShopSettings {
   /** Presentation-only switch. It never changes catalog, orders or integrations. */
@@ -87,12 +73,6 @@ export function normalizeShopSettings(value: Partial<ShopSettings> | undefined):
     colorPalette: { ...DEFAULT_SHOP_SETTINGS.colorPalette, ...(data.colorPalette || {}) },
     aiAssistant: { ...DEFAULT_SHOP_SETTINGS.aiAssistant, ...(data.aiAssistant || {}) },
     designStudio: normalizeDesignStudio(data.designStudio),
-    shippingSettings: {
-      boxnowPrice: Number(data.shippingSettings?.boxnowPrice ?? DEFAULT_SHIPPING_SETTINGS.boxnowPrice),
-      boxnowFreeThreshold: Number(data.shippingSettings?.boxnowFreeThreshold ?? DEFAULT_SHIPPING_SETTINGS.boxnowFreeThreshold),
-      courierPrice: Number(data.shippingSettings?.courierPrice ?? DEFAULT_SHIPPING_SETTINGS.courierPrice),
-      courierFreeThreshold: Number(data.shippingSettings?.courierFreeThreshold ?? DEFAULT_SHIPPING_SETTINGS.courierFreeThreshold),
-      customNotes: String(data.shippingSettings?.customNotes || '')
-    }
+    shippingSettings: normalizeShippingSettings(data.shippingSettings)
   };
 }

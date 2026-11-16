@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { sanitizeVintedDescription as stripVintedCondition } from '../lib/vinted-sanitizer';
-import { assertUnchangedInventory, compareSoldLast, inventoryLabel, isSoldItem, stockForSelectedStatus } from '../lib/stock-edit';
+import { assertUnchangedInventory, assertInventoryChangeAllowed, duplicateJewelryData, compareSoldLast, inventoryLabel, isSoldItem, stockForSelectedStatus } from '../lib/stock-edit';
+import { addJewelryItem, writeJewelryChanges } from '../lib/jewelry-store';
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import { PortfolioDesignSettings } from './PortfolioDesignSettings';
@@ -405,9 +406,10 @@ interface BackOfficeViewProps {
                     setVintedSyncPercent(45);
                     setVintedSyncStep('2/3: Ανάκτηση κριτικών και βαθμολογιών...');
                     
+                    if (!auth.currentUser) throw new Error('Συνδέσου ξανά στο Back Office.');
                     const response = await fetch('/api/vinted-reviews/sync', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await auth.currentUser.getIdToken()}` },
                         body: JSON.stringify({ memberId: '231329281' })
                     });
                     
@@ -2280,7 +2282,7 @@ interface BackOfficeViewProps {
                         stock: 0,
                         updatedAt: serverTimestamp()
                     };
-                    await updateDoc(doc(db, "jewelry", item.id), newData);
+                    await writeJewelryChanges(db, [{ id: item.id, patch: newData, baseline: item }]);
                     pushUndoAction({
                         type: 'UPDATE',
                         id: item.id,
@@ -2699,7 +2701,7 @@ interface BackOfficeViewProps {
                             createdAt: serverTimestamp(),
                             updatedAt: serverTimestamp()
                         };
-                        const docRef = await addDoc(collection(db, 'jewelry'), itemData);
+                        const docRef = await addJewelryItem(db, itemData);
                         pendingImportStorageRefs = [];
                         pushVersionHistory({
                             type: 'ADD',
@@ -2897,6 +2899,7 @@ interface BackOfficeViewProps {
                             if (!snapshot.exists()) throw new Error('Το προϊόν δεν υπάρχει πλέον.');
                             const latest = snapshot.data();
                             assertUnchangedInventory(currentItem, latest);
+                            assertInventoryChangeAllowed(latest, itemData);
                             if (!equalHistoryValue(currentItem.mediaList, latest.mediaList) || currentItem.imageUrl !== latest.imageUrl) {
                                 throw new Error('Οι εικόνες του προϊόντος άλλαξαν. Άνοιξε ξανά τη φόρμα.');
                             }
@@ -2911,7 +2914,7 @@ interface BackOfficeViewProps {
                         pushUndoAction(action, false);
                     } else {
                         itemData.createdAt = serverTimestamp();
-                        const docRef = await addDoc(collection(db, "jewelry"), itemData);
+                        const docRef = await addJewelryItem(db, itemData);
                         catalogSaved = true;
                         pushVersionHistory({
                             type: 'ADD',
@@ -2946,7 +2949,7 @@ interface BackOfficeViewProps {
                 const itemForUndo = jewelryList.find(item => item.id === id) || null;
                 if (!window.confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή τη δημιουργία;')) return;
                 try {
-                    await deleteDoc(doc(db, "jewelry", id));
+                    await writeJewelryChanges(db, [{ id, remove: true, baseline: itemForUndo || undefined }]);
                     if (itemForUndo) {
                         pushUndoAction({
                             type: 'DELETE',
@@ -3350,14 +3353,7 @@ interface BackOfficeViewProps {
                 }
 
                 try {
-                    const batch = writeBatch(db);
-                    updatesList.forEach(u => {
-                        batch.update(doc(db, "jewelry", u.id), {
-                            ...u.newData,
-                            updatedAt: serverTimestamp()
-                        });
-                    });
-                    await batch.commit();
+                    await writeJewelryChanges(db, updatesList.map(u => ({ id: u.id, patch: u.newData, baseline: selectedItems.find(item => item.id === u.id) })));
 
                     pushUndoAction({
                         type: 'BULK_UPDATE',
@@ -3480,16 +3476,7 @@ interface BackOfficeViewProps {
 
                 try {
                     if (undoItems.length > 500) throw new Error('Επιτρέπονται έως 500 προϊόντα ανά μαζική ενέργεια.');
-                    await runTransaction(db, async tx => {
-                        const inventoryChanges = undoItems.filter(item => 'stock' in item.newData || 'status' in item.newData);
-                        const snapshots = await Promise.all(inventoryChanges.map(item => tx.get(doc(db, 'jewelry', item.id))));
-                        snapshots.forEach((snapshot, index) => {
-                            const original = selectedItems.find(item => item.id === inventoryChanges[index].id);
-                            if (!snapshot.exists() || !original) throw new Error('Το προϊόν δεν υπάρχει πλέον.');
-                            assertUnchangedInventory(original, snapshot.data());
-                        });
-                        undoItems.forEach(item => tx.update(doc(db, 'jewelry', item.id), { ...item.newData, updatedAt: serverTimestamp() }));
-                    });
+                    await writeJewelryChanges(db, undoItems.map(item => ({ id: item.id, patch: item.newData, baseline: jewelryList.find(original => original.id === item.id) })));
                     pushUndoAction({ type: 'BULK_UPDATE', items: undoItems, message: bulkDraft.shopPlacement ? 'Ενημερώθηκε η μαζική επεξεργασία και η σειρά Shop.' : 'Ενημερώθηκαν ' + selectedItems.length + ' προϊόντα.' });
                     if (updates.category && !BASE_CATEGORIES.includes(updates.category) && !customCategories.includes(updates.category)) setCustomCategories(prev => [...prev, updates.category]);
                     if (updates.colors) updates.colors.forEach(color => {
@@ -3513,9 +3500,7 @@ interface BackOfficeViewProps {
                 const itemsForUndo = selectedItems.map(item => ({ id: item.id, data: item }));
                 try {
                     if (itemsForUndo.length > 500) throw new Error('Επιτρέπονται έως 500 προϊόντα ανά μαζική διαγραφή.');
-                    const batch = writeBatch(db);
-                    itemsForUndo.forEach(item => batch.delete(doc(db, "jewelry", item.id)));
-                    await batch.commit();
+                    await writeJewelryChanges(db, itemsForUndo.map(item => ({ id: item.id, remove: true, baseline: item.data })));
                     pushUndoAction({ type: 'BULK_DELETE', items: itemsForUndo, message: 'Διαγράφηκαν ' + selectedItems.length + ' προϊόντα.' });
                     notifyOperationSuccess('Μαζική Διαγραφή', `Διαγράφηκαν ${selectedItems.length} προϊόντα επιτυχώς.`);
                     clearBulkSelection();
@@ -3529,18 +3514,19 @@ interface BackOfficeViewProps {
                 if (selectedItems.length === 0) return;
                 try {
                     if (selectedItems.length > 500) throw new Error('Επιτρέπονται έως 500 προϊόντα ανά μαζική αντιγραφή.');
-                    const batch = writeBatch(db);
-                    const duplicates = selectedItems.map(({ id, createdAt, updatedAt, ...item }) => {
+                    const changes = [];
+                    const duplicates = selectedItems.map(original => {
+                        const item = duplicateJewelryData(original);
                         const ref = doc(collection(db, 'jewelry'));
-                        batch.set(ref, {
+                        changes.push({ id: ref.id, create: true, duplicateOf: original.id, baseline: original, patch: {
                             ...item,
                             name: `${item.name || 'Προϊόν'} (Αντίγραφο)`,
                             createdAt: serverTimestamp(),
                             updatedAt: serverTimestamp()
-                        });
+                        } });
                         return { ...item, id: ref.id, name: `${item.name || 'Προϊόν'} (Αντίγραφο)` };
                     });
-                    await batch.commit();
+                    await writeJewelryChanges(db, changes);
                     pushVersionHistory({
                         type: 'BULK_DUPLICATE',
                         id: '',
@@ -3647,12 +3633,7 @@ interface BackOfficeViewProps {
 
                 try {
                     if (updates.length > 500) throw new Error('Επιτρέπονται έως 500 προϊόντα ανά αλλαγή σειράς.');
-                    const batch = writeBatch(db);
-                    updates.forEach(update => batch.update(doc(db, "jewelry", update.id), {
-                        ...update.newData,
-                        updatedAt: serverTimestamp()
-                    }));
-                    await batch.commit();
+                    await writeJewelryChanges(db, updates.map(update => ({ id: update.id, patch: update.newData, baseline: update.oldData })));
                     pushUndoAction({ type: 'BULK_UPDATE', items: updates, message: movingIds?.length > 1 ? 'Άλλαξε μαζικά η σειρά εμφάνισης στο Shop.' : 'Άλλαξε η σειρά εμφάνισης στο Shop.' });
                     setSortBy('shop_order');
                 } catch (err) {

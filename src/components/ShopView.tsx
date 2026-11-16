@@ -16,12 +16,11 @@ import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import { portfolioHeroVideoUrl, heroPosterFor, initialHeroSnapshot, cacheHeroSnapshot } from '../lib/hero-media';
 import { isUnconfirmedEmptyCatalog } from '../lib/catalog-snapshot';
+import { trackShopMetric } from '../lib/shop-metrics';
 import {
   collection,
   doc,
-  onSnapshot,
-  updateDoc,
-  increment
+  onSnapshot
 } from 'firebase/firestore';
 import {
   ShoppingBag,
@@ -313,7 +312,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   useEffect(() => {
     let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
     try {
-      const jewelryColl = collection(db, 'jewelry');
+      const jewelryColl = collection(db, 'shopCatalog');
       const unsubscribe = onSnapshot(jewelryColl, (snapshot) => {
         if (isUnconfirmedEmptyCatalog(snapshot)) return;
         if (fallbackTimer) clearTimeout(fallbackTimer);
@@ -375,14 +374,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
         })
       );
 
-      // Persist view to Firestore
-      try {
-        const itemRef = doc(db, 'jewelry', item.id);
-      updateDoc(itemRef, {
-          views: increment(1),
-          viewCount: increment(1)
-        }).catch((err) => console.warn('Could not persist view count:', err));
-      } catch (_) {}
+      trackShopMetric(item.id, 'view').catch(err => console.warn('Could not persist view count:', err));
     }
   };
 
@@ -429,15 +421,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       } : null);
     }
 
-    // Persist to Firestore
-    try {
-      const itemRef = doc(db, 'jewelry', itemId);
-      updateDoc(itemRef, {
-        likes: increment(delta),
-        favorites: increment(delta),
-        shopFavorites: increment(delta)
-      }).catch((err) => console.warn('Could not persist like:', err));
-    } catch (_) {}
+    trackShopMetric(itemId, 'favorite', !isCurrentlyFav).catch(err => console.warn('Could not persist like:', err));
   };
 
   const handleAdd = (item: JewelryItem, e?: React.MouseEvent) => {

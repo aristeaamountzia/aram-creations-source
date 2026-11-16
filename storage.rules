@@ -4,7 +4,8 @@ service firebase.storage {
     function isAdmin() {
       return request.auth != null
         && (request.auth.token.get('admin', false) == true
-          || request.auth.token.get('email', '') == 'aristeaamnta@gmail.com');
+          || (request.auth.token.get('email', '') == 'aristeaamnta@gmail.com'
+            && request.auth.token.get('email_verified', false) == true));
     }
 
     match /jewelry/{filePath=**} {

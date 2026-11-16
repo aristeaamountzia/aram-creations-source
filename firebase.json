@@ -1,4 +1,9 @@
 {
+  "functions": [{
+    "source": "functions/catalog",
+    "codebase": "catalog",
+    "predeploy": ["node scripts/build-catalog-publisher.mjs"]
+  }],
   "firestore": [
     {
       "database": "(default)",

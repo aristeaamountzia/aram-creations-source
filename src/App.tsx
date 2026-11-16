@@ -25,6 +25,7 @@ import { designStudioCss } from './lib/design-studio';
 import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from './lib/design-studio';
 import { GlobalNotificationToast } from './components/GlobalNotificationToast';
 import { notifyOperationSuccess } from './lib/sound-notifications';
+import { confirmStripePayment } from './lib/stripe-confirmation';
 
 // Synchronous theme cache resolver to eliminate FOUC (Flash of Unstyled/Old Theme)
 const getInitialThemeState = () => {
@@ -104,7 +105,7 @@ export const App: React.FC = () => {
   }, () => {}), []);
   const cartIds = cartItems.map(entry => entry.item.id).sort().join(',');
   useEffect(() => {
-    const unsubscribes = cartIds.split(',').filter(Boolean).map(id => onSnapshot(doc(db, 'jewelry', id), snapshot => {
+    const unsubscribes = cartIds.split(',').filter(Boolean).map(id => onSnapshot(doc(db, 'shopCatalog', id), snapshot => {
       setCartItems(items => items.map(entry => entry.item.id === id ? { ...entry, item: snapshot.exists() ? { ...entry.item, ...snapshot.data(), id } : { ...entry.item, stock: 0, status: 'Μη διαθέσιμο' } } : entry));
     }, () => {}));
     return () => unsubscribes.forEach(unsubscribe => unsubscribe());
@@ -115,53 +116,81 @@ export const App: React.FC = () => {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [paymentSuccessData, setPaymentSuccessData] = useState<{ number: string; total?: number } | null>(null);
   const [paymentAlert, setPaymentAlert] = useState<string | null>(null);
-
-  // Check for Stripe Checkout return parameters
-  useEffect(() => {
+  const [stripeReturn] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
-    const orderId = params.get('order_id');
-    const cancelled = params.get('order_cancelled');
+    if (!sessionId) return null;
+    let checkoutRequest: string | null = null;
+    try { checkoutRequest = localStorage.getItem('aram_checkout_request'); } catch { /* optional */ }
+    return { sessionId, orderId: params.get('order_id'), cartIds: new Set(cartItems.map(entry => entry.item.id)), checkoutRequest };
+  });
+  const [paymentConfirmation, setPaymentConfirmation] = useState<{ status: 'idle' | 'checking' | 'error'; error?: string }>({ status: 'idle' });
+  const [confirmationAttempt, setConfirmationAttempt] = useState(0);
 
-    if (sessionId) {
-      setCartItems([]);
-      try {
-        localStorage.removeItem('aram_boutique_cart');
-        localStorage.removeItem('aram_checkout_request');
-      } catch { /* optional */ }
+  // Retain return details across StrictMode cleanup and retries until payment is confirmed.
+  useEffect(() => {
+    if (!stripeReturn) return;
+    const controller = new AbortController();
+    let active = true;
+    setPaymentConfirmation({ status: 'checking' });
 
-      fetch('/api/stripe-confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, orderId })
+    confirmStripePayment(stripeReturn.sessionId, stripeReturn.orderId, controller.signal)
+      .then((payment) => {
+        if (!active) return;
+        // Keep any new items or checkout request created while confirmation was pending.
+        setCartItems(items => items.filter(entry => !stripeReturn.cartIds.has(entry.item.id)));
+        try {
+          if (localStorage.getItem('aram_checkout_request') === stripeReturn.checkoutRequest) {
+            localStorage.removeItem('aram_checkout_request');
+          }
+        } catch { /* optional */ }
+        const cleanUrl = new URL(window.location.href);
+        if (cleanUrl.searchParams.get('session_id') === stripeReturn.sessionId) {
+          cleanUrl.searchParams.delete('session_id');
+          cleanUrl.searchParams.delete('order_id');
+          window.history.replaceState(window.history.state, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+        }
+        setPaymentSuccessData({ number: payment.orderNumber, total: payment.total });
+        setPaymentConfirmation({ status: 'idle' });
       })
-        .then((res) => res.json())
-        .then((data) => {
-          setPaymentSuccessData({
-            number: data?.orderNumber || orderId || 'ARAM-PAID',
-            total: data?.total
-          });
-        })
-        .catch((err) => {
-          console.error('Error confirming Stripe payment:', err);
-          setPaymentSuccessData({
-            number: orderId || 'ARAM-PAID'
-          });
-        });
+      .catch((error) => {
+        if (!active) return;
+        setPaymentConfirmation({ status: 'error', error: error instanceof Error ? error.message : String(error) });
+      });
 
-      const cleanUrl = window.location.pathname + (window.location.hash || '');
-      window.history.replaceState({}, '', cleanUrl);
-    } else if (cancelled) {
-      // Immediately cancel the pending order and restore item availability in Firestore
+    return () => { active = false; controller.abort(); };
+  }, [stripeReturn, confirmationAttempt]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cancelled = params.get('order_cancelled');
+    if (!params.get('session_id') && cancelled) {
+      const controller = new AbortController();
+      let active = true;
+      setPaymentAlert('Έλεγχος ακύρωσης της συνεδρίας πληρωμής…');
       fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel_unpaid', orderId: cancelled })
-      }).catch(err => console.error('Failed to cancel unpaid order:', err));
-
-      setPaymentAlert('Η πληρωμή μέσω Stripe δεν ολοκληρώθηκε. Τα είδη παραμένουν στην τσάντα αγορών σας.');
-      const cleanUrl = window.location.pathname + (window.location.hash || '');
-      window.history.replaceState({}, '', cleanUrl);
+        body: JSON.stringify({ action: 'cancel_unpaid', orderId: cancelled, cancelToken: params.get('cancel_token') }),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30_000)])
+      }).then(async response => {
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.ok) throw new Error(data?.error || `Η ακύρωση επέστρεψε HTTP ${response.status}.`);
+        if (!active) return;
+        try {
+          const previous = JSON.parse(localStorage.getItem('aram_checkout_request') || 'null');
+          if (previous?.requestId === cancelled) localStorage.removeItem('aram_checkout_request');
+        } catch { /* optional */ }
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('order_cancelled');
+        cleanUrl.searchParams.delete('cancel_token');
+        window.history.replaceState(window.history.state, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+        setPaymentAlert('Η πληρωμή ακυρώθηκε. Τα είδη παραμένουν στην τσάντα αγορών σας.');
+        setIsCartOpen(true);
+      }).catch(error => {
+        if (active) setPaymentAlert(`Η ακύρωση δεν επιβεβαιώθηκε: ${error instanceof Error ? error.message : String(error)}`);
+      });
+      return () => { active = false; controller.abort(); };
     }
   }, []);
 
@@ -352,6 +381,28 @@ export const App: React.FC = () => {
       )}
 
       {/* Payment alert toast */}
+      {paymentConfirmation.status !== 'idle' && (
+        <div
+          role={paymentConfirmation.status === 'error' ? 'alert' : 'status'}
+          aria-busy={paymentConfirmation.status === 'checking'}
+          className="fixed bottom-6 left-6 right-6 sm:left-auto sm:max-w-md z-50 bg-stone-900 text-white text-sm p-4 rounded-2xl shadow-2xl border border-stone-700 space-y-3"
+        >
+          {paymentConfirmation.status === 'checking' ? (
+            <div className="flex items-center gap-3">
+              <span className="w-5 h-5 shrink-0 rounded-full border-2 border-stone-500 border-t-white animate-spin" aria-hidden="true" />
+              <span>Επιβεβαίωση πληρωμής με τη Stripe…</span>
+            </div>
+          ) : (
+            <>
+              <p>Δεν ολοκληρώθηκε η επιβεβαίωση πληρωμής: {paymentConfirmation.error}</p>
+              <p className="text-xs text-stone-300">Το καλάθι σας παραμένει αποθηκευμένο. Η επανάληψη ελέγχει την ίδια πληρωμή.</p>
+              <button type="button" onClick={() => setConfirmationAttempt(attempt => attempt + 1)} className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-stone-900 hover:bg-stone-100 transition">
+                Επανάληψη ελέγχου
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {paymentAlert && (
         <div className="fixed bottom-6 right-6 z-50 bg-stone-900 text-white text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-stone-700 animate-in slide-in-from-bottom duration-200">
           <span>{paymentAlert}</span>

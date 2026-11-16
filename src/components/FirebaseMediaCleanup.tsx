@@ -4,8 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
-  updateDoc,
-  deleteDoc
+  runTransaction
 } from 'firebase/firestore';
 import {
   ref,
@@ -31,7 +30,8 @@ import {
   Square
 } from 'lucide-react';
 import { auth, db, storage } from '../firebase';
-import { loadHistory, persistHistory } from '../lib/catalog-history';
+import { equalHistoryValue, loadHistory, stageHistory } from '../lib/catalog-history';
+import { assertInventoryChangeAllowed } from '../lib/stock-edit';
 import {
   buildFirebaseMediaCleanupPlan,
   collectKnownUrlByPath,
@@ -326,6 +326,7 @@ export function FirebaseMediaCleanup({
 
   const executeCleanup = async () => {
     if (!plan || !firestoreDocs || !storageFiles) return;
+    const executionStartedAt = Date.now();
 
     setIsExecuting(true);
     setErrorMessage(null);
@@ -362,7 +363,7 @@ export function FirebaseMediaCleanup({
 
       const docUpdatesToRun = cleanDocReferences ? activePlan.documentUpdates : [];
       const vintedDocsToDelete = Array.from(selectedDuplicateVintedDocIds);
-      const storageFilesToRemove: StorageFileEntry[] = [
+      let storageFilesToRemove: StorageFileEntry[] = [
         ...(cleanDuplicates ? activePlan.duplicateFilesToDelete : []),
         ...(cleanOrphans ? activePlan.orphanedFiles : [])
       ];
@@ -394,8 +395,13 @@ export function FirebaseMediaCleanup({
             ? doc(db, 'settings', updateItem.id)
             : doc(db, updateItem.collection, updateItem.id);
 
-        await updateDoc(targetRef, updateItem.patch);
-        await persistHistory(db, {
+        await runTransaction(db, async tx => {
+          const current = await tx.get(targetRef);
+          if (!current.exists() || Object.keys(updateItem.patch).some(key => !equalHistoryValue(current.data()[key], updateItem.beforeSnapshot[key]))) {
+            throw new Error(`Το έγγραφο «${updateItem.title}» άλλαξε μετά τη σάρωση. Κάνε νέα σάρωση.`);
+          }
+          tx.update(targetRef, updateItem.patch);
+          stageHistory(db, tx, {
           type: 'UPDATE',
           collection: updateItem.collection,
           id: updateItem.id,
@@ -404,7 +410,8 @@ export function FirebaseMediaCleanup({
           timestamp: new Date().toISOString(),
           before: updateItem.beforeSnapshot,
           after: updateItem.patch
-        }).catch(() => {});
+          });
+        });
         updatedDocsCount++;
       }
 
@@ -420,10 +427,15 @@ export function FirebaseMediaCleanup({
           label: `Βήμα 2/3: Διαγραφή διπλότυπης καταχώρησης ${i + 1}/${vintedDocsToDelete.length} — ${pct}%`
         });
 
-        const oldDoc = firestoreDocs.find(d => d.id === docId);
-        await deleteDoc(doc(db, 'jewelry', docId));
-        if (oldDoc) {
-          await persistHistory(db, {
+        const oldDoc = firestoreDocs.find(d => d.collection === 'jewelry' && d.id === docId);
+        if (!oldDoc) throw new Error('Δεν βρέθηκε η αρχική καταχώρηση. Κάνε νέα σάρωση.');
+        await runTransaction(db, async tx => {
+          const target = doc(db, 'jewelry', docId);
+          const current = await tx.get(target);
+          if (!current.exists() || !equalHistoryValue(current.data(), oldDoc.raw)) throw new Error('Το προϊόν άλλαξε μετά τη σάρωση. Κάνε νέα σάρωση.');
+          assertInventoryChangeAllowed(current.data());
+          tx.delete(target);
+          stageHistory(db, tx, {
             type: 'DELETE',
             collection: 'jewelry',
             id: docId,
@@ -432,18 +444,43 @@ export function FirebaseMediaCleanup({
             timestamp: new Date().toISOString(),
             before: oldDoc.raw,
             after: null
-          }).catch(() => {});
-        }
+          });
+        });
         deletedVintedDocsCount++;
       }
 
-      // Step 3/3: Delete duplicate & orphaned files in Firebase Storage in batches of 8
+      // Re-read references after edits, including the history just written.
+      // Never delete a referenced file merely because "rewrite links" is unchecked.
+      const protectedNow = new Set<string>();
+      for (const name of ['jewelry', 'portfolio', 'settings', 'shopCatalog']) {
+        const current = await getDocs(collection(db, name));
+        current.forEach(record => extractAllStoragePathsDeep(record.data(), protectedNow));
+      }
+      const historyNow = await getDocs(collection(db, 'catalogHistory'));
+      for (const record of historyNow.docs) {
+        const entry = record.data();
+        // New Undo entries are protected even when older history protection is disabled.
+        if (protectHistoryFiles || !protectedHistoryPaths.size || !entry.timestamp || Date.parse(entry.timestamp) >= executionStartedAt) {
+          extractAllStoragePathsDeep(await loadHistory(db, entry.parts ? { ...entry, cloudId: record.id } : entry), protectedNow);
+        }
+      }
+      try {
+        extractAllStoragePathsDeep(JSON.parse(localStorage.getItem('aram_draft') || 'null'), protectedNow);
+        extractAllStoragePathsDeep(JSON.parse(localStorage.getItem('aram_version_history') || 'null'), protectedNow);
+      } catch { /* malformed local state does not replace cloud protection */ }
+      storageFilesToRemove = storageFilesToRemove.filter(file => !protectedNow.has(file.fullPath));
+
+      // Step 3/3: Delete only old, unchanged, currently unreferenced objects.
       const deleteBatchSize = 8;
       for (let i = 0; i < storageFilesToRemove.length; i += deleteBatchSize) {
         const batch = storageFilesToRemove.slice(i, i + deleteBatchSize);
         await Promise.all(
           batch.map(async fileEntry => {
             try {
+              const meta = await getMetadata(ref(storage, fileEntry.fullPath));
+              if (!fileEntry.md5Hash || meta.md5Hash !== fileEntry.md5Hash || meta.timeCreated !== fileEntry.timeCreated || Date.parse(meta.timeCreated) > executionStartedAt - 86400000) {
+                throw new Error('Το αρχείο είναι πρόσφατο ή άλλαξε μετά τη σάρωση. Παραλείφθηκε για νέα σάρωση.');
+              }
               await deleteObject(ref(storage, fileEntry.fullPath));
               deletedStorageFilesCount++;
               reclaimedBytes += fileEntry.size || 0;
@@ -508,7 +545,8 @@ export function FirebaseMediaCleanup({
             if (!upd) return d;
             return {
               ...d,
-              ...(upd.patch as Partial<FirestoreMediaDoc>)
+              ...(upd.patch as Partial<FirestoreMediaDoc>),
+              raw: { ...d.raw, ...upd.patch }
             };
           });
       });

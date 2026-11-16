@@ -1,5 +1,5 @@
 export class OrderError extends Error {
-  constructor(message: string, public status = 400) { super(message); }
+  constructor(message: string, public status = 400, public code?: string) { super(message); }
 }
 const shipping = { boxnow: { cents: 250, free: 4500 }, courier: { cents: 400, free: 5000 } };
 const field = (value: unknown, max: number, required = false) => {

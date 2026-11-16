@@ -1,11 +1,13 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { normalizeOrder, priceOrder, nextStatus, OrderError } from '../../server/orders-core';
 import { notifyOrder } from '../../server/order-notifications';
-import { createStripeCheckoutSession } from '../../server/stripe-service';
-import { cancelOrder, initialOrderStatus, releaseOrderStock, reservationPatch } from '../../server/order-lifecycle';
+import { createStripeCheckoutSession, retrieveStripeCheckoutSession } from '../../server/stripe-service';
+import { cancelOrder, initialOrderStatus, markStripeOrderPaid, resolveStripeOrderId, reservationPatch } from '../../server/order-lifecycle';
+import { cancelUnpaidCheckout, closeUnpaidStripeCheckout, hashCancelToken } from '../../server/checkout-cancellation';
+import { normalizeShippingSettings } from '../../src/lib/shipping';
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return true;
@@ -90,7 +92,12 @@ export function createOrdersHandler(connect: typeof database = database, notify:
         const { id, status, tracking } = await request.json();
         if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id)) throw new OrderError('Μη έγκυρη παραγγελία.');
         if (status === 'cancelled') {
-          const result = await cancelOrder(db, id, 'admin_cancelled');
+          const snapshot = await db.doc(`orders/${id}`).get();
+          if (!snapshot.exists) throw new OrderError('Η παραγγελία δεν βρέθηκε.', 404);
+          const order = snapshot.data()!;
+          const result = order.paymentMethod === 'stripe' && ['pending', 'waiting_payment'].includes(order.status)
+            ? await closeUnpaidStripeCheckout(db, id, order, 'admin_cancelled', notify)
+            : await cancelOrder(db, id, 'admin_cancelled');
           return reply({ ok: true, ...result }, 200, origin);
         }
         await db.runTransaction(async transaction => {
@@ -137,11 +144,12 @@ export function createOrdersHandler(connect: typeof database = database, notify:
       // Handle cancel_unpaid action when customer cancels checkout or payment fails
       if (parsedBody?.action === 'cancel_unpaid' && typeof parsedBody.orderId === 'string' && /^[a-f0-9-]{36}$/.test(parsedBody.orderId)) {
         const targetId = parsedBody.orderId;
-        await cancelOrder(db, targetId, 'customer_checkout_cancelled', ['pending', 'waiting_payment']);
+        await cancelUnpaidCheckout(db, targetId, parsedBody.cancelToken, notify);
         return reply({ ok: true, cancelled: true }, 200, origin);
       }
 
       const input = normalizeOrder(parsedBody);
+      let cancelToken = input.paymentMethod === 'stripe' ? randomBytes(32).toString('base64url') : '';
       const requestHash = createHash('sha256').update(JSON.stringify(input)).digest('hex');
       const now = new Date();
       const ref = db.doc(`orders/${input.requestId}`);
@@ -152,16 +160,17 @@ export function createOrdersHandler(connect: typeof database = database, notify:
       const receipt = await db.runTransaction(async transaction => {
         const shopSnap = await transaction.get(db.doc('settings/shop'));
         const shopData = shopSnap.exists ? shopSnap.data() : null;
-        const customShipping = shopData?.shippingSettings ? {
+        const shippingSettings = normalizeShippingSettings(shopData?.shippingSettings);
+        const customShipping = {
           boxnow: {
-            cents: Math.round((Number(shopData.shippingSettings.boxnowPrice) || 2.5) * 100),
-            free: Math.round((Number(shopData.shippingSettings.boxnowFreeThreshold) || 45) * 100)
+            cents: Math.round(shippingSettings.boxnowPrice * 100),
+            free: Math.round(shippingSettings.boxnowFreeThreshold * 100)
           },
           courier: {
-            cents: Math.round((Number(shopData.shippingSettings.courierPrice) || 4.0) * 100),
-            free: Math.round((Number(shopData.shippingSettings.courierFreeThreshold) || 50) * 100)
+            cents: Math.round(shippingSettings.courierPrice * 100),
+            free: Math.round(shippingSettings.courierFreeThreshold * 100)
           }
-        } : undefined;
+        };
 
         const previous = await transaction.get(ref);
         if (previous.exists) {
@@ -169,7 +178,9 @@ export function createOrdersHandler(connect: typeof database = database, notify:
           if (data.requestHash !== requestHash) {
             throw new OrderError('Το αναγνωριστικό της παραγγελίας έχει ήδη χρησιμοποιηθεί με διαφορετικά στοιχεία. Δοκίμασε ξανά.', 409);
           }
-          stripeCheckoutUrl = data.stripeCheckoutUrl;
+          if (data.status === 'cancelled') throw new OrderError('Η προηγούμενη προσπάθεια ακυρώθηκε. Πατήστε ξανά υποβολή για νέα παραγγελία.', 409, 'ORDER_CANCELLED');
+          cancelToken = data.checkoutCancelToken || '';
+          stripeCheckoutUrl = ['paid', 'shipped', 'delivered'].includes(data.status) ? undefined : data.stripeCheckoutUrl;
           return {
             created: false,
             id: ref.id,
@@ -179,7 +190,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
             shippingCost: data.shippingCost,
             status: data.status,
             items: data.items,
-            checkoutUrl: data.stripeCheckoutUrl
+            checkoutUrl: stripeCheckoutUrl
           };
         }
 
@@ -211,6 +222,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
 
         const orderData = {
           ...priced,
+          ...(cancelToken ? { checkoutCancelTokenHash: hashCancelToken(cancelToken), checkoutCancelToken: cancelToken } : {}),
           customer: input.customer,
           shippingMethod: input.shippingMethod,
           paymentMethod: input.paymentMethod,
@@ -252,8 +264,28 @@ export function createOrdersHandler(connect: typeof database = database, notify:
       });
 
       if (input.paymentMethod === 'stripe') {
+        if (['paid', 'shipped', 'delivered'].includes(receipt.status)) {
+          const { created: _created, ...publicReceipt } = receipt;
+          return reply({ ok: true, order: publicReceipt }, 200, origin);
+        }
+        if (stripeCheckoutUrl) {
+          const existingOrder = (await ref.get()).data()!;
+          const session = await retrieveStripeCheckoutSession(existingOrder.stripeSessionId);
+          resolveStripeOrderId(session, receipt.id);
+          if (session.id !== existingOrder.stripeSessionId) throw new OrderError('Μη έγκυρη αντιστοίχιση πληρωμής.', 409);
+          if (session.payment_status === 'paid') {
+            const paidReceipt = await markStripeOrderPaid(db, receipt.id, session, 'checkout_retry');
+            await notify(db, receipt.id).catch(() => console.error('Order email remains queued'));
+            return reply({ ok: true, order: { ...paidReceipt, status: 'paid' } }, 200, origin);
+          }
+          if (session.status === 'expired') {
+            await cancelOrder(db, receipt.id, 'stripe_session_expired', ['pending', 'waiting_payment']);
+            throw new OrderError('Η προηγούμενη πληρωμή έληξε. Πατήστε ξανά υποβολή για νέα παραγγελία.', 409, 'ORDER_CANCELLED');
+          }
+          if (session.status !== 'open') throw new OrderError('Η Stripe επεξεργάζεται την πληρωμή. Μην ξεκινήσεις νέα παραγγελία.', 409);
+        }
         if (!stripeCheckoutUrl) {
-          if (!receipt.created) {
+          if (!cancelToken) {
             throw new OrderError('Η πληρωμή της παραγγελίας προετοιμάζεται ήδη. Δοκίμασε ξανά σε λίγο.', 409);
           }
           try {
@@ -269,7 +301,8 @@ export function createOrdersHandler(connect: typeof database = database, notify:
               shippingMethod: input.shippingMethod,
               shippingCost: receipt.shippingCost,
               customerEmail: input.customer.email,
-              origin: origin || ''
+              origin: origin || '',
+              cancelToken
             });
             stripeCheckoutUrl = session.url;
             await db.runTransaction(async tx => {
@@ -285,18 +318,13 @@ export function createOrdersHandler(connect: typeof database = database, notify:
               });
             });
           } catch (stripeErr: any) {
-            console.error('Stripe session creation error, rolling back reservation:', stripeErr);
-            // Roll back the reservation immediately so products are not left locked!
-            await db.runTransaction(async tx => {
-              const orderSnap = await tx.get(ref);
-              if (!orderSnap.exists || orderSnap.data()?.status !== 'waiting_payment') return;
-              await releaseOrderStock(db, tx, orderSnap.data()?.items, ref.id);
-              tx.delete(ref);
-              tx.delete(db.doc(`orderNotifications/${ref.id}`));
-            }).catch(e => console.error('Rollback failed:', e));
-
-            if (stripeErr instanceof OrderError) throw stripeErr;
-            throw new OrderError(stripeErr.message || 'Αποτυχία αρχικοποίησης πληρωμής στη Stripe. Δοκιμάστε ξανά.', 502);
+            // A timeout may hide a successfully created, payable session. Preserve
+            // its reservation and retry the same Stripe idempotency key.
+            if (stripeErr?.code === 'STRIPE_SESSION_REJECTED') {
+              await cancelOrder(db, receipt.id, 'stripe_creation_rejected', ['waiting_payment']);
+              throw new OrderError(stripeErr.message, 502, 'ORDER_CANCELLED');
+            }
+            throw new OrderError(`${stripeErr.message || 'Η Stripe δεν απάντησε.'} Η προσπάθεια έχει αποθηκευτεί· δοκίμασε ξανά με τα ίδια στοιχεία.`, 502);
           }
         }
         const { created: _created, ...publicReceipt } = receipt;
@@ -307,7 +335,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
       const { created: _created, ...publicReceipt } = receipt;
       return reply({ ok: true, order: publicReceipt }, 201, origin);
     } catch (error) {
-      if (error instanceof OrderError) return reply({ error: error.message }, error.status, origin);
+      if (error instanceof OrderError) return reply({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status, origin);
       if (error instanceof SyntaxError) return reply({ error: 'Μη έγκυρα δεδομένα.' }, 400, origin);
       console.error('Order processing failed', { name: error instanceof Error ? error.name : 'unknown', message: error instanceof Error ? error.message : '' });
       return reply({ error: error instanceof Error ? error.message : 'Η καταχώρηση δεν ολοκληρώθηκε. Δοκίμασε ξανά· το καλάθι σου παραμένει αποθηκευμένο.' }, 503, origin);

@@ -321,6 +321,7 @@ export async function persistVintedReviewsToFirestore(
     }, { merge: true });
   } catch (error: any) {
     console.warn('Could not persist Vinted reviews to Firestore:', error.message);
+    throw error;
   }
 }
 
