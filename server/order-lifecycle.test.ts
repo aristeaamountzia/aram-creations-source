@@ -20,11 +20,19 @@ function fakeDb(initial: Record<string, any>) {
   return {
     docs,
     doc: ref,
-    runTransaction: async (fn: any) => fn({
-      get: async (document: { path: string }) => ({ exists: docs.has(document.path), data: () => structuredClone(docs.get(document.path)), ref: document }),
-      update: (document: { path: string }, patch: Record<string, any>) => apply(document.path, patch),
-      delete: (document: { path: string }) => docs.delete(document.path)
-    })
+    runTransaction: async (fn: any) => {
+      const writes: Array<() => unknown> = [];
+      const result = await fn({
+        get: async (document: { path: string }) => {
+          assert.equal(writes.length, 0, 'Firestore requires every read before any write');
+          return { exists: docs.has(document.path), data: () => structuredClone(docs.get(document.path)), ref: document };
+        },
+        update: (document: { path: string }, patch: Record<string, any>) => writes.push(() => apply(document.path, patch)),
+        delete: (document: { path: string }) => writes.push(() => docs.delete(document.path))
+      });
+      writes.forEach(write => write());
+      return result;
+    }
   };
 }
 
@@ -95,6 +103,35 @@ test('expired checkout releases reservation and cannot release it twice', async 
 
 test('payment without this order reservation is rejected', () => {
   assert.throws(() => paidPatch({ stock: 0, checkoutReservations: {} }, 'order-1'));
+});
+
+test('multi-product payment and cancellation read all products before writes and restore each quantity once', async () => {
+  const db = fakeDb({
+    'orders/o': { status: 'waiting_payment', paymentMethod: 'stripe', items: [{ id: 'a' }, { id: 'b' }], history: [] },
+    'jewelry/a': { stock: 2, checkoutReservations: { o: 1 } },
+    'jewelry/b': { stock: 0, checkoutReservations: { o: 2, other: 1 } }
+  });
+  await markStripeOrderPaid(db, 'o', { id: 'cs_o' }, 'stripe_webhook');
+  assert.equal((await cancelOrder(db, 'o', 'admin_cancelled')).restored, 3);
+  assert.equal((await cancelOrder(db, 'o', 'admin_cancelled')).restored, 0);
+  assert.equal(db.docs.get('jewelry/a').stock, 3);
+  assert.equal(db.docs.get('jewelry/b').stock, 2);
+  assert.deepEqual(db.docs.get('jewelry/b').checkoutReservations, { other: 1 });
+});
+
+test('historic cancellation only releases a surviving reservation for the exact order', async () => {
+  const db = fakeDb({
+    'orders/o': { status: 'cancelled', emailNotification: 'sent', items: [{ id: 'a' }, { id: 'b' }] },
+    'jewelry/a': { stock: 0, checkoutReservations: { o: 1 } },
+    'jewelry/b': { stock: 0, status: 'Πουλήθηκε', checkoutReservations: { other: 1 } }
+  });
+  assert.equal((await cancelOrder(db, 'o', 'stripe_checkout_expired')).restored, 0);
+  assert.equal((await cancelOrder(db, 'o', 'admin_cancelled')).restored, 1);
+  assert.equal((await cancelOrder(db, 'o', 'admin_cancelled')).restored, 0);
+  assert.equal(db.docs.get('orders/o').emailNotification, 'sent');
+  assert.equal(db.docs.get('orders/o').history.length, 1);
+  assert.equal(db.docs.get('jewelry/b').stock, 0);
+  assert.equal(db.docs.get('jewelry/b').status, 'Πουλήθηκε');
 });
 
 test('Stripe confirmation only accepts the order bound to the paid session', () => {

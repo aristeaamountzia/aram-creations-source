@@ -647,7 +647,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         setForm(current => current && { ...current, mediaList: [...current.mediaList, uploaded] });
       }
     } catch (err: any) {
-      setError(`Δεν ανέβηκε το αρχείο: ${err.message}`);
+      setVideoProgress(null);
+      setError(err instanceof TypeError && err.message === 'Failed to fetch'
+        ? 'Η σύνδεση διακόπηκε κατά το ανέβασμα ή τον έλεγχο του αρχείου. Δοκίμασε ξανά.'
+        : `Δεν ανέβηκε το αρχείο: ${err.message}`);
     } finally {
       setUploading(false);
     }

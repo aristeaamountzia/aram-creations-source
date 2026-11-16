@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectMediaSignature, IMAGE_UPLOAD_LIMIT, validateMediaFile } from '../src/lib/media-validation';
+import { detectMediaSignature, IMAGE_UPLOAD_LIMIT, shouldFetchStoredMediaBytes, validateMediaFile } from '../src/lib/media-validation';
 
 test('automatic upload detection enforces the image size limit', async () => {
   const oversized = new Blob([new Uint8Array([0xff, 0xd8, 0xff]), new Uint8Array(IMAGE_UPLOAD_LIMIT)]);
@@ -24,4 +24,10 @@ test('rejects corrupted images and MIME/content mismatches', async () => {
 test('accepts valid content when browser omits MIME type', async () => {
   const detected = await validateMediaFile(file([0xff, 0xd8, 0xff, 0x00], '', 'camera.jpg'), 'image');
   assert.equal(detected.mime, 'image/jpeg');
+});
+
+test('does not require CORS Range fetches for cross-origin Firebase media URLs', () => {
+  assert.equal(shouldFetchStoredMediaBytes('https://firebasestorage.googleapis.com/v0/b/example/o/image.jpg?token=redacted', 'https://aramcreationsofficial.netlify.app'), false);
+  assert.equal(shouldFetchStoredMediaBytes('https://aramcreationsofficial.netlify.app/media/image.jpg', 'https://aramcreationsofficial.netlify.app'), true);
+  assert.equal(shouldFetchStoredMediaBytes('http://localhost:9199/v0/b/example/o/image.jpg', 'http://localhost:5173'), true);
 });

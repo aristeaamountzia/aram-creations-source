@@ -258,6 +258,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
   return (
     <section
       id="customer-reviews"
+      tabIndex={-1}
       aria-label="Εμπειρίες & Αξιολογήσεις Πελατών"
       className={`scroll-mt-20 py-14 sm:py-20 border-t border-stone-200/80 transition-colors ${className}`}
     >

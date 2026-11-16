@@ -5,7 +5,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { normalizeOrder, priceOrder, nextStatus, OrderError } from '../../server/orders-core';
 import { notifyOrder } from '../../server/order-notifications';
 import { createStripeCheckoutSession } from '../../server/stripe-service';
-import { cancelOrder, initialOrderStatus, releasePatch, reservationPatch } from '../../server/order-lifecycle';
+import { cancelOrder, initialOrderStatus, releaseOrderStock, reservationPatch } from '../../server/order-lifecycle';
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return true;
@@ -90,8 +90,8 @@ export function createOrdersHandler(connect: typeof database = database, notify:
         const { id, status, tracking } = await request.json();
         if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id)) throw new OrderError('Μη έγκυρη παραγγελία.');
         if (status === 'cancelled') {
-          await cancelOrder(db, id, 'admin_cancelled');
-          return reply({ ok: true }, 200, origin);
+          const result = await cancelOrder(db, id, 'admin_cancelled');
+          return reply({ ok: true, ...result }, 200, origin);
         }
         await db.runTransaction(async transaction => {
           const ref = db.doc(`orders/${id}`);
@@ -290,17 +290,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
             await db.runTransaction(async tx => {
               const orderSnap = await tx.get(ref);
               if (!orderSnap.exists || orderSnap.data()?.status !== 'waiting_payment') return;
-              for (const it of receipt.items || []) {
-                const pRef = db.doc(`jewelry/${it.id}`);
-                const pSnap = await tx.get(pRef);
-                if (pSnap.exists) {
-                  const patch = releasePatch(pSnap.data(), ref.id);
-                  if (patch) {
-                    const { restored: _restored, ...update } = patch;
-                    tx.update(pRef, update);
-                  }
-                }
-              }
+              await releaseOrderStock(db, tx, orderSnap.data()?.items, ref.id);
               tx.delete(ref);
               tx.delete(db.doc(`orderNotifications/${ref.id}`));
             }).catch(e => console.error('Rollback failed:', e));

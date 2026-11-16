@@ -2,6 +2,16 @@ export type MediaKind = 'image' | 'video';
 export type DetectedMedia = { kind: MediaKind; mime: string };
 export type MediaMetadata = { width: number; height: number; duration?: number; mime?: string };
 
+export function shouldFetchStoredMediaBytes(url: string, pageOrigin: string) {
+  try {
+    const parsed = new URL(url);
+    const local = parsed.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(parsed.hostname);
+    return parsed.origin === pageOrigin || local;
+  } catch {
+    return false;
+  }
+}
+
 export const IMAGE_UPLOAD_LIMIT = 30 * 1024 * 1024;
 
 const ascii = (bytes: Uint8Array, start: number, length: number) =>
@@ -75,7 +85,12 @@ export async function readMediaMetadata(source: File | string, kind: MediaKind):
     }
     return await new Promise<MediaMetadata>((resolve, reject) => {
       const video = document.createElement('video');
-      const cleanup = () => { video.removeAttribute('src'); video.load(); };
+      const cleanup = () => {
+        video.onloadedmetadata = null;
+        video.onerror = null;
+        video.removeAttribute('src');
+        video.load();
+      };
       const timer = setTimeout(() => { cleanup(); reject(new Error('Το βίντεο δεν φόρτωσε metadata εγκαίρως.')); }, 12000);
       video.preload = 'metadata';
       video.muted = true;
@@ -113,8 +128,11 @@ export async function verifyStoredMedia(url: string, expectedKind: MediaKind): P
     throw new Error('Το αποθηκευμένο media URL δεν είναι ασφαλές HTTPS URL.');
   }
   const metadata = await readMediaMetadata(url, expectedKind);
-  const sameOrigin = typeof location !== 'undefined' && parsedUrl.origin === location.origin;
-  if (sameOrigin || isLocalEmulator || /firebasestorage\.googleapis\.com|firebasestorage\.app/i.test(url)) {
+  const pageOrigin = typeof location !== 'undefined' ? location.origin : '';
+  // Firebase download URLs may be readable as image/video elements while a
+  // custom Range fetch is rejected by the bucket's CORS policy. Decoding above
+  // verifies the actual stored bytes without that unnecessary cross-origin fetch.
+  if (shouldFetchStoredMediaBytes(url, pageOrigin)) {
     const response = await fetch(url, { headers: { Range: 'bytes=0-63' }, cache: 'no-store' });
     if (!response.ok) throw new Error(`Το αποθηκευμένο αρχείο δεν φορτώνει (HTTP ${response.status}).`);
     const bytes = new Uint8Array(await response.arrayBuffer());

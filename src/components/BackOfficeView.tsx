@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { sanitizeVintedDescription as stripVintedCondition } from '../lib/vinted-sanitizer';
+import { assertUnchangedInventory, compareSoldLast, isSoldItem } from '../lib/stock-edit';
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import { PortfolioDesignSettings } from './PortfolioDesignSettings';
@@ -7,7 +8,7 @@ import { DesignStudioSettings } from './DesignStudioSettings';
 import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, validatePortfolioDesign } from '../lib/portfolio-settings';
 import { PortfolioHero, portfolioHeroVideoUrl, isKnownUnplayableHevcHeroUrl, TRANSCODED_HERO_H264_PATH } from './PortfolioHero';
-import { Check, X, Star, BadgeCheck, RefreshCw, MessageSquare, ExternalLink, CornerDownRight } from 'lucide-react';
+import { Check, X, Star, BadgeCheck, RefreshCw, MessageSquare, ExternalLink, CornerDownRight, AlertTriangle } from 'lucide-react';
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
 import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
@@ -40,7 +41,7 @@ import {
   deleteDoc,
   serverTimestamp,
   query,
-  orderBy, limit, getDoc
+  orderBy, limit, getDoc, runTransaction
 } from "firebase/firestore";
 import {
   ref as firebaseRef,
@@ -135,7 +136,6 @@ interface BackOfficeViewProps {
             borderRadius: '0.5rem',
             heroTitleSize: 'text-2xl md:text-3xl'
         };
-        const isSoldItem = (item) => item.status === 'Πουλήθηκε';
         const isAvailableItem = (item) => item.status === 'Διαθέσιμο' && (item.stock === undefined || item.stock === null || Number(item.stock) > 0);
         const isUnavailableItem = (item) => !isAvailableItem(item) && !isSoldItem(item);
         const splitTags = (value) => value.split(',').map(v => v.trim()).filter(Boolean);
@@ -2218,7 +2218,7 @@ interface BackOfficeViewProps {
                 setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
 
                 setFormName(item.name || ''); setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status || 'Διαθέσιμο'); setFormDate(item.creationDate || '');
-                setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
+                setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock ?? 1); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
                 setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
                 setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(stripVintedCondition(item.notes || ''));
 
@@ -2887,12 +2887,18 @@ interface BackOfficeViewProps {
                         imageUrl: mainImage.url,
                         fileType: mainImage.type,
                         mediaList: finalMediaUrls,
-                        ...(formStatus === 'Διαθέσιμο' && parsedStock >= 1 ? { checkoutReservations: {} } : {}),
                         updatedAt: serverTimestamp()
                     };
 
                     if (isEditMode && currentItem) {
-                        await updateDoc(doc(db, "jewelry", currentItem.id), itemData);
+                        await runTransaction(db, async tx => {
+                            const productRef = doc(db, "jewelry", currentItem.id);
+                            const snapshot = await tx.get(productRef);
+                            if (!snapshot.exists()) throw new Error('Το προϊόν δεν υπάρχει πλέον.');
+                            const latest = snapshot.data();
+                            assertUnchangedInventory(currentItem, latest);
+                            tx.update(productRef, itemData);
+                        });
                         catalogSaved = true;
                         const originalMedia = currentItem.mediaList || (currentItem.imageUrl ? [{ url: currentItem.imageUrl, type: currentItem.fileType || 'image' }] : []);
                         const finalMediaReferences = new Set(finalMediaUrls.flatMap(media => [media.url, media.originalUrl].filter(Boolean)));
@@ -3031,6 +3037,8 @@ interface BackOfficeViewProps {
                 });
 
                 pool.sort((a, b) => {
+                    const availabilityOrder = compareSoldLast(a, b);
+                    if (availabilityOrder) return availabilityOrder;
                     if (sortBy === 'entry_new') return b.createdAt?.seconds - a.createdAt?.seconds || b.id.localeCompare(a.id);
                     if (sortBy === 'entry_old') return a.createdAt?.seconds - b.createdAt?.seconds || a.id.localeCompare(b.id);
                     if (sortBy === 'shop_order') return (b.shopOrder || 0) - (a.shopOrder || 0) || (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);

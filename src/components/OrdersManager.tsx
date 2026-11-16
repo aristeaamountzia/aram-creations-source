@@ -10,6 +10,7 @@ type Order = {
   id: string; number: string; status: Status; createdAt: string; total: number; shippingCost: number;
   shippingMethod: string; paymentMethod: string; tracking?: string; emailNotification?: string;
   stripeSessionId?: string; stripeCheckoutUrl?: string;
+  history?: Array<{ stockMutation?: string; restored?: number }>;
   customer: { name: string; phone: string; email: string; address: string; city: string; postalCode: string; notes?: string };
   items: Array<{ id: string; name: string; price: number; quantity: number; customInscription?: string }>;
 };
@@ -26,6 +27,7 @@ export function OrdersManager({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState('');
   const [mailMessage, setMailMessage] = useState('');
   const [tracking, setTracking] = useState<Record<string, string>>({});
+  const [stockNotice, setStockNotice] = useState<Record<string, string>>({});
 
   async function request(path: string, init: RequestInit = {}) {
     if (!auth.currentUser) throw new Error('Συνδέσου ξανά στο Back Office.');
@@ -49,12 +51,24 @@ export function OrdersManager({ onBack }: { onBack: () => void }) {
   useEffect(() => { void load(); }, []);
 
   async function update(order: Order, status: Status) {
-    if (status === 'cancelled' && !window.confirm('Ακύρωση παραγγελίας και επαναφορά αποθέματος; Αν έχει πληρωθεί, η επιστροφή χρημάτων γίνεται χειροκίνητα.')) return;
+    if (status === 'cancelled' && !window.confirm(order.status === 'cancelled'
+      ? 'Να αποδεσμευτεί τυχόν υπόλοιπο αποθέματος που ανήκει σε αυτή την παραγγελία;'
+      : 'Ακύρωση παραγγελίας και επαναφορά αποθέματος; Αν έχει πληρωθεί, η επιστροφή χρημάτων γίνεται χειροκίνητα.')) return;
     setBusy(order.id); setError('');
     try {
       const value = tracking[order.id] ?? order.tracking ?? '';
-      await request('/api/orders', { method: 'PATCH', body: JSON.stringify({ id: order.id, status, tracking: value }) });
-      setOrders(current => current.map(entry => entry.id === order.id ? { ...entry, status, tracking: value } : entry));
+      const result = await request('/api/orders', { method: 'PATCH', body: JSON.stringify({ id: order.id, status, tracking: value }) });
+      if (status === 'cancelled') {
+        setStockNotice(current => ({ ...current, [order.id]: result.restored > 0
+          ? `Επιστράφηκαν στο απόθεμα ${result.restored} τεμάχια.`
+          : 'Δεν βρέθηκε ενεργή δέσμευση για αυτή την παραγγελία. Το απόθεμα παρέμεινε ίδιο.' }));
+      }
+      setOrders(current => current.map(entry => {
+        if (entry.id !== order.id) return entry;
+        if (status !== 'cancelled') return { ...entry, status, tracking: value };
+        const history = [...(entry.history || []), { stockMutation: 'release_reservation', restored: result.restored }];
+        return { ...entry, status, history, emailNotification: entry.emailNotification === 'sent' || result.alreadyCancelled && !result.restored ? entry.emailNotification : 'cancelled' };
+      }));
       notifyOperationSuccess('Ενημέρωση Παραγγελίας', `Η κατάσταση της παραγγελίας #${order.number} ενημερώθηκε σε «${status}».`);
     } catch (error) { const msg = error instanceof Error ? error.message : 'Η αλλαγή απέτυχε.'; setError(msg); notifyOperationError('Σφάλμα Ενημέρωσης', msg); }
     finally { setBusy(''); }
@@ -166,10 +180,16 @@ export function OrdersManager({ onBack }: { onBack: () => void }) {
               <p className="font-bold text-base text-stone-900">Σύνολο: {money(order.total)}</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {order.status === 'cancelled' ? <div className="space-y-2 text-sm">
+            <p role="status">{stockNotice[order.id] || (
+              order.history?.some(event => event.stockMutation === 'release_reservation' && Number(event.restored) > 0)
+                ? `Καταγεγραμμένη επιστροφή στο απόθεμα: ${order.history.reduce((sum, event) => sum + (event.stockMutation === 'release_reservation' ? Number(event.restored || 0) : 0), 0)} τεμάχια.`
+                : 'Δεν έχει καταγραφεί επιστροφή αποθέματος για αυτή την παραγγελία.')}</p>
+            <button type="button" disabled={!!busy} onClick={() => void update(order, 'cancelled')} className="rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-40">Έλεγχος και αποδέσμευση υπολοίπου</button>
+          </div> : <div className="flex flex-wrap gap-2">
             <input aria-label={`Κωδικός αποστολής ${order.number}`} value={tracking[order.id] ?? order.tracking ?? ''} onChange={e => setTracking(current => ({ ...current, [order.id]: e.target.value }))} maxLength={200} placeholder="Κωδικός / στοιχεία αποστολής (π.χ. Tracking Number)" className="min-w-0 flex-1 rounded-lg border p-2 text-xs" />
             <button disabled={!!busy} onClick={() => void update(order, order.status)} className="rounded-lg border px-3 py-2 text-xs font-bold hover:bg-stone-50 transition">Αποθήκευση στοιχείων</button>
-          </div>
+          </div>}
           <div className="flex flex-wrap gap-2">
             {(order.paymentMethod === 'cod' && ['pending', 'waiting_payment'].includes(order.status) ? [...transitions[order.status], 'shipped' as Status] : transitions[order.status]).map(status => <button key={status} disabled={!!busy} onClick={() => void update(order, status)} className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:opacity-40 ${status === 'cancelled' ? 'border border-rose-200 text-rose-800 hover:bg-rose-50' : 'bg-stone-900 text-white hover:bg-stone-800'}`}>{busy === order.id ? 'Αποθήκευση…' : ORDER_STATUSES[status]}</button>)}
           </div>

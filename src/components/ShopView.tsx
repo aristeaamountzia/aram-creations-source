@@ -1,4 +1,5 @@
 import { ImageLightbox } from './ImageLightbox';
+import { compareSoldLast, isSoldItem } from '../lib/stock-edit';
 import { VintedReviewsSection } from './VintedReviewsSection';
 import { ContentCard } from './content/ContentCard';
 import { DetailView } from './content/DetailView';
@@ -6,7 +7,7 @@ import { FilterBar } from './content/FilterBar';
 import { MediaGallery } from './content/MediaGallery';
 import { SectionShell } from './content/SectionShell';
 import { StatusBadge } from './content/StatusBadge';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { JewelryItem } from '../types';
 import { JEWELRY_CATALOG } from '../data';
 import { db } from '../firebase';
@@ -246,6 +247,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const [areShopSettingsReady, setAreShopSettingsReady] = useState(true);
   const [jewelryList, setJewelryList] = useState<JewelryItem[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const reviewsJumpDuringLoad = useRef(false);
   const [catalogOffline, setCatalogOffline] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Όλα');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -466,6 +468,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
       return matchesCat && matchesSearch && matchesFav;
     }).sort((a, b) => {
+      const availabilityOrder = compareSoldLast(a, b);
+      if (availabilityOrder) return availabilityOrder;
       if (sortBy === 'price-asc') return (Number(a.price) || 0) - (Number(b.price) || 0);
       if (sortBy === 'price-desc') return (Number(b.price) || 0) - (Number(a.price) || 0);
       if (sortBy === 'popular') return getItemLikes(b) - getItemLikes(a);
@@ -507,31 +511,25 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const resolvedHeroVideoUrl = portfolioHeroVideoUrl(shopSettings.heroVideoUrl);
   const hasHeroVideo = Boolean(resolvedHeroVideoUrl) && !heroVideoFailed;
 
+  useLayoutEffect(() => {
+    if (isCatalogLoading || !reviewsJumpDuringLoad.current) return;
+    reviewsJumpDuringLoad.current = false;
+    const target = document.getElementById('customer-reviews');
+    if (target && document.activeElement === target) {
+      target.scrollIntoView({ behavior: 'instant', block: 'start' });
+    }
+  }, [isCatalogLoading]);
+
   const handleScrollToReviews = (e: React.MouseEvent) => {
     e.preventDefault();
-    const findTarget = () => document.getElementById('customer-reviews') || document.getElementById('vinted-reviews');
-    const target = findTarget();
+    const target = document.getElementById('customer-reviews') || document.getElementById('vinted-reviews');
     if (!target) return;
-
-    const headerOffset = 70;
-    const targetTop = target.getBoundingClientRect().top + window.scrollY - headerOffset;
-    window.scrollTo({ top: targetTop, behavior: 'smooth' });
-
-    let attempts = 0;
-    const interval = setInterval(() => {
-      attempts++;
-      const current = findTarget();
-      if (!current || attempts > 8) {
-        clearInterval(interval);
-        return;
-      }
-      const rect = current.getBoundingClientRect();
-      if (Math.abs(rect.top - headerOffset) > 60) {
-        current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        clearInterval(interval);
-      }
-    }, 200);
+    reviewsJumpDuringLoad.current = isCatalogLoading;
+    // Offscreen cards use content-visibility with estimated heights. Materialize
+    // them before calculating the destination so the jump reaches the reviews.
+    document.getElementById('shop-catalog')?.classList.add('catalog-reviews-jump');
+    target.scrollIntoView({ behavior: 'instant', block: 'start' });
+    target.focus({ preventScroll: true });
   };
 
   return (
@@ -746,7 +744,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             {filteredItems.map((item) => {
               const isFav = favoriteIds.includes(item.id);
               const isAvailable = isAvailableForSale(item);
-              const isSold = item.status === 'Πουλήθηκε' || (item.status !== 'Κρατημένο' && item.stock !== undefined && item.stock !== null && Number(item.stock) <= 0);
+              const isSold = isSoldItem(item);
               const isAdded = !!addedIds[item.id];
               const vintedLink = (item.purchaseLinks || []).find((l) => l.site?.toLowerCase() === 'vinted')?.url;
 
@@ -1054,7 +1052,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     )}
                     <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                       !isAvailableForSale(selectedItem)
-                        ? selectedItem.status === 'Πουλήθηκε' || (selectedItem.status !== 'Κρατημένο' && selectedItem.stock !== undefined && selectedItem.stock !== null && Number(selectedItem.stock) <= 0)
+                        ? isSoldItem(selectedItem)
                           ? 'bg-rose-100 text-rose-800'
                           : 'bg-amber-100 text-amber-900'
                         : 'bg-emerald-100 text-emerald-800'
@@ -1062,7 +1060,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                       {selectedItem.status || 'Διαθέσιμο'}
                     </span>
                   </div>
-                  {selectedItem.status === 'Πουλήθηκε' || (selectedItem.status !== 'Κρατημένο' && selectedItem.stock !== undefined && selectedItem.stock !== null && Number(selectedItem.stock) <= 0) ? (
+                  {isSoldItem(selectedItem) ? (
                     <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-rose-900">
                       Αυτό το κομμάτι είναι μοναδικό και έχει ήδη πουληθεί. Αν θέλεις κάτι παρόμοιο, επικοινώνησε μαζί μας μέσω{' '}
                       {/^https:\/\//i.test(shopSettings.fallbackLinks?.Instagram || '') ? <a href={shopSettings.fallbackLinks.Instagram} target="_blank" rel="noopener noreferrer" className="font-bold underline">Instagram</a> : 'Instagram'} ή{' '}
@@ -1155,7 +1153,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   <ShoppingBag className="w-4 h-4" />
                   <span>
                     {!isAvailableForSale(selectedItem)
-                      ? selectedItem.status === 'Πουλήθηκε' || (selectedItem.status !== 'Κρατημένο' && selectedItem.stock !== undefined && selectedItem.stock !== null && Number(selectedItem.stock) <= 0) ? 'Πουλήθηκε' : selectedItem.status || 'Μη διαθέσιμο'
+                      ? isSoldItem(selectedItem) ? 'Πουλήθηκε' : selectedItem.status || 'Μη διαθέσιμο'
                       : 'Προσθήκη στην Τσάντα Αγορών'}
                   </span>
                 </button>

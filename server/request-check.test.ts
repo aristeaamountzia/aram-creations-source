@@ -5,6 +5,23 @@ import { chooseRefreshPatch, RefreshChoice, refreshBaseline } from '../src/lib/v
 import { restorationFields, historyRecords } from '../src/lib/catalog-history';
 import { sortPortfolio, movePortfolio } from '../src/lib/portfolio-order';
 import { sendOrderEmail, resolveAdminUrl } from './order-notifications';
+import { assertUnchangedInventory, compareSoldLast } from '../src/lib/stock-edit';
+
+test('sold cards follow available and reserved cards, with the selected sort preserved in each group', () => {
+  const cards = [
+    { id: 1, status: 'Πουλήθηκε' }, { id: 2, status: 'Κρατημένο', stock: 0 },
+    { id: 3, status: 'Διαθέσιμο', stock: 0 }, { id: 4, status: 'Διαθέσιμο', stock: 3 }
+  ];
+  assert.deepEqual(cards.sort((a, b) => compareSoldLast(a, b) || b.id - a.id).map(item => item.id), [4, 2, 3, 1]);
+});
+
+test('product edits reject concurrent reservations and stock changes', () => {
+  const baseline = { stock: 0, status: 'Κρατημένο', checkoutReservations: { b: 1, a: 1 } };
+  assert.doesNotThrow(() => assertUnchangedInventory(baseline, { ...baseline, checkoutReservations: { a: 1, b: 1 } }));
+  assert.throws(() => assertUnchangedInventory(baseline, { ...baseline, stock: 1 }));
+  assert.throws(() => assertUnchangedInventory(baseline, { ...baseline, checkoutReservations: { a: 1 } }));
+  assert.throws(() => assertUnchangedInventory(baseline, { ...baseline, status: 'Διαθέσιμο' }));
+});
 
 test('current listing status ignores recommended listings and supports numeric/string IDs in RSC', () => {
   const source = '<script>' + JSON.stringify({ item: { id: 123, is_sold: false, is_reserved: true, is_closed: false }, recommended: { id: 456, is_sold: true } }) + '</script>';

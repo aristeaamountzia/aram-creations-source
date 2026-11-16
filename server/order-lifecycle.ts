@@ -57,6 +57,24 @@ export function paidPatch(product: any, orderId: string) {
   return { status: Number(product?.stock || 0) > 0 ? 'Διαθέσιμο' : 'Πουλήθηκε' };
 }
 
+async function readOrderProducts(db: any, tx: any, items: Array<{ id: string }> = []) {
+  const ids = new Set(items.map(item => item.id));
+  return Promise.all(Array.from(ids, id => tx.get(db.doc(`jewelry/${id}`))));
+}
+
+export async function releaseOrderStock(db: any, tx: any, items: Array<{ id: string }>, orderId: string) {
+  const products = await readOrderProducts(db, tx, items);
+  let restored = 0;
+  for (const product of products) {
+    const patch = product.exists && releasePatch(product.data(), orderId);
+    if (!patch) continue;
+    const { restored: quantity, ...update } = patch;
+    tx.update(product.ref, update);
+    restored += quantity;
+  }
+  return restored;
+}
+
 export async function markStripeOrderPaid(db: any, orderId: string, session: StripeSession, via: string) {
   return db.runTransaction(async (tx: any) => {
     const orderRef = db.doc(`orders/${orderId}`);
@@ -71,11 +89,10 @@ export async function markStripeOrderPaid(db: any, orderId: string, session: Str
       throw new OrderError('Η συνεδρία Stripe δεν αντιστοιχεί στην παραγγελία.', 409);
     }
 
-    for (const item of Array.isArray(order.items) ? order.items : []) {
-      const productRef = db.doc(`jewelry/${item.id}`);
-      const productSnap = await tx.get(productRef);
-      if (!productSnap.exists) throw new OrderError(`Το προϊόν ${item.id} δεν βρέθηκε.`, 409);
-      tx.update(productRef, paidPatch(productSnap.data(), orderId));
+    const products = await readOrderProducts(db, tx, order.items);
+    for (const product of products) {
+      if (!product.exists) throw new OrderError('Ένα προϊόν της παραγγελίας δεν βρέθηκε.', 409);
+      tx.update(product.ref, paidPatch(product.data(), orderId));
     }
 
     const now = new Date().toISOString();
@@ -97,30 +114,21 @@ export async function cancelOrder(db: any, orderId: string, reason: string, allo
     const orderSnap = await tx.get(orderRef);
     if (!orderSnap.exists) throw new OrderError('Η παραγγελία δεν βρέθηκε.', 404);
     const order = orderSnap.data();
-    if (order.status === 'cancelled') return { alreadyCancelled: true, restored: 0 };
-    if (!allowedStatuses.includes(order.status)) throw new OrderError('Η παραγγελία δεν μπορεί να ακυρωθεί.', 409);
+    const alreadyCancelled = order.status === 'cancelled';
+    if (alreadyCancelled && reason !== 'admin_cancelled') return { alreadyCancelled, restored: 0 };
+    if (!alreadyCancelled && !allowedStatuses.includes(order.status)) throw new OrderError('Η παραγγελία δεν μπορεί να ακυρωθεί.', 409);
 
-    let restored = 0;
-    for (const item of Array.isArray(order.items) ? order.items : []) {
-      const productRef = db.doc(`jewelry/${item.id}`);
-      const productSnap = await tx.get(productRef);
-      if (!productSnap.exists) continue;
-      const patch = releasePatch(productSnap.data(), orderId);
-      if (patch) {
-        restored += patch.restored;
-        const { restored: _restored, ...update } = patch;
-        tx.update(productRef, update);
-      }
-    }
+    const restored = await releaseOrderStock(db, tx, order.items, orderId);
+    if (alreadyCancelled && !restored) return { alreadyCancelled, restored };
 
     const now = new Date().toISOString();
     tx.update(orderRef, {
       status: 'cancelled',
-      emailNotification: 'cancelled',
+      emailNotification: order.emailNotification === 'sent' ? 'sent' : 'cancelled',
       updatedAt: now,
       history: [...(order.history || []), { status: 'cancelled', at: now, reason, stockMutation: 'release_reservation', orderId, restored }]
     });
     tx.delete(db.doc(`orderNotifications/${orderId}`));
-    return { alreadyCancelled: false, restored };
+    return { alreadyCancelled, restored };
   });
 }
