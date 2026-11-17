@@ -10,3 +10,4 @@ work-api-check.cjs
 .auth/
 audit-results/
 functions/catalog/lib/
+public/codecs/

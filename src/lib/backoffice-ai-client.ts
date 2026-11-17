@@ -9,8 +9,13 @@ export async function requestBackofficeAi(
     body: JSON.stringify(payload)
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok || !data || typeof data !== 'object') {
+  if (!response.ok || !data || typeof data !== 'object' || Array.isArray(data) || data.error) {
     throw new Error(data?.error || data?.message || `Μη έγκυρη απάντηση από το AI endpoint (HTTP ${response.status}).`);
+  }
+  const suggestion = data.suggestion || data.product || data;
+  const fields = ['title', 'name', 'description', 'notes', 'shortDescription', 'category', 'collection', 'status', 'colors', 'materials', 'tags', 'seoKeywords', 'instagramCaption', 'altText'];
+  if (!suggestion || typeof suggestion !== 'object' || !fields.some(key => typeof suggestion[key] === 'string' ? suggestion[key].trim().length : Array.isArray(suggestion[key]) && suggestion[key].length)) {
+    throw new Error('Το AI endpoint επέστρεψε κενή πρόταση.');
   }
   return data;
 }

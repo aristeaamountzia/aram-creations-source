@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { cert, initializeApp, getApps } from 'firebase-admin/app';
+import { cert, initializeApp, getApps, deleteApp as deleteAdminApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getStorage } from 'firebase-admin/storage';
 import handler from '../netlify/functions/media';
@@ -62,7 +62,7 @@ try {
   console.log('PASS: signed image/video/GIF downloads, original GIF bytes, attachment headers and GIF editing protection.');
 } finally {
   await fixture.delete({ ignoreNotFound: true });
-  await Promise.all(getApps().map(app => app.delete()));
+  await Promise.all(getApps().map(app => deleteAdminApp(app)));
   delete process.env.FIREBASE_SERVICE_ACCOUNT;
 }
 

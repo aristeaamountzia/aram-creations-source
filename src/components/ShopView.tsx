@@ -955,17 +955,6 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
           previousLabel="Προηγούμενο κόσμημα"
           nextLabel="Επόμενο κόσμημα"
         >
-            {/* Close button */}
-            <button
-              data-detail-close
-              type="button"
-              onClick={() => setSelectedItem(null)}
-              className="absolute top-4 right-4 z-30 p-2 rounded-full bg-stone-100 text-stone-600 hover:text-stone-900 hover:bg-stone-200 border border-stone-300 transition shadow-sm"
-              aria-label="Κλείσιμο παραθύρου"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
             {/* LEFT COLUMN: Rich Media Stage (Images & Videos) */}
             <div className="w-full shrink-0 border-b border-stone-200 bg-stone-100 p-4 sm:p-6 md:w-1/2 md:border-b-0 md:border-r">
               <MediaGallery

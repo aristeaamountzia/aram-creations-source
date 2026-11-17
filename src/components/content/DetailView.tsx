@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 interface DetailViewProps {
   title: string;
@@ -109,6 +109,10 @@ export function DetailView({
         </button>
       )}
       <div className={`detail-view-panel relative my-auto flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden border bg-white text-stone-900 md:flex-row ${className}`} onClick={event => event.stopPropagation()}>
+        <button data-detail-close type="button" onClick={onClose} aria-label="Κλείσιμο παραθύρου" title="Κλείσιμο (Esc)"
+          className="absolute top-3 right-3 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-600 shadow-sm transition hover:bg-stone-100 hover:text-stone-900">
+          <X className="h-5 w-5" aria-hidden="true" />
+        </button>
         {children}
       </div>
     </div>

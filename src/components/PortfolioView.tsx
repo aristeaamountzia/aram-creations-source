@@ -485,8 +485,8 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
             {/* Right Column: Curatorial & Artwork Metadata */}
             <div className="w-full md:w-1/2 p-6 flex flex-col justify-between overflow-y-auto">
               <div>
-                {/* Header Strip with Close button */}
-                <div className="flex items-start justify-between gap-4">
+                {/* Artwork metadata */}
+                <div className="flex items-start justify-between gap-4 md:pr-14">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-sans uppercase px-2.5 py-1 rounded text-stone-700 bg-stone-100">
                       {artCategories.find((c) => c.id === selectedItem.category)?.title}
@@ -499,9 +499,6 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                       </span>)}
                   </div>
 
-                  <button data-detail-close type="button" onClick={closeItemDetail} aria-label="Κλείσιμο παραθύρου" className="p-1.5 rounded-full transition bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900" title="Κλείσιμο (Esc)">
-                    <X className="w-5 h-5"/>
-                  </button>
                 </div>
 
                 {/* Title & Medium */}

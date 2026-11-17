@@ -6,7 +6,7 @@ import mediaHandler from "./netlify/functions/media";
 import wixProjectHandler from "./netlify/functions/wix-project";
 import vintedReviewsHandler from "./netlify/functions/vinted-reviews";
 import shopMetricsHandler from "./netlify/functions/shop-metrics";
-import { handleVideoTranscode } from "./server/video-transcode";
+import { authorizeVideoTranscode, handleVideoTranscode } from "./server/video-transcode";
 import {
   bridgedOrdersHandler,
   bridgedStripeConfirmHandler,
@@ -701,6 +701,7 @@ app.all("/.netlify/functions/wix-project", wrapWebHandler(wixProjectHandler));
 app.all(["/api/order-email-test", "/.netlify/functions/order-email-test"], bridgedOrderEmailTestHandler);
 app.post(
   ["/api/video-transcode", "/.netlify/functions/video-transcode"],
+  authorizeVideoTranscode,
   express.raw({ type: () => true, limit: "120mb" }),
   handleVideoTranscode
 );

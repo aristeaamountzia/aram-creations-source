@@ -1,4 +1,5 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
+import { requireAdmin } from './admin-database';
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -7,6 +8,20 @@ import os from "node:os";
 import path from "node:path";
 
 const execFileAsync = promisify(execFile);
+
+// Retained for authenticated local/native ffmpeg installations. Browser uploads
+// use the self-hosted worker and never send raw video to Netlify Functions.
+export async function authorizeVideoTranscode(req: Request, res: Response, next: NextFunction) {
+  const authorization = req.get('Authorization') || '';
+  if (!/^Bearer\s+\S+$/i.test(authorization)) return res.status(401).json({ error: 'Συνδέσου στο Back Office για μετατροπή βίντεο.' });
+  try {
+    await requireAdmin(new globalThis.Request('https://aramcreationsofficial.netlify.app/api/video-transcode', { headers: { authorization } }));
+  } catch (error) {
+    const denied = error instanceof Error && error.message === 'ADMIN_REQUIRED';
+    return res.status(denied ? 403 : 503).json({ error: denied ? 'Δεν επιτρέπεται η μετατροπή βίντεο.' : 'Η επαλήθευση διαχειριστή δεν είναι διαθέσιμη.' });
+  }
+  next();
+}
 
 export async function handleVideoTranscode(req: Request, res: Response) {
   const body = req.body;

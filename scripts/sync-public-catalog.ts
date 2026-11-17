@@ -1,4 +1,4 @@
-import { initializeApp, applicationDefault } from 'firebase-admin/app';
+import { initializeApp, applicationDefault, deleteApp as deleteAdminApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { syncPublicJewelry } from '../server/public-catalog-sync';
 
@@ -17,4 +17,4 @@ try {
     results[state] = (results[state] || 0) + 1;
   }
   console.log(JSON.stringify({ projectId, database: '(default)', records: ids.length, results }));
-} finally { await app.delete(); }
+} finally { await deleteAdminApp(app); }

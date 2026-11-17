@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { initializeApp as initializeAdmin, cert } from 'firebase-admin/app';
+import { initializeApp as initializeAdmin, cert, deleteApp as deleteAdminApp } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signOut } from 'firebase/auth';
@@ -29,4 +29,4 @@ try {
     console.log('PASS: real owner email test accepted by Resend.');
   }
   console.log('PASS: deployed admin authentication, order list, private backup list/download, path validation.');
-} finally { await signOut(auth); await deleteApp(app); await admin.delete(); }
+} finally { await signOut(auth); await deleteApp(app); await deleteAdminApp(admin); }

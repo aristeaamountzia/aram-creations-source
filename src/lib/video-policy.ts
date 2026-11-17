@@ -11,7 +11,10 @@ const VIDEO_CONTENT_TYPES: Record<string, string> = {
   mov: 'video/quicktime',
   mp4: 'video/mp4',
   ogv: 'video/ogg',
-  webm: 'video/webm'
+  webm: 'video/webm',
+  '3gp': 'video/3gpp', '3g2': 'video/3gpp2', mpeg: 'video/mpeg', mpg: 'video/mpeg',
+  m2v: 'video/mpeg', mts: 'video/mp2t', m2ts: 'video/mp2t', ts: 'video/mp2t',
+  flv: 'video/x-flv', wmv: 'video/x-ms-wmv', asf: 'video/x-ms-asf', ogg: 'video/ogg'
 };
 
 export function inferVideoContentType(file: { name?: string; type?: string }) {
@@ -21,7 +24,7 @@ export function inferVideoContentType(file: { name?: string; type?: string }) {
 }
 
 export function validateVideoInput(file: { size?: number; type?: string; name?: string }) {
-  const isVideo = Boolean(file?.type && file.type.startsWith('video/')) || Boolean(file?.name && /\.(mp4|webm|mov|m4v|mkv|avi|ogv)$/i.test(file.name));
+  const isVideo = Boolean(file && inferVideoContentType(file));
   if (!file || !isVideo || !file.size) throw new Error('Επίλεξε έγκυρο αρχείο βίντεο (MP4, WebM, MOV κ.α.).');
   if (file.size > VIDEO_INPUT_LIMIT) throw new Error('Το αρχικό βίντεο ξεπερνά το όριο 1 GB. Δεν θα ανέβει.');
 }

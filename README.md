@@ -5,18 +5,22 @@
 ## Τοπική εκτέλεση
 
 ```bash
-pnpm install
-pnpm dev
+npm ci
+npm run dev
 ```
 
 ## Έλεγχος και build
 
 ```bash
-pnpm lint
-pnpm build
+npm run check
+npm run build
 ```
 
 Το Netlify χρησιμοποιεί το `netlify.toml` και το API endpoint βρίσκεται στο `netlify/functions/api.ts`. Οι κανόνες Firebase είναι στα `firestore.rules` και `storage.rules`. Μεταβλητές περιβάλλοντος, όπως `GEMINI_API_KEY`, ρυθμίζονται στις υπηρεσίες και δεν αποθηκεύονται στο αποθετήριο.
+
+Το `prebuild` εκτελεί υποχρεωτικά TypeScript και `npm test` πριν από το build. Το Netlify καλεί την ίδια εντολή: αποτυχία ελέγχου σταματά τη δημοσίευση. Το test runner βρίσκει αυτόματα όλα τα offline `.test.ts` στα `server/` και `tests/`. Το credentialed integration παραμένει χωριστό (`npm run test:integration`) και απαιτεί ρητά τοπικά διαπιστευτήρια.
+
+Τα πλήρη backups και η διαδικασία επαναφοράς περιγράφονται στο [docs/BACKUP-RECOVERY.md](docs/BACKUP-RECOVERY.md). Η λήψη JSON περιέχει το ευρετήριο και τα δεδομένα· τα πραγματικά αντίγραφα αρχείων φυλάσσονται ιδιωτικά στο Storage.
 
 ## Κατάλογος και ασφαλής δημοσίευση
 
@@ -41,10 +45,14 @@ pnpm build
 
 - `useCatalogHistory.ts` και `CatalogHistoryDialog.tsx`: τοπική αναίρεση/επαναφορά, ιστορικό cloud και εμφάνιση εκδόσεων. Η επαναφορά περνά από τον κοινό μηχανισμό `src/lib/catalog-history.ts`, που προστατεύει ενεργές παραγγελίες και νεότερες αλλαγές.
 - `useVintedReviews.ts` και `VintedReviewsSettings.tsx`: συνδρομή στις αξιολογήσεις, συγχρονισμός με admin token και εμφάνιση προόδου/σφαλμάτων.
-- `image-processing.ts`: συμπίεση εικόνων με διατήρηση αναλογιών και αμετάβλητων GIF.
+- `image-processing.ts`: κοινή προετοιμασία εικόνων με διατήρηση αναλογιών και κινούμενων αρχείων. Οι μετατροπές HEIC/HEIF και παλιότερων εικόνων/βίντεο περιγράφονται στο [MEDIA-UPLOADS.md](docs/MEDIA-UPLOADS.md).
 - `catalog-config.ts` και `icons.tsx`: προεπιλογές/επιλογές καταλόγου και υπάρχοντα εικονίδια.
 
 Τα δύο hooks παραμένουν στο επίπεδο της `BackOfficeView`, ακόμη και όταν τα αντίστοιχα παράθυρα είναι κλειστά. Έτσι διατηρούνται οι συνδρομές, τα badges, οι εκκρεμείς συγχρονισμοί και η κατάσταση αναίρεσης κατά την εναλλαγή ενοτήτων. Οι νέες ενότητες ελέγχονται από το `npm run lint` χωρίς `@ts-nocheck`.
+
+Η φόρμα, οι μεταφορτώσεις, το Media Studio, οι μαζικές ενέργειες, τα φίλτρα, οι προτιμήσεις, το AI και το Vinted έχουν επίσης ξεχωριστούς controllers και dialog components. Στο `src/components/portfolio/` οργανώνονται αντίστοιχα κατάλογος/seed overrides, επιλογή, ιστορικό, φόρμα, AI, media και συναλλαγές Portfolio. Οι εγγραφές και το ιστορικό εξακολουθούν να αποθηκεύονται ατομικά.
+
+Κοινή βάση ρυθμίσεων για Shop, Back Office και Portfolio είναι το `src/shopSettings.ts`. Ο normalizer διατηρεί αποθηκευμένες τιμές, συμπληρώνει παλιότερα μερικά έγγραφα και χρησιμοποιεί την κοινή κανονικοποίηση μεταφορικών. Το minimal θέμα παραμένει ξεχωριστή ρητή επιλογή.
 
 ## AI Back Office
 

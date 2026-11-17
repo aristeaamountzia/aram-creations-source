@@ -13,6 +13,8 @@ export function shouldFetchStoredMediaBytes(url: string, pageOrigin: string) {
 }
 
 export const IMAGE_UPLOAD_LIMIT = 30 * 1024 * 1024;
+export const VIDEO_FILE_ACCEPT = 'video/*,.mp4,.m4v,.mov,.webm,.mkv,.avi,.ogv,.ogg,.3gp,.3g2,.mpeg,.mpg,.m2v,.mts,.m2ts,.ts,.flv,.wmv,.asf';
+export const MEDIA_FILE_ACCEPT = `image/*,.jpg,.jpeg,.jfif,.png,.webp,.gif,.avif,.heic,.heif,.hif,.bmp,.tif,.tiff,.svg,.ico,.psd,.jp2,.j2k,.jxl,${VIDEO_FILE_ACCEPT}`;
 
 const ascii = (bytes: Uint8Array, start: number, length: number) =>
   String.fromCharCode(...bytes.slice(start, start + length));
@@ -33,11 +35,13 @@ export function detectMediaSignature(bytes: Uint8Array): DetectedMedia | null {
   if (bytes.length >= 12 && ascii(bytes, 4, 4) === 'ftyp') {
     const brands = ascii(bytes, 8, Math.min(bytes.length - 8, 32));
     if (/avif|avis/.test(brands)) return { kind: 'image', mime: 'image/avif' };
+    if (/heic|heix|hevc|hevx|heim|heis|mif1|msf1/.test(brands)) return { kind: 'image', mime: 'image/heif' };
+    if (/3gp|3g2/.test(brands)) return { kind: 'video', mime: 'video/3gpp' };
     const brand = ascii(bytes, 8, 4);
     return { kind: 'video', mime: /qt  /.test(brand) ? 'video/quicktime' : 'video/mp4' };
   }
   if (bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
-    return { kind: 'video', mime: 'video/webm' };
+    return { kind: 'video', mime: ascii(bytes, 0, bytes.length).includes('webm') ? 'video/webm' : 'video/x-matroska' };
   }
   if (bytes.length >= 12 && ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'AVI ') {
     return { kind: 'video', mime: 'video/x-msvideo' };
@@ -45,6 +49,20 @@ export function detectMediaSignature(bytes: Uint8Array): DetectedMedia | null {
   if (bytes.length >= 4 && ascii(bytes, 0, 4) === 'OggS') {
     return { kind: 'video', mime: 'video/ogg' };
   }
+  if (ascii(bytes, 0, 2) === 'BM') return { kind: 'image', mime: 'image/bmp' };
+  if (['II*\x00', 'MM\x00*', 'II+\x00', 'MM\x00+'].includes(ascii(bytes, 0, 4))) return { kind: 'image', mime: 'image/tiff' };
+  if (bytes.length >= 4 && bytes[0] === 0 && bytes[1] === 0 && bytes[2] === 1 && bytes[3] === 0) return { kind: 'image', mime: 'image/x-icon' };
+  if (ascii(bytes, 0, 4) === '8BPS') return { kind: 'image', mime: 'image/vnd.adobe.photoshop' };
+  if (ascii(bytes, 4, 8) === 'jP  \r\n\x87\n' || (bytes[0] === 0xff && bytes[1] === 0x4f && bytes[2] === 0xff && bytes[3] === 0x51)) return { kind: 'image', mime: 'image/jp2' };
+  if ((bytes[0] === 0xff && bytes[1] === 0x0a) || ascii(bytes, 4, 8) === 'JXL \r\n\x87\n') return { kind: 'image', mime: 'image/jxl' };
+  const text = new TextDecoder().decode(bytes).replace(/^\uFEFF/, '').trimStart().replace(/^<\?xml[^>]*\?>\s*/i, '').replace(/^(?:<!--[\s\S]*?-->\s*)*/, '').replace(/^<!DOCTYPE\s+svg\s[^>]*>\s*/i, '');
+  if (/^<svg(?:\s|>)/i.test(text)) return { kind: 'image', mime: 'image/svg+xml' };
+  if (ascii(bytes, 0, 3) === 'FLV') return { kind: 'video', mime: 'video/x-flv' };
+  if (bytes.length >= 16 && bytes.slice(0, 16).every((b, i) => b === [0x30,0x26,0xb2,0x75,0x8e,0x66,0xcf,0x11,0xa6,0xd9,0,0xaa,0,0x62,0xce,0x6c][i])) return { kind: 'video', mime: 'video/x-ms-asf' };
+  if (bytes[0] === 0 && bytes[1] === 0 && bytes[2] === 1 && [0xba, 0xb3].includes(bytes[3])) return { kind: 'video', mime: 'video/mpeg' };
+  if ((bytes[0] === 0x47 && bytes[188] === 0x47) || (bytes[4] === 0x47 && bytes[196] === 0x47)) return { kind: 'video', mime: 'video/mp2t' };
+  // Older QuickTime files may start with a movie or media atom instead of ftyp.
+  if (['moov', 'mdat', 'wide'].includes(ascii(bytes, 4, 4))) return { kind: 'video', mime: 'video/quicktime' };
   return null;
 }
 
@@ -53,7 +71,7 @@ const declaredKind = (mime = ''): MediaKind | null =>
 
 export async function validateMediaFile(file: Blob & { name?: string }, expectedKind?: MediaKind) {
   if (!file?.size) throw new Error('Το αρχείο είναι κενό.');
-  const bytes = new Uint8Array(await file.slice(0, 64).arrayBuffer());
+  const bytes = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
   const detected = detectMediaSignature(bytes);
   if (!detected) throw new Error('Το πραγματικό περιεχόμενο του αρχείου δεν είναι υποστηριζόμενη εικόνα ή βίντεο.');
   if (detected.kind === 'image' && file.size > IMAGE_UPLOAD_LIMIT) throw new Error('Η εικόνα πρέπει να είναι έως 30 MB.');

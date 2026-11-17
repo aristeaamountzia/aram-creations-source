@@ -66,25 +66,25 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
         className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-stone-200 animate-fade-in cursor-default"
       >
         {/* Header with thumbnail */}
-        <div className="px-6 py-4 border-b border-stone-200 bg-stone-50 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="relative px-6 py-4 pr-20 border-b border-stone-200 bg-stone-50 flex items-start shrink-0">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             {currentMedia && (
               <div className="w-12 h-12 rounded-xl bg-stone-200 overflow-hidden shrink-0 border border-stone-300">
                 <img src={currentMedia.url} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" className="w-full h-full object-cover" />
               </div>
             )}
-            <div>
+            <div className="min-w-0">
               <span className="text-[10px] font-black uppercase tracking-wider text-stone-400">
                 {mode === 'shop' ? 'Shop Προϊόν' : 'Portfolio Έργο'}
               </span>
-              <h2 className="text-base font-black text-stone-900 leading-tight">{title}</h2>
+              <h2 className="text-base font-black text-stone-900 leading-tight break-words">{title}</h2>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Κλείσιμο"
-            className="p-1.5 text-stone-400 hover:text-stone-800 rounded-lg hover:bg-stone-200 transition"
+            className="absolute top-3 right-3 flex h-11 w-11 items-center justify-center text-stone-500 hover:text-stone-800 rounded-lg hover:bg-stone-200 transition"
           ><X className="w-4 h-4" /></button>
         </div>
 

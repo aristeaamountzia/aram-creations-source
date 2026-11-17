@@ -24,12 +24,16 @@
   },
   "include": [
     "src/**/*",
+    "server/**/*.ts",
+    "netlify/functions/**/*.ts",
+    "scripts/**/*.ts",
     "server.ts",
     "vite.config.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "*_*"
+    "*_*",
+    "**/*.test.ts"
   ]
 }

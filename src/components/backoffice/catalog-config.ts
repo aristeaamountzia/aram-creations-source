@@ -1,3 +1,5 @@
+import { DEFAULT_SHOP_SETTINGS } from '../../shopSettings';
+export { DEFAULT_SHOP_SETTINGS } from '../../shopSettings';
 import { DEFAULT_DESIGN_STUDIO } from '../../lib/design-studio';
 import { DEFAULT_PORTFOLIO_DESIGN } from '../../lib/portfolio-settings';
 import { isSoldItem } from '../../lib/stock-edit';
@@ -11,42 +13,6 @@ export const COLOR_SWATCHES = {
     'Διάφανο': '#f8fafc', 'Μαύρο': '#171717', 'Λευκό': '#f8fafc', 'Χρυσό': '#c9a35e',
     'Ασημί': '#cbd5e1', 'Κόκκινο': '#b91c1c', 'Μπλε': '#2563eb', 'Πράσινο': '#2f855a',
     'Ροζ': '#ec9fb4', 'Μωβ': '#8b5cf6', 'Κίτρινο': '#eab308', 'Πολύχρωμο': '#d1d5db'
-};
-export const DEFAULT_SHOP_SETTINGS = {
-    fontFamily: 'Jura',
-    primaryColor: '#18181b',
-    bgColor: '#fafaf9',
-    textColor: '#18181b',
-    heroBgColor: '#0c0a09',
-    heroTitleColor: '#ffffff',
-    heroSubtitleColor: '#a1a1aa',
-    heroTitleSize: 'text-3xl md:text-4xl',
-    borderRadius: '0.75rem',
-    heroTitle: 'Χειροποίητες Δημιουργίες',
-    heroSubtitle: 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.',
-    heroVideoUrl: '',
-    portfolioHeroVideoUrl: '',
-    portfolioDesign: DEFAULT_PORTFOLIO_DESIGN,
-    designStudio: DEFAULT_DESIGN_STUDIO,
-    announcementEnabled: false,
-    announcementText: '',
-    announcementLink: '',
-    catalogDensity: 'comfortable',
-    colorPalette: COLOR_SWATCHES,
-    categoryOrder: [...BASE_CATEGORIES, 'Άλλα'],
-    fallbackLinks: {
-        'Vinted': '', 'Wix': '', 'Instagram': '', 'Facebook': '', 'TikTok': '', 'Etsy': ''
-    },
-    aiAssistant: {
-        backofficeEndpoint: ''
-    },
-    shippingSettings: {
-        boxnowPrice: 2.50,
-        boxnowFreeThreshold: 45.00,
-        courierPrice: 4.00,
-        courierFreeThreshold: 50.00,
-        customNotes: ''
-    }
 };
 export const MINIMAL_SHOP_SETTINGS = {
     ...DEFAULT_SHOP_SETTINGS,

@@ -1,5 +1,6 @@
 import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from './lib/design-studio';
 import { DEFAULT_SHIPPING_SETTINGS, normalizeShippingSettings, type ShippingSettings } from './lib/shipping';
+import { DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, type PortfolioDesign } from './lib/portfolio-settings';
 export { DEFAULT_SHIPPING_SETTINGS, type ShippingSettings } from './lib/shipping';
 
 export interface ShopSettings {
@@ -13,10 +14,12 @@ export interface ShopSettings {
   heroTitleColor: string;
   heroSubtitleColor: string;
   heroTitleSize: string;
-  borderRadius: string;
+  borderRadius: string | number;
   heroTitle: string;
   heroSubtitle: string;
   heroVideoUrl: string;
+  portfolioHeroVideoUrl: string;
+  portfolioDesign: PortfolioDesign;
   announcementEnabled: boolean;
   announcementText: string;
   announcementLink: string;
@@ -43,6 +46,8 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   heroTitle: 'Χειροποίητα κοσμήματα & μοναδικές δημιουργίες',
   heroSubtitle: 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.',
   heroVideoUrl: '',
+  portfolioHeroVideoUrl: '',
+  portfolioDesign: DEFAULT_PORTFOLIO_DESIGN,
   announcementEnabled: false,
   announcementText: '',
   announcementLink: '',
@@ -62,7 +67,15 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   shippingSettings: DEFAULT_SHIPPING_SETTINGS
 };
 
-export function normalizeShopSettings(value: Partial<ShopSettings> | undefined): ShopSettings {
+export type ShopSettingsInput = Omit<Partial<ShopSettings>, 'shippingSettings' | 'portfolioDesign' | 'designStudio' | 'aiAssistant'> & {
+  shippingSettings?: Partial<ShippingSettings>;
+  portfolioDesign?: Partial<PortfolioDesign>;
+  designStudio?: Partial<DesignStudio>;
+  aiAssistant?: Partial<ShopSettings['aiAssistant']>;
+};
+
+/** One normalization path for the editor, public Shop and public Portfolio. */
+export function normalizeShopSettings(value?: ShopSettingsInput): ShopSettings {
   const data = value || {};
   return {
     ...DEFAULT_SHOP_SETTINGS,
@@ -72,6 +85,8 @@ export function normalizeShopSettings(value: Partial<ShopSettings> | undefined):
     fallbackLinks: { ...DEFAULT_SHOP_SETTINGS.fallbackLinks, ...(data.fallbackLinks || {}) },
     colorPalette: { ...DEFAULT_SHOP_SETTINGS.colorPalette, ...(data.colorPalette || {}) },
     aiAssistant: { ...DEFAULT_SHOP_SETTINGS.aiAssistant, ...(data.aiAssistant || {}) },
+    portfolioHeroVideoUrl: typeof data.portfolioHeroVideoUrl === 'string' ? data.portfolioHeroVideoUrl : '',
+    portfolioDesign: normalizePortfolioDesign(data.portfolioDesign),
     designStudio: normalizeDesignStudio(data.designStudio),
     shippingSettings: normalizeShippingSettings(data.shippingSettings)
   };

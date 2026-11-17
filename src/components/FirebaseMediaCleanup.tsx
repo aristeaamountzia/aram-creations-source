@@ -715,7 +715,7 @@ export function FirebaseMediaCleanup({
                   {executionSummary.backupSynced && (
                     <div className="text-[11px] text-emerald-800 font-medium pt-1 flex items-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
-                      <span>Δημιουργήθηκε αυτόματα νέο συγχρονισμένο Αντίγραφο Ασφαλείας (Backup Καταλόγου).</span>
+                      <span>Ξεκίνησε αυτόματα νέο αντίγραφο ασφαλείας. Η ολοκλήρωσή του εμφανίζεται στο Ιστορικό → Αντίγραφα ασφαλείας.</span>
                     </div>
                   )}
                   {executionSummary.failedDeletions.length > 0 && (

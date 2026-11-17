@@ -31,3 +31,33 @@ test('does not require CORS Range fetches for cross-origin Firebase media URLs',
   assert.equal(shouldFetchStoredMediaBytes('https://aramcreationsofficial.netlify.app/media/image.jpg', 'https://aramcreationsofficial.netlify.app'), true);
   assert.equal(shouldFetchStoredMediaBytes('http://localhost:9199/v0/b/example/o/image.jpg', 'http://localhost:5173'), true);
 });
+
+test('HEIC and HEIF brands are images rather than misclassified MP4 videos', async () => {
+  for (const brand of ['heic', 'heix', 'mif1', 'msf1']) {
+    const source = file([...Buffer.from(`0000ftyp${brand}0000${brand}`)], 'image/heic', `photo.${brand}`);
+    assert.deepEqual(await validateMediaFile(source, 'image'), { kind: 'image', mime: 'image/heif' });
+  }
+  assert.equal(detectMediaSignature(Buffer.from('0000ftypavif'))?.mime, 'image/avif');
+});
+
+test('recognizes common camera, design and legacy image signatures without trusting extensions', async () => {
+  const examples = [
+    [Buffer.from('BM000000'), 'image/bmp'], [Buffer.from('II*\x00'), 'image/tiff'],
+    [Buffer.from('MM\x00*'), 'image/tiff'], [Buffer.from([0, 0, 1, 0]), 'image/x-icon'],
+    [Buffer.from('8BPS0000'), 'image/vnd.adobe.photoshop'],
+    [Buffer.from('0000jP  \r\n\x87\n', 'binary'), 'image/jp2'],
+    [Buffer.from('\uFEFF<?xml version="1.0"?>\n<!-- artist --><svg xmlns="http://www.w3.org/2000/svg">'), 'image/svg+xml'],
+  ] as const;
+  for (const [bytes, mime] of examples) assert.equal(detectMediaSignature(bytes)?.mime, mime);
+  await assert.rejects(() => validateMediaFile(file([...Buffer.from('<html><svg>not a standalone image</svg></html>')], 'image/svg+xml', 'fake.svg')));
+});
+
+test('recognizes MKV, WebM, MPEG transport streams and FLV by content', () => {
+  const ebml = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
+  assert.equal(detectMediaSignature(Buffer.concat([ebml, Buffer.from('matroska')]))?.mime, 'video/x-matroska');
+  assert.equal(detectMediaSignature(Buffer.concat([ebml, Buffer.from('webm')]))?.mime, 'video/webm');
+  assert.equal(detectMediaSignature(Buffer.from('FLV\x01'))?.mime, 'video/x-flv');
+  const ts = new Uint8Array(400); ts[0] = ts[188] = 0x47;
+  assert.equal(detectMediaSignature(ts)?.mime, 'video/mp2t');
+  assert.equal(detectMediaSignature(Buffer.from([0,0,1,0xba]))?.mime, 'video/mpeg');
+});

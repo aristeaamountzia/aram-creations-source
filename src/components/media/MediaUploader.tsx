@@ -1,4 +1,5 @@
 import type { ChangeEvent, ReactNode } from 'react';
+import { MEDIA_FILE_ACCEPT } from '../../lib/media-validation';
 
 interface MediaUploaderProps {
   label: ReactNode;
@@ -21,7 +22,7 @@ export function MediaUploader({ label, help, disabled, inputClassName, onFiles }
       {help && <div className="mb-2 text-xs text-stone-500">{help}</div>}
       <input
         type="file"
-        accept="image/*,video/*"
+        accept={MEDIA_FILE_ACCEPT}
         multiple
         disabled={disabled}
         className={inputClassName || 'w-full border border-stone-300 rounded-lg px-4 py-2.5 bg-white cursor-pointer'}

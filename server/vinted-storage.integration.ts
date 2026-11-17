@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-import { initializeApp as initializeAdmin, cert } from 'firebase-admin/app';
+import { initializeApp as initializeAdmin, cert, deleteApp as deleteAdminApp } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signOut } from 'firebase/auth';
@@ -27,5 +27,5 @@ try {
   await setDoc(ref, { ...baseline, checkoutReservations: { order: 1 } });
   await assert.rejects(applyVintedRefresh(db, 'fixture', baseline, { stock: 0 }, collection));
   console.log('PASS: actual browser SDK authentication, Vinted price/status write, backup and concurrent-order protection.');
-} finally { await deleteDoc(ref).catch(() => {}); await signOut(auth); await terminate(db); await deleteApp(app); await admin.delete(); }
+} finally { await deleteDoc(ref).catch(() => {}); await signOut(auth); await terminate(db); await deleteApp(app); await deleteAdminApp(admin); }
 
