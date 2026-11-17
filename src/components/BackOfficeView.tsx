@@ -1,4 +1,20 @@
 // @ts-nocheck
+import {
+    IconPlus, IconSettings, IconTrash, IconEdit, IconEye, IconX, IconImage, IconGrid,
+    IconList, IconBox, IconDownload, IconClone, IconBolt, IconExternalLink,
+    IconGripVertical, IconUndo, IconCheck
+} from './backoffice/icons';
+import {
+    BASE_CATEGORIES, BASE_STATUSES, BASE_MATERIALS, BASE_PLATFORMS, BASE_COLORS,
+    COLOR_SWATCHES, DEFAULT_SHOP_SETTINGS, MINIMAL_SHOP_SETTINGS, isAvailableItem,
+    isUnavailableItem, splitTags, mergeUnique, getEffectiveQty, readStoredList,
+    writeStoredList, normalizeForMatch, CATEGORY_KEYWORD_HINTS
+} from './backoffice/catalog-config';
+import { compressImage, compressImageBlob } from './backoffice/image-processing';
+import { useCatalogHistory, buildHistoryEntryFromAction } from './backoffice/useCatalogHistory';
+import { CatalogHistoryDialog } from './backoffice/CatalogHistoryDialog';
+import { useVintedReviews } from './backoffice/useVintedReviews';
+import { VintedReviewsSettings } from './backoffice/VintedReviewsSettings';
 import { sanitizeVintedDescription as stripVintedCondition } from '../lib/vinted-sanitizer';
 import { assertUnchangedInventory, assertInventoryChangeAllowed, duplicateJewelryData, compareSoldLast, inventoryLabel, isSoldItem, stockForSelectedStatus } from '../lib/stock-edit';
 import { addJewelryItem, writeJewelryChanges } from '../lib/jewelry-store';
@@ -9,11 +25,10 @@ import { DesignStudioSettings } from './DesignStudioSettings';
 import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, validatePortfolioDesign } from '../lib/portfolio-settings';
 import { PortfolioHero, portfolioHeroVideoUrl, isKnownUnplayableHevcHeroUrl, TRANSCODED_HERO_H264_PATH } from './PortfolioHero';
-import { Check, X, Star, BadgeCheck, RefreshCw, MessageSquare, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Check, X, Star, RefreshCw, MessageSquare, ExternalLink, AlertTriangle } from 'lucide-react';
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { stageHistory, equalHistoryValue, persistHistory, loadHistory, restoreHistory } from '../lib/catalog-history';
+import { stageHistory, equalHistoryValue } from '../lib/catalog-history';
 import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notifications';
-import { CatalogBackups } from './CatalogBackups';
 import { CatalogExcelExport } from './CatalogExcelExport';
 import { FirebaseMediaCleanup } from './FirebaseMediaCleanup';
 import { OrdersManager } from './OrdersManager';
@@ -62,215 +77,8 @@ interface BackOfficeViewProps {
   onExit?: () => void;
 }
 
-        const IconPlus = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>;
-        const IconSettings = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>;
-        const IconTrash = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>;
-        const IconEdit = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>;
-        const IconEye = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>;
-        const IconX = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>;
-        const IconImage = () => <svg className="w-8 h-8 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>;
-        const IconGrid = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>;
-        const IconList = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>;
-        const IconBox = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>;
-        const IconDownload = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>;
-        const IconClone = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>;
-        const IconBolt = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>;
-        const IconExternalLink = () => <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>;
-        const IconGripVertical = () => <svg className="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M8 5v.01M8 12v.01M8 19v.01"></path></svg>;
-        const IconUndo = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>;
-        const IconCheck = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>;
 
-        const BASE_CATEGORIES = ['Κολιέ', 'Δαχτυλίδια', 'Σκουλαρίκια', 'Βραχιόλια', 'Καρφίτσες', 'Σετ', 'Θήκες Κινητών'];
-        const BASE_STATUSES = ['Διαθέσιμο', 'Κρατημένο', 'Πουλήθηκε', 'Μη διαθέσιμο', 'Δωρίστηκε', 'Προσωπική Συλλογή', 'Υπό Κατασκευή'];
-        const BASE_MATERIALS = ['Υγρό Γυαλί', 'Αποξηραμένα Άνθη', 'Φύλλα Χρυσού', 'Ασήμι 925', 'Ορείχαλκος', 'Ακρυλικά Χρώματα'];
-        const BASE_PLATFORMS = ['Vinted', 'Wix', 'Instagram', 'Facebook', 'TikTok', 'Etsy', 'Φυσικό Κατάστημα'];
-        const BASE_COLORS = ['Διάφανο', 'Μαύρο', 'Λευκό', 'Χρυσό', 'Ασημί', 'Κόκκινο', 'Μπλε', 'Πράσινο', 'Ροζ', 'Μωβ', 'Κίτρινο', 'Πολύχρωμο'];
-        const COLOR_SWATCHES = {
-            'Διάφανο': '#f8fafc', 'Μαύρο': '#171717', 'Λευκό': '#f8fafc', 'Χρυσό': '#c9a35e',
-            'Ασημί': '#cbd5e1', 'Κόκκινο': '#b91c1c', 'Μπλε': '#2563eb', 'Πράσινο': '#2f855a',
-            'Ροζ': '#ec9fb4', 'Μωβ': '#8b5cf6', 'Κίτρινο': '#eab308', 'Πολύχρωμο': '#d1d5db'
-        };
-        const DEFAULT_SHOP_SETTINGS = {
-            fontFamily: 'Jura',
-            primaryColor: '#18181b',
-            bgColor: '#fafaf9',
-            textColor: '#18181b',
-            heroBgColor: '#0c0a09',
-            heroTitleColor: '#ffffff',
-            heroSubtitleColor: '#a1a1aa',
-            heroTitleSize: 'text-3xl md:text-4xl',
-            borderRadius: '0.75rem',
-            heroTitle: 'Χειροποίητες Δημιουργίες',
-            heroSubtitle: 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.',
-            heroVideoUrl: '',
-            portfolioHeroVideoUrl: '',
-            portfolioDesign: DEFAULT_PORTFOLIO_DESIGN,
-            designStudio: DEFAULT_DESIGN_STUDIO,
-            announcementEnabled: false,
-            announcementText: '',
-            announcementLink: '',
-            catalogDensity: 'comfortable',
-            colorPalette: COLOR_SWATCHES,
-            categoryOrder: [...BASE_CATEGORIES, 'Άλλα'],
-            fallbackLinks: {
-                'Vinted': '', 'Wix': '', 'Instagram': '', 'Facebook': '', 'TikTok': '', 'Etsy': ''
-            },
-            aiAssistant: {
-                backofficeEndpoint: ''
-            },
-            shippingSettings: {
-                boxnowPrice: 2.50,
-                boxnowFreeThreshold: 45.00,
-                courierPrice: 4.00,
-                courierFreeThreshold: 50.00,
-                customNotes: ''
-            }
-        };
-        const MINIMAL_SHOP_SETTINGS = {
-            ...DEFAULT_SHOP_SETTINGS,
-            primaryColor: '#111111',
-            bgColor: '#ffffff',
-            textColor: '#111111',
-            heroBgColor: '#ffffff',
-            heroTitleColor: '#111111',
-            heroSubtitleColor: '#57534e',
-            borderRadius: '0.5rem',
-            heroTitleSize: 'text-2xl md:text-3xl'
-        };
-        const isAvailableItem = (item) => item.status === 'Διαθέσιμο' && (item.stock === undefined || item.stock === null || Number(item.stock) > 0);
-        const isUnavailableItem = (item) => !isAvailableItem(item) && !isSoldItem(item);
-        const splitTags = (value) => value.split(',').map(v => v.trim()).filter(Boolean);
-        const mergeUnique = (current = [], incoming = []) => Array.from(new Set([...current, ...incoming].filter(Boolean)));
-        const getEffectiveQty = (item) => Math.max(Number(item.stock || 0), 1);
-        const readStoredList = (key) => {
-            try {
-                const value = JSON.parse(localStorage.getItem(key) || '[]');
-                return Array.isArray(value) ? value.filter(Boolean) : [];
-            } catch (err) {
-                return [];
-            }
-        };
-        const writeStoredList = (key, value) => {
-            try {
-                localStorage.setItem(key, JSON.stringify(Array.from(new Set((value || []).filter(Boolean)))));
-            } catch (err) {}
-        };
-        const normalizeForMatch = (value = '') => value
-            .toString()
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[._\-_/]+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        const CATEGORY_KEYWORD_HINTS = {
-            'Κολιέ': ['κολιε', 'περιδεραιο', 'μενταγιον', 'αλυσιδα', 'λαιμου', 'necklace', 'pendant', 'choker', 'chain', 'collar'],
-            'Σκουλαρίκια': ['σκουλαρ', 'κρικοι', 'καρφωτα', 'αυτια', 'earring', 'earrings', 'studs', 'hoops', 'dangles', 'ear cuff'],
-            'Βραχιόλια': ['βραχιολ', 'χειροπεδα', 'bracelet', 'bangle', 'cuff'],
-            'Δαχτυλίδια': ['δαχτυλ', 'δαχτυλιδι', 'ring', 'rings'],
-            'Καρφίτσες': ['καρφιτ', 'παραμανα', 'brooch', 'pin', 'lapel pin'],
-            'Θήκες Κινητών': ['θηκη', 'κινητο', 'κινητου', 'τηλεφωνο', 'phone case', 'mobile case', 'case', 'phone', 'mobile'],
-            'Σετ': ['σετ', 'ζευγαρι', 'σετακι', 'set', 'combo', 'pair', 'bundle'],
-            'Μπρελόκ': ['μπρελοκ', 'κλειδια', 'keychain', 'key ring', 'keyring'],
-            'Γούρια': ['γουρι', 'τυχερο', 'charm', 'lucky charm', 'good luck'],
-            'Διακοσμητικά': ['διακοσμητικ', 'στολιδι', 'decor', 'decoration', 'ornament'],
-            'Σελιδοδείκτες': ['σελιδοδεικ', 'bookmark', 'book mark'],
-            'Μαγνητάκια': ['μαγνητ', 'magnet', 'fridge magnet']
-        };
 
-        // --- ΣΥΝΑΡΤΗΣΗ ΑΥΤΟΜΑΤΗΣ ΣΥΜΠΙΕΣΗΣ ΕΙΚΟΝΩΝ ---
-        const compressImage = async (file) => {
-            const detected = await validateMediaFile(file, 'image');
-            // Canvas converts animated GIFs into one still frame. Keep GIFs intact.
-            if (detected.mime === 'image/gif') {
-                if (file.size > 30 * 1024 * 1024) throw new Error('Το GIF πρέπει να είναι έως 30 MB.');
-                return file;
-            }
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onerror = () => reject(new Error('Δεν διαβάστηκε η εικόνα.'));
-                reader.onabort = () => reject(new Error('Η ανάγνωση εικόνας ακυρώθηκε.'));
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.onerror = () => reject(new Error('Δεν άνοιξε η εικόνα. Επίλεξε έγκυρο JPG, PNG, WebP, AVIF ή GIF.'));
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        const max_size = 1200;
-
-                        if (width > height) {
-                            if (width > max_size) {
-                                height *= max_size / width;
-                                width = max_size;
-                            }
-                        } else {
-                            if (height > max_size) {
-                                width *= max_size / height;
-                                height = max_size;
-                            }
-                        }
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        if (!ctx) { reject(new Error('Δεν ξεκίνησε η επεξεργασία εικόνας.')); return; }
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(0, 0, width, height);
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        canvas.toBlob((blob) => {
-                            if (!blob?.size) { reject(new Error('Δεν δημιουργήθηκε έγκυρη εικόνα.')); return; }
-                            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
-                                type: 'image/jpeg',
-                                lastModified: Date.now()
-                            });
-                            resolve(compressedFile);
-                        }, 'image/jpeg', 0.8);
-                    };
-                };
-            });
-        };
-
-        const compressImageBlob = async (blob, maxSize = 1400, quality = 0.85) => {
-            if (!blob || !/^image\//i.test(blob.type || '')) return blob;
-            if (blob.type === 'image/gif') return blob;
-
-            return new Promise((resolve, reject) => {
-                const objectUrl = URL.createObjectURL(blob);
-                const img = new Image();
-                img.onload = () => {
-                    try {
-                        let width = img.naturalWidth || img.width;
-                        let height = img.naturalHeight || img.height;
-                        const ratio = Math.min(1, maxSize / Math.max(width, height));
-                        width = Math.max(1, Math.round(width * ratio));
-                        height = Math.max(1, Math.round(height * ratio));
-
-                        const canvas = document.createElement('canvas');
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(0, 0, width, height);
-                        ctx.drawImage(img, 0, 0, width, height);
-                        canvas.toBlob((compressedBlob) => {
-                            URL.revokeObjectURL(objectUrl);
-                            resolve(compressedBlob || blob);
-                        }, 'image/jpeg', quality);
-                    } catch (err) {
-                        URL.revokeObjectURL(objectUrl);
-                        reject(new Error('Δεν συμπιέστηκε η εικόνα.'));
-                    }
-                };
-                img.onerror = () => {
-                    URL.revokeObjectURL(objectUrl);
-                    reject(new Error('Η εικόνα δεν αποκωδικοποιείται.'));
-                };
-                img.src = objectUrl;
-            });
-        };
 
         export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
             const [activeCollection, setActiveCollection] = useState<'jewelry' | 'portfolio' | 'orders'>('jewelry');
@@ -288,30 +96,8 @@ interface BackOfficeViewProps {
             const [catalogRetryKey, setCatalogRetryKey] = useState(0);
             const [settingsLoadError, setSettingsLoadError] = useState('');
             const [isSaving, setIsSaving] = useState(false);
-            const [undoStack, setUndoStack] = useState([]);
-            const [redoStack, setRedoStack] = useState([]);
-            const [showUndoToast, setShowUndoToast] = useState(false);
-            const [showRedoToast, setShowRedoToast] = useState(false);
-            const [versionHistory, setVersionHistory] = useState(() => {
-                try {
-                    const stored = JSON.parse(localStorage.getItem('aram_version_history') || '[]');
-                    return Array.isArray(stored) ? stored : [];
-                } catch (err) {
-                    return [];
-                }
-            });
-            const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-            const [historySaveError, setHistorySaveError] = useState('');
-            useEffect(() => {
-                if (!firebaseReady || !currentUser) return;
-                return onSnapshot(query(collection(db, 'catalogHistory'), orderBy('timestamp', 'desc'), limit(100)), snapshot => {
-                    setVersionHistory(previous => {
-                        const cloud = snapshot.docs.map(row => row.data());
-                        const signatures = new Set(cloud.map(row => `${row.timestamp}|${row.type}|${row.id}`));
-                        return [...cloud, ...previous.filter(row => !row.cloudId && !signatures.has(`${row.timestamp}|${row.type}|${row.id}`))].sort((a,b) => String(b.timestamp).localeCompare(String(a.timestamp))).slice(0,200);
-                    });
-                }, () => setHistorySaveError('Δεν φορτώθηκε το ιστορικό από το cloud.'));
-            }, [firebaseReady, currentUser]);
+            const catalogHistory = useCatalogHistory(firebaseReady, currentUser);
+            const { versionHistory, isHistoryOpen, setIsHistoryOpen, lastAction, redoAction, showUndoToast, setShowUndoToast, showRedoToast, setShowRedoToast, pushVersionHistory, pushUndoAction, handleUndo, handleRedo } = catalogHistory;
 
             const [statsFilter, setStatsFilter] = useState('all');
             const [uploadProgress, setUploadProgress] = useState(0);
@@ -364,80 +150,10 @@ interface BackOfficeViewProps {
             const [lassoRect, setLassoRect] = useState(null);
 
             // --- VINTED REVIEWS STATE ---
-            const [vintedReviewsData, setVintedReviewsData] = useState({
-                stats: {
-                    memberId: '231329281',
-                    login: 'aramcreations',
-                    feedbackCount: 10,
-                    positiveFeedbackCount: 10,
-                    ratingScore: 5.0,
-                    itemCount: 106,
-                    lastUpdated: ''
-                },
-                reviews: []
-            });
-            const [isSyncingVintedReviews, setIsSyncingVintedReviews] = useState(false);
-            const [vintedSyncStep, setVintedSyncStep] = useState('');
-            const [vintedSyncPercent, setVintedSyncPercent] = useState(0);
-            const [vintedSyncError, setVintedSyncError] = useState(null);
-            const [vintedSyncSuccess, setVintedSyncSuccess] = useState(null);
+            const vintedReviews = useVintedReviews();
+            const { vintedReviewsData } = vintedReviews;
 
-            useEffect(() => {
-                const unsubscribe = onSnapshot(doc(db, 'settings', 'vinted_reviews'), (snapshot) => {
-                    if (snapshot.exists()) {
-                        const data = snapshot.data();
-                        setVintedReviewsData(prev => ({
-                            stats: data.stats || prev.stats,
-                            reviews: Array.isArray(data.reviews) ? data.reviews : prev.reviews
-                        }));
-                    }
-                }, () => {});
-                return () => unsubscribe();
-            }, []);
 
-            const handleSyncVintedReviews = async () => {
-                setIsSyncingVintedReviews(true);
-                setVintedSyncError(null);
-                setVintedSyncSuccess(null);
-                setVintedSyncPercent(15);
-                setVintedSyncStep('1/3: Σύνδεση με Vinted (@aramcreations)...');
-
-                try {
-                    setVintedSyncPercent(45);
-                    setVintedSyncStep('2/3: Ανάκτηση κριτικών και βαθμολογιών...');
-                    
-                    if (!auth.currentUser) throw new Error('Συνδέσου ξανά στο Back Office.');
-                    const response = await fetch('/api/vinted-reviews/sync', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await auth.currentUser.getIdToken()}` },
-                        body: JSON.stringify({ memberId: '231329281' })
-                    });
-                    
-                    const payload = await response.json().catch(() => null);
-                    
-                    if (!response.ok || !payload?.ok) {
-                        throw new Error(payload?.error || `Σφάλμα απόκρισης server (${response.status})`);
-                    }
-
-                    setVintedSyncPercent(85);
-                    setVintedSyncStep('3/3: Ενημέρωση και αποθήκευση στο Firestore...');
-                    
-                    setVintedReviewsData({
-                        stats: payload.stats,
-                        reviews: payload.reviews
-                    });
-                    
-                    setVintedSyncPercent(100);
-                    setVintedSyncStep('Ολοκληρώθηκε επιτυχώς!');
-                    setVintedSyncSuccess(`Συγχρονίστηκαν ${payload.reviews.length} αξιολογήσεις με βαθμολογία ${payload.stats.ratingScore || 5.0}!`);
-                    notifyOperationSuccess('Συγχρονισμός Vinted', `Συγχρονίστηκαν ${payload.reviews.length} αξιολογήσεις με βαθμολογία ${payload.stats.ratingScore || 5.0}!`);
-                } catch (err) {
-                    setVintedSyncError(err.message || 'Αποτυχία συγχρονισμού αξιολογήσεων Vinted');
-                    notifyOperationError('Σφάλμα Συγχρονισμού Vinted', err.message || 'Αποτυχία συγχρονισμού αξιολογήσεων Vinted');
-                } finally {
-                    setIsSyncingVintedReviews(false);
-                }
-            };
             const lassoStartRef = useRef(null);
             const lassoBaseSelectionRef = useRef([]);
             const productGridRef = useRef(null);
@@ -598,77 +314,9 @@ interface BackOfficeViewProps {
             const [isCustomCollection, setIsCustomCollection] = useState(false);
             const [isCustomStatus, setIsCustomStatus] = useState(false);
 
-            const lastAction = undoStack[undoStack.length - 1] || null;
-            const redoAction = redoStack[redoStack.length - 1] || null;
 
-            const pushVersionHistory = (entry) => {
-                const historyEntry = {
-                    ...entry,
-                    localId: crypto.randomUUID(),
-                    timestamp: new Date().toISOString()
-                };
-                void persistHistory(db, historyEntry).catch(() => setHistorySaveError('Η αλλαγή έγινε, αλλά το ιστορικό δεν αποθηκεύτηκε στο cloud. Κράτησε ένα backup.'));
-                setVersionHistory(prev => {
-                    const next = [historyEntry, ...prev].slice(0, 200);
-                    try {
-                        localStorage.setItem('aram_version_history', JSON.stringify(next));
-                    } catch (err) {}
-                    return next;
-                });
-            };
 
-            const buildHistoryEntryFromAction = (action, typeOverride) => {
-                const actionType = typeOverride || action.type || 'ACTION';
-                const base = {
-                    type: actionType,
-                    id: action.id || '',
-                    name: action.name || action.message || 'Ενέργεια backoffice',
-                    message: action.message || 'Ενέργεια backoffice'
-                };
 
-                if (action.type === 'DELETE') {
-                    return {
-                        ...base,
-                        name: action.data?.name || base.name,
-                        before: action.data || null,
-                        after: null
-                    };
-                }
-
-                if (action.type === 'UPDATE') {
-                    return {
-                        ...base,
-                        before: action.oldData || action.data || null,
-                        after: { ...(action.oldData || {}), ...(action.newData || action.data || {}) }
-                    };
-                }
-
-                if (action.type === 'BULK_UPDATE') {
-                    return {
-                        ...base,
-                        before: (action.items || []).map(item => ({ id: item.id, ...(item.oldData || {}) })),
-                        after: (action.items || []).map(item => ({ id: item.id, ...(item.oldData || {}), ...(item.newData || {}) }))
-                    };
-                }
-
-                if (action.type === 'BULK_DELETE') {
-                    return {
-                        ...base,
-                        before: (action.items || []).map(item => ({ ...(item.data || item), id: item.id || item.data?.id })),
-                        after: null
-                    };
-                }
-
-                return base;
-            };
-
-            const pushUndoAction = (action, shouldLogHistory = true) => {
-                setUndoStack(prev => [...prev, action].slice(-20));
-                setRedoStack([]);
-                setShowUndoToast(true);
-                setShowRedoToast(false);
-                if (shouldLogHistory && action.type !== 'DELETE') pushVersionHistory(buildHistoryEntryFromAction(action));
-            };
 
             const stripClientId = (data = {}) => {
                 const { id, ...docData } = data;
@@ -733,17 +381,7 @@ interface BackOfficeViewProps {
             useEffect(() => writeStoredList('aram_hidden_color_options', hiddenColorOptions), [hiddenColorOptions]);
             useEffect(() => writeStoredList('aram_hidden_material_options', hiddenMaterialOptions), [hiddenMaterialOptions]);
 
-            useEffect(() => {
-                if (!showUndoToast) return;
-                const timer = setTimeout(() => setShowUndoToast(false), 6500);
-                return () => clearTimeout(timer);
-            }, [showUndoToast, lastAction?.message]);
 
-            useEffect(() => {
-                if (!showRedoToast) return;
-                const timer = setTimeout(() => setShowRedoToast(false), 6500);
-                return () => clearTimeout(timer);
-            }, [showRedoToast, redoAction?.message]);
 
             useEffect(() => {
                 if (!firebaseReady || !currentUser) return;
@@ -3543,89 +3181,10 @@ interface BackOfficeViewProps {
                 }
             };
 
-            const handleUndo = async () => {
-                if (!lastAction) return;
-                try {
-                    const original = buildHistoryEntryFromAction(lastAction);
-                    await restoreHistory(db, original);
-                    setUndoStack(prev => prev.slice(0, -1));
-                    setRedoStack(prev => [...prev, lastAction].slice(-20));
-                    setShowUndoToast(false);
-                    setShowRedoToast(true);
-                    pushVersionHistory({
-                        ...buildHistoryEntryFromAction(lastAction, 'UNDO'), before: original.after || null, after: original.before || null,
-                        message: 'Αναίρεση: ' + (lastAction.message || 'ενέργεια backoffice')
-                    });
-                    notifyOperationSuccess('Αναίρεση', 'Η ενέργεια αναιρέθηκε επιτυχώς.');
-                } catch (err) {
-                    alert("Σφάλμα αναίρεσης: " + err.message);
-                }
-            };
 
-            const handleRedo = async () => {
-                if (!redoAction) return;
-                try {
-                    const original = buildHistoryEntryFromAction(redoAction);
-                    await restoreHistory(db, { ...original, before: original.after, after: original.before });
-                    setRedoStack(prev => prev.slice(0, -1));
-                    setUndoStack(prev => [...prev, redoAction].slice(-20));
-                    setShowRedoToast(false);
-                    setShowUndoToast(true);
-                    pushVersionHistory({
-                        ...buildHistoryEntryFromAction(redoAction, 'REDO'),
-                        message: 'Επαναφορά: ' + (redoAction.message || 'ενέργεια backoffice')
-                    });
-                    notifyOperationSuccess('Επαναφορά', 'Η ενέργεια επανήλθε επιτυχώς.');
-                } catch (err) {
-                    alert("Σφάλμα επαναφοράς: " + err.message);
-                }
-            };
 
-            const handleRestoreVersion = async (entry) => {
-                if (!entry?.before || !entry.id) return;
-                if (!window.confirm('Να επαναφερθεί αυτή η προηγούμενη έκδοση;')) return;
-                try {
-                    const loaded = await loadHistory(db, entry);
-                    await restoreHistory(db, loaded);
-                    pushVersionHistory({ type: 'HISTORY_RESTORE', collection: loaded.collection || 'jewelry', id: loaded.id, message: 'Επαναφορά προηγούμενης έκδοσης', before: loaded.after, after: loaded.before });
-                    setIsHistoryOpen(false);
-                } catch (err) {
-                    alert("Αποτυχία επαναφοράς έκδοσης: " + err.message);
-                }
-            };
 
-            const canRestoreHistoryEntry = (entry) => {
-                if (entry?.cloudId) return entry.hasBefore || ['ADD', 'BULK_DUPLICATE'].includes(entry.type);
-                if (!entry) return false;
-                if ((entry.type === 'ADD' || entry.type === 'BULK_DUPLICATE') && (entry.after?.id || (Array.isArray(entry.after) && entry.after.length))) return true;
-                if (entry.id && entry.before) return true;
-                if (Array.isArray(entry.before) && entry.before.length) return true;
-                return false;
-            };
 
-            const handleRestoreHistoryEntry = async (entry) => {
-                if (!canRestoreHistoryEntry(entry)) {
-                    alert('Δεν υπάρχουν αρκετά δεδομένα σε αυτή την εγγραφή ιστορικού για επαναφορά.');
-                    return;
-                }
-                if (!window.confirm('Να γίνει επαναφορά αυτής της ενέργειας;')) return;
-                try {
-                    entry = await loadHistory(db, entry);
-                    await restoreHistory(db, entry);
-                    pushVersionHistory({
-                        type: 'HISTORY_RESTORE',
-                        collection: entry.collection || 'jewelry',
-                        id: entry.id || '',
-                        name: entry.name || 'Επαναφορά ιστορικού',
-                        message: 'Έγινε επαναφορά από το ιστορικό: ' + (entry.message || entry.type || 'ενέργεια'),
-                        before: entry.after || null,
-                        after: entry.type === 'BULK_DUPLICATE' ? null : entry.before || null
-                    });
-                    setIsHistoryOpen(false);
-                } catch (err) {
-                    alert("Αποτυχία επαναφοράς ιστορικού: " + err.message);
-                }
-            };
 
             const handleReorderProducts = async ({ movingIds, placement, targetId }) => {
                 const updates = getGroupShopOrderUpdates({ movingIds, placement, targetId });
@@ -6237,146 +5796,7 @@ interface BackOfficeViewProps {
                                         </div>
                                     )}
 
-                                    {activeSettingsTab === 'reviews' && (
-                                        <div className="animate-fade-in space-y-6">
-                                            <div className="rounded-2xl border border-teal-200 bg-linear-to-r from-teal-50 to-emerald-50 p-4.5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="w-2 h-2 rounded-full bg-teal-600"></span>
-                                                        <h3 className="text-sm font-black text-teal-950 uppercase tracking-wider">Αξιολογήσεις & Φήμη Vinted</h3>
-                                                    </div>
-                                                    <p className="text-xs text-teal-800 leading-relaxed max-w-2xl">
-                                                        Διαχείριση και αυτόματος συγχρονισμός των αξιολογήσεων από το επίσημο προφίλ <strong>aramcreations</strong> στο Vinted. Οι κριτικές προβάλλονται αυτόματα στη βιτρίνα του καταστήματος.
-                                                    </p>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={handleSyncVintedReviews}
-                                                    disabled={isSyncingVintedReviews}
-                                                    className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 shadow-xs disabled:opacity-50 shrink-0"
-                                                >
-                                                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingVintedReviews ? 'animate-spin' : ''}`} />
-                                                    <span>{isSyncingVintedReviews ? 'Συγχρονισμός...' : 'Συγχρονισμός Vinted'}</span>
-                                                </button>
-                                            </div>
-
-                                            {/* Progress or Status Feedback (Rule 2) */}
-                                            {isSyncingVintedReviews && (
-                                                <div className="p-4 bg-teal-50/80 border border-teal-200 rounded-2xl space-y-2 animate-fade-in">
-                                                    <div className="flex items-center justify-between text-xs font-bold text-teal-950">
-                                                        <span>{vintedSyncStep}</span>
-                                                        <span>{vintedSyncPercent}%</span>
-                                                    </div>
-                                                    <div className="w-full bg-teal-100 rounded-full h-2 overflow-hidden">
-                                                        <div
-                                                            className="bg-teal-600 h-full transition-all duration-300 rounded-full"
-                                                            style={{ width: `${vintedSyncPercent}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {vintedSyncError && (
-                                                <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs space-y-1 animate-fade-in">
-                                                    <div className="font-bold flex items-center gap-2">
-                                                        <X className="w-4 h-4 text-rose-600 shrink-0" />
-                                                        <span>Σφάλμα συγχρονισμού Vinted:</span>
-                                                    </div>
-                                                    <p className="font-mono text-[11px] text-rose-900 bg-white/70 p-2 rounded-lg border border-rose-200">
-                                                        {vintedSyncError}
-                                                    </p>
-                                                </div>
-                                            )}
-
-                                            {vintedSyncSuccess && (
-                                                <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-xs animate-fade-in">
-                                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span>{vintedSyncSuccess}</span>
-                                                </div>
-                                            )}
-
-                                            {/* Metrics Cards */}
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                                <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-2xs">
-                                                    <span className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Βαθμολογία</span>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-2xl font-bold font-mono text-stone-900">{vintedReviewsData.stats.ratingScore || 5.0}</span>
-                                                        <div className="flex text-amber-500">
-                                                            {[...Array(5)].map((_, i) => (
-                                                                <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-2xs">
-                                                    <span className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Σύνολο Κριτικών</span>
-                                                    <span className="text-2xl font-bold font-mono text-stone-900">{vintedReviewsData.stats.feedbackCount || 10}</span>
-                                                    <span className="text-[10px] text-stone-500 block">100% Θετικές</span>
-                                                </div>
-
-                                                <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-2xs">
-                                                    <span className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Ενεργά Προϊόντα</span>
-                                                    <span className="text-2xl font-bold font-mono text-stone-900">{vintedReviewsData.stats.itemCount || 106}</span>
-                                                    <span className="text-[10px] text-stone-500 block">Κατάλογος Vinted</span>
-                                                </div>
-
-                                                <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-2xs">
-                                                    <span className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Προφίλ Vinted</span>
-                                                    <a
-                                                        href={`https://www.vinted.gr/member/${vintedReviewsData.stats.memberId || '231329281'}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-xs font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1 mt-1 truncate"
-                                                    >
-                                                        <span>@{vintedReviewsData.stats.login || 'aramcreations'}</span>
-                                                        <ExternalLink className="w-3 h-3 shrink-0" />
-                                                    </a>
-                                                </div>
-                                            </div>
-
-                                            {/* Reviews List */}
-                                            <section className="bg-white border border-stone-200 rounded-2xl p-5 shadow-2xs space-y-4">
-                                                <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                                                    <div>
-                                                        <h4 className="text-xs font-black uppercase tracking-wider text-stone-900">
-                                                            Αποθηκευμένες Αξιολογήσεις ({vintedReviewsData.reviews.length || 10})
-                                                        </h4>
-                                                        <p className="text-[11px] text-stone-500">
-                                                            Όλες οι κριτικές ελέγχονται αυτόματα και αφαιρούνται τα τυποποιημένα μηνύματα κατάστασης.
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                                                    {(vintedReviewsData.reviews.length > 0 ? vintedReviewsData.reviews : [
-                                                        { id: 1, userLogin: 'vasileiasefer', rating: 5, formattedDate: '27 Οκτωβρίου 2026', feedback: 'Τα προϊόντα έφτασαν σε τέλεια κατάσταση, η συσκευασία τους πολύ προσεγμένη και με οδηγίες χρήσης για το πώς να τα προσέξω.', sellerReply: 'Σας ευχαριστώ πολύ!' },
-                                                        { id: 2, userLogin: 'piscesismysign', rating: 5, formattedDate: '26 Σεπτεμβρίου 2026', feedback: 'Το κολιέ είναι πραγματικά πανέμορφο! Το λουλούδι το κάνει πολύ ξεχωριστό και φαίνεται ακόμη πιο όμορφο από κοντά. Πολύ προσεγμένη δουλειά και λεπτομέρεια.', sellerReply: 'Ευχαριστώ πολύ!' },
-                                                        { id: 3, userLogin: 'zoioulia', rating: 5, formattedDate: '10 Σεπτεμβρίου 2026', feedback: 'Ολα τέλεια, ευχαριστώ!', sellerReply: 'Εγώ ευχαριστώ πολύ!' },
-                                                        { id: 4, userLogin: 'alkistisgln', rating: 5, formattedDate: '7 Σεπτεμβρίου 2026', feedback: 'Τέλειο το κολιέ και πολύ καλή συσκευασία', sellerReply: 'Ευχαριστώ πάρα πολύ!' },
-                                                        { id: 5, userLogin: 'dosdosss', rating: 5, formattedDate: '3 Σεπτεμβρίου 2026', feedback: 'Άμεση αποστολή, τέλειο κολιέ και μου έβαλε και δωράκι ένα μπρελόκ! θα ξαναπάρω σίγουρα.', sellerReply: 'Ευχαριστώ πάρα πολύ!' }
-                                                    ]).map((rev, idx) => (
-                                                        <div key={rev.id || idx} className="p-3.5 rounded-xl border border-stone-100 bg-stone-50/60 text-xs space-y-1.5">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-bold text-stone-900">{rev.userLogin}</span>
-                                                                    <BadgeCheck className="w-3.5 h-3.5 text-teal-600" />
-                                                                    <span className="text-[10px] text-stone-400">{rev.formattedDate}</span>
-                                                                </div>
-                                                                <div className="flex text-amber-500">
-                                                                    {[...Array(rev.rating || 5)].map((_, i) => (
-                                                                        <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                            <p className="text-stone-700 italic">"{rev.feedback}"</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </section>
-                                        </div>
-                                    )}
+                                    {activeSettingsTab === 'reviews' && (<VintedReviewsSettings {...vintedReviews} />)}
                                 </div>
 
                                 <div className="p-4 border-t border-stone-200 bg-stone-50 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -6661,47 +6081,7 @@ interface BackOfficeViewProps {
                             onClose={() => setVintedPreviewImage(null)} />
                     )}
 
-                    {isHistoryOpen && (
-                        <div onClick={(e) => { if (e.target === e.currentTarget) setIsHistoryOpen(false); }} className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 cursor-pointer overflow-y-auto">
-                            <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden border border-stone-200 cursor-default animate-fade-in">
-                                <div className="p-5 border-b border-stone-100 bg-amber-50 flex items-center justify-between">
-                                    <div>
-                                        <h2 className="text-lg font-black text-stone-800">Ιστορικό εκδόσεων</h2>
-                                        <p className="text-xs font-bold text-stone-500">Τελευταίες {versionHistory.length} αλλαγές. Οι νέες καταγραφές αποθηκεύονται ιδιωτικά στο cloud· το παλαιότερο τοπικό ιστορικό παραμένει σε αυτόν τον browser.</p>
-                                    </div>
-                                    <button onClick={() => setIsHistoryOpen(false)} className="text-stone-500 hover:text-stone-900 bg-white p-1 rounded-lg border border-stone-200"><IconX /></button>
-                                </div>
-                                <div className="max-h-[60vh] overflow-y-auto p-5 space-y-3">
-                                    <CatalogBackups />
-                        {historySaveError && <p role="alert" className="p-3 text-sm text-rose-700">{historySaveError}</p>}
-                        {versionHistory.length === 0 && (
-                                        <div className="text-center p-10 text-stone-400 font-bold border border-dashed border-stone-200 rounded-xl">Δεν υπάρχει ακόμη ιστορικό εκδόσεων.</div>
-                                    )}
-                                    {versionHistory.map((entry, idx) => (
-                                        <div key={`${entry.timestamp}-${entry.id}-${idx}`} className="border border-stone-200 rounded-xl p-4 bg-white flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                                            <div>
-                                                <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-black uppercase tracking-wider bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">{entry.type}</span>
-                                                    <span className="text-xs text-stone-400">{new Date(entry.timestamp).toLocaleString('el-GR')}</span>
-                                                </div>
-                                                <p className="font-black text-stone-800">{entry.name || 'Προϊόν'}</p>
-                                                <p className="text-xs text-stone-500">{entry.message || 'Αλλαγή έκδοσης'}</p>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button onClick={() => handleRestoreHistoryEntry(entry)} disabled={!canRestoreHistoryEntry(entry)} className="px-4 py-2 bg-stone-900 text-white rounded-lg text-xs font-bold hover:bg-stone-800 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                                                        Επαναφορά
-                                                    </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="p-5 border-t border-stone-100 bg-stone-50 flex justify-between gap-3">
-                                    <button onClick={() => { if (window.confirm('Να καθαριστεί μόνο το τοπικό ιστορικό; Οι εγγραφές cloud διατηρούνται.')) { setVersionHistory(previous => previous.filter(entry => entry.cloudId)); localStorage.removeItem('aram_version_history'); } }} className="px-4 py-2 bg-white border border-stone-200 text-stone-500 rounded-lg text-xs font-bold hover:bg-stone-100 transition">Καθαρισμός τοπικού ιστορικού</button>
-                                    <button onClick={() => setIsHistoryOpen(false)} className="px-6 py-2.5 bg-stone-900 text-white rounded-lg text-sm font-bold hover:bg-stone-800 transition">Κλείσιμο</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <CatalogHistoryDialog {...catalogHistory} />
 
 
                     {showUndoToast && lastAction && (

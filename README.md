@@ -35,6 +35,17 @@ pnpm build
 
 Τα backups καταλόγου αποθηκεύουν εγγραφές και συνδέσμους media, όχι αντίγραφα των ίδιων των αρχείων ή πλήρες backup παραγγελιών/ιστορικού. Ο καθαρισμός επανελέγχει τις αναφορές και διατηρεί αρχεία που χρειάζονται το πρόσφατο ιστορικό και οι τρέχουσες εγγραφές. Αποφύγετε παράλληλη επαναφορά/upload κατά τη διαγραφή: Firestore και Storage δεν υποστηρίζουν κοινή ατομική συναλλαγή.
 
+## Δομή Back Office
+
+Η `BackOfficeView.tsx` συντονίζει τις ενότητες του Back Office. Στον φάκελο `src/components/backoffice/` βρίσκονται:
+
+- `useCatalogHistory.ts` και `CatalogHistoryDialog.tsx`: τοπική αναίρεση/επαναφορά, ιστορικό cloud και εμφάνιση εκδόσεων. Η επαναφορά περνά από τον κοινό μηχανισμό `src/lib/catalog-history.ts`, που προστατεύει ενεργές παραγγελίες και νεότερες αλλαγές.
+- `useVintedReviews.ts` και `VintedReviewsSettings.tsx`: συνδρομή στις αξιολογήσεις, συγχρονισμός με admin token και εμφάνιση προόδου/σφαλμάτων.
+- `image-processing.ts`: συμπίεση εικόνων με διατήρηση αναλογιών και αμετάβλητων GIF.
+- `catalog-config.ts` και `icons.tsx`: προεπιλογές/επιλογές καταλόγου και υπάρχοντα εικονίδια.
+
+Τα δύο hooks παραμένουν στο επίπεδο της `BackOfficeView`, ακόμη και όταν τα αντίστοιχα παράθυρα είναι κλειστά. Έτσι διατηρούνται οι συνδρομές, τα badges, οι εκκρεμείς συγχρονισμοί και η κατάσταση αναίρεσης κατά την εναλλαγή ενοτήτων. Οι νέες ενότητες ελέγχονται από το `npm run lint` χωρίς `@ts-nocheck`.
+
 ## AI Back Office
 
 Το AI Back Office δέχεται `GEMINI_API_KEY` ή `GOOGLE_API_KEY` για Gemini. Από προεπιλογή χρησιμοποιεί Gemini· προαιρετικά, μπορείς να ορίσεις `OPENAI_API_KEY` και `AI_PROVIDER=auto` για fallback στο OpenAI αν αποτύχει το Gemini. Με `AI_PROVIDER=gemini` ή `AI_PROVIDER=openai` επιλέγεις έναν πάροχο, ενώ τα `AI_PROVIDER_ORDER`, `GEMINI_MODEL`, `GEMINI_MODEL_ORDER`, `OPENAI_MODEL` και `OPENAI_MODEL_ORDER` ρυθμίζουν τη σειρά παρόχων/μοντέλων. Οι διαθέσιμες ρυθμίσεις και τα προεπιλεγμένα μοντέλα υπάρχουν στο `.env.example`.
