@@ -17,6 +17,9 @@ importers:
       '@google/genai':
         specifier: ^2.4.0
         version: 2.24.0
+      '@netlify/aws-lambda-compat':
+        specifier: 2.0.4
+        version: 2.0.4
       dotenv:
         specifier: ^17.2.3
         version: 17.4.2
@@ -812,6 +815,14 @@ packages:
     cpu: [x64]
     os: [linux]
     libc: [glibc]
+
+  '@netlify/aws-lambda-compat@2.0.4':
+    resolution: {integrity: sha512-5ytPeydgrQCZMtq2u/LEn/7IbxHarqA3/mFc7x5bl6qCJ36hmAjmj4bWfPQL0msZMsG9tzWUlrNkcR/HYJveVQ==}
+    engines: {node: '>=22.12.0'}
+
+  '@netlify/types@3.3.1':
+    resolution: {integrity: sha512-LwPy3VpwMTETniJEgLr67yP8Rt8eORZaQ/NwVXhOOkv9q1F2SANSoJbfkhEmyLpwQ/aoPTAi0bULBDlFHXwEQA==}
+    engines: {node: '>=22.12.0'}
 
   '@nodable/entities@3.1.0':
     resolution: {integrity: sha512-LsS/DjHr+uDM647Gru/cA8+J3a3HfhttwCKLyuoyN7yXTFCxKBtSgMQBvrW9yNPa2/zDRUNuGPaH5QUFoa4arQ==}
@@ -3228,6 +3239,12 @@ snapshots:
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
+
+  '@netlify/aws-lambda-compat@2.0.4':
+    dependencies:
+      '@netlify/types': 3.3.1
+
+  '@netlify/types@3.3.1': {}
 
   '@nodable/entities@3.1.0':
     optional: true
