@@ -16,7 +16,7 @@ export default async function handler(request: Request) {
     const raw = await request.text();
     if (raw.length > 6000) return json({ error: 'Μη έγκυρο αίτημα.' }, 400);
     const body = JSON.parse(raw);
-    if (!['edit', 'download'].includes(body.action) || typeof body.url !== 'string') return json({ error: 'Μη έγκυρο αίτημα.' }, 400);
+    if (!['edit', 'download', 'read'].includes(body.action) || typeof body.url !== 'string') return json({ error: 'Μη έγκυρο αίτημα.' }, 400);
     let location;
     try { location = mediaLocation(body.url); } catch (error: any) { return json({ error: error.message }, 400); }
     if (location.bucket) {
@@ -29,7 +29,7 @@ export default async function handler(request: Request) {
         const [url] = await file.getSignedUrl({ version: 'v4', action: 'read', expires: Date.now() + 300000, responseDisposition: `attachment; filename="aram-media"; filename*=UTF-8''${encodeURIComponent(filename)}` });
         return json({ url, filename });
       }
-      if (!/^image\/(jpeg|png|webp|avif|bmp)$/.test(type)) return json({ error: 'Ο editor δέχεται στατικές εικόνες. Τα GIF κατεβαίνουν χωρίς μετατροπή.' }, 415);
+      if (body.action === 'edit' && !/^image\/(jpeg|png|webp|avif|bmp)$/.test(type)) return json({ error: 'Ο editor δέχεται στατικές εικόνες. Τα GIF κατεβαίνουν χωρίς μετατροπή.' }, 415);
       if (Number(metadata.size) > 18 * 1024 * 1024) return json({ error: 'Η εικόνα είναι πολύ μεγάλη για επεξεργασία.' }, 413);
       const [bytes] = await file.download();
       return new Response(new Uint8Array(bytes), { headers: { 'Content-Type': type, 'Cache-Control': 'no-store' } });
