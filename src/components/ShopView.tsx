@@ -1,3 +1,4 @@
+import { heroAppearanceCss } from '../lib/hero-appearance';
 import { ImageLightbox } from './ImageLightbox';
 import { compareSoldLast, inventoryLabel, isSoldItem } from '../lib/stock-edit';
 import { VintedReviewsSection } from './VintedReviewsSection';
@@ -242,7 +243,7 @@ export function isAvailableForSale(item: JewelryItem): boolean {
 export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   // Start with the last-known (or build-time) hero content so the hero and its
   // video render immediately instead of waiting for the Firestore round trip.
-  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => ({ ...DEFAULT_SHOP_SETTINGS, ...initialHeroSnapshot() }));
+  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => normalizeShopSettings(initialHeroSnapshot()));
   const [areShopSettingsReady, setAreShopSettingsReady] = useState(true);
   const [jewelryList, setJewelryList] = useState<JewelryItem[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
@@ -517,7 +518,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   };
 
   return (
-    <SectionShell section="shop" className="catalog-view" style={{ backgroundColor: ds.pageBackground || shopSettings.bgColor, color: ds.ink || shopSettings.textColor, fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif` }}>
+    <SectionShell section="shop" className="catalog-view" style={{ ...heroAppearanceCss(shopSettings.heroAppearance), backgroundColor: ds.pageBackground || shopSettings.bgColor, color: ds.ink || shopSettings.textColor, fontFamily: 'var(--ds-font-family, Jura, sans-serif)' }}>
       {/* Authentic Artisan Hero Banner */}
       <section
         className={`shop-hero ${hasHeroVideo ? 'catalog-hero--video bg-stone-950' : 'bg-stone-950'} min-h-[520px] h-[62svh] max-h-[680px] flex flex-col justify-center items-center relative overflow-hidden py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center transition-colors`}
@@ -562,7 +563,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
               <h1
                 className={`${shopSettings.heroTitleSize || 'text-3xl sm:text-4xl md:text-5xl'} font-bold tracking-tight break-words text-white drop-shadow-sm`}
                 style={{
-                  fontFamily: ds.fontFamily || `'${shopSettings.fontFamily}', sans-serif`
+                  fontFamily: 'var(--ds-font-family, Jura, sans-serif)'
                 }}
               >
                 {shopSettings.heroTitle}
@@ -883,7 +884,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                       <div className="flex items-baseline gap-1.5 flex-wrap">
                         {item.originalPrice && Number(item.originalPrice) > Number(item.price) ? (
                           <>
-                            <span className="text-base font-bold text-stone-900 tracking-tight" style={{ fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
+                            <span className="text-base font-bold text-stone-900 tracking-tight" style={{ fontFamily: 'inherit' }}>
                               {item.price ? `${item.price}€` : '-'}
                             </span>
                             <span className="text-xs font-medium text-stone-400 line-through">
@@ -891,7 +892,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                             </span>
                           </>
                         ) : (
-                          <span className="text-base font-semibold text-stone-900 tracking-tight" style={{ fontFamily: `'${shopSettings.fontFamily}', sans-serif` }}>
+                          <span className="text-base font-semibold text-stone-900 tracking-tight" style={{ fontFamily: 'inherit' }}>
                             {item.price ? `${item.price}€` : '-'}
                           </span>
                         )}
@@ -1006,7 +1007,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
                 {/* Title & Price */}
                 <div>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-stone-900 leading-snug" style={{ fontFamily: 'Jura, sans-serif' }}>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-stone-900 leading-snug" style={{ fontFamily: 'inherit' }}>
                     {selectedItem.name || selectedItem.title}
                   </h2>
                   <div className="mt-2 flex items-baseline gap-3 flex-wrap">

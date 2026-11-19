@@ -1,16 +1,21 @@
+import { designStudioCss } from './src/lib/design-studio';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import { initialContent, searchPages, SITE_URL } from './src/lib/search-content';
-import { fetchHeroSnapshot, setBuildHeroSnapshot } from './src/lib/hero-media';
+import { getBuildHeroSnapshot, fetchHeroSnapshot, setBuildHeroSnapshot } from './src/lib/hero-media';
 
 function searchLandingPages(): Plugin {
   return {
     name: 'search-landing-pages',
     enforce: 'post',
     transformIndexHtml(html) {
-      return html.replace('<div id="root"></div>', `<div id="root">${initialContent()}</div>`);
+      const baked = getBuildHeroSnapshot();
+      const css = designStudioCss(baked.designStudio);
+      // Apply the saved family before the HTML shell is painted, including returning visitors.
+      const boot = `<style>:root{${Object.entries(css).map(([key, value]) => `${key}:${value}`).join(';').replace(/</g, '')}}</style><script>try{const t=JSON.parse(localStorage.getItem('aram_theme_cache')||'null');if(t&&t.designStudio)for(const [k,v] of Object.entries(t.designStudio)){if(typeof v==='string')document.documentElement.style.setProperty('--ds-'+k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase()),v)}}catch{}</script>`;
+      return html.replace('</head>', boot + '</head>').replace('<div id="root"></div>', `<div id="root">${initialContent()}</div>`);
     },
     generateBundle(_, bundle) {
       const index = bundle['index.html'];

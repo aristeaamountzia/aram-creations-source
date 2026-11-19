@@ -522,3 +522,15 @@
 .studio-information h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1.5rem; }
 .studio-information p { margin-top: .65rem; }
 .studio-information a { text-decoration: underline; text-underline-offset: .2em; }
+
+/* All text utilities follow the selected family; technical code retains monospace. */
+:root { --font-sans: var(--ds-font-family, Jura, sans-serif); --font-serif: var(--ds-font-family, Jura, sans-serif); }
+body { font-family: var(--ds-font-family, Jura, sans-serif); }
+.aram-site :is(.font-sans, .font-serif) { font-family: var(--ds-font-family, Jura, sans-serif); }
+[data-touch-target] { outline: 3px solid #b48c48; outline-offset: 3px; }
+[data-reorder-handle] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.aram-site :is(.shop-hero, .portfolio-hero) { max-height: none; height: auto !important; }
+.aram-site :is(.shop-hero, .portfolio-hero) > div.absolute.inset-0[class*="bg-black"] { background: rgb(0 0 0 / var(--ds-hero-overlay, .5)) !important; }
+@media (max-width: 640px) {
+  .aram-site :is(.shop-hero, .portfolio-hero) h1 { font-size: clamp(20px, 8vw, var(--ds-hero-title-size, 40px)) !important; }
+}

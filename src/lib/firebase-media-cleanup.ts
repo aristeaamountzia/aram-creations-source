@@ -734,3 +734,8 @@ export function formatBytes(bytes: number): string {
   const mb = kb / 1024;
   return `${mb.toFixed(2)} MB`;
 }
+
+/** Selection is an explicit allowlist; newly discovered candidates stay unselected. */
+export function selectedCleanupFiles(files: StorageFileEntry[], selected: ReadonlySet<string>): StorageFileEntry[] {
+  return [...new Map(files.filter(file => selected.has(file.fullPath)).map(file => [file.fullPath, file])).values()];
+}

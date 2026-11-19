@@ -1,5 +1,7 @@
+import type { HeroAppearance } from './hero-appearance';
 import { CATEGORIES, ART_ITEMS } from '../data';
 export type PortfolioDesign = {
+  heroAppearance?: HeroAppearance;
   title: string; subtitle: string; contactLabel: string;
   categories: { id: string; title: string; description: string }[];
   statuses: { id: string; label: string }[];

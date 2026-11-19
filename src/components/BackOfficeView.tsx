@@ -1,3 +1,4 @@
+import { useTouchReorder } from '../lib/use-touch-reorder';
 import {
     IconPlus, IconSettings, IconTrash, IconEdit, IconEye, IconX, IconImage, IconGrid, IconList, IconBox,
     IconDownload, IconClone, IconBolt, IconUndo
@@ -45,6 +46,10 @@ interface BackOfficeViewProps {
 }
 
 export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
+    const touchReorder = useTouchReorder((from, to) => {
+        const target = jewelryList.find(item => item.id === to);
+        if (target) void handleProductDrop({ preventDefault() {}, dataTransfer: { getData: () => from } }, target);
+    });
     const [activeCollection, setActiveCollection] = useState<'jewelry' | 'portfolio' | 'orders'>('jewelry');
     const [firebaseReady, setFirebaseReady] = useState(false);
     const [authReady, setAuthReady] = useState(false);
@@ -473,6 +478,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                                 <div
                                     key={item.id}
                                     data-product-id={item.id}
+                                    {...touchReorder(item.id)}
                                     draggable
                                     onClick={(event) => handleProductSelectionClick(event, item.id)}
                                     onDragStart={(event) => handleProductDragStart(event, item)}
@@ -481,6 +487,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                                     onDragEnd={handleProductDragEnd}
                                     className={`group bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition relative cursor-grab active:cursor-grabbing ${selectedItemIds.includes(item.id) ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200'} ${dragOverProductId === item.id ? 'ring-2 ring-amber-400 border-amber-300 shadow-lg' : ''} ${draggedProductId === item.id || isBulkDragged ? 'opacity-60 scale-[0.99]' : ''} ${isSold ? 'opacity-80' : ''}`}
                                 >
+                                    <button type="button" data-reorder-handle style={{ touchAction: 'none' }} onClick={event => event.stopPropagation()} className="min-h-11 px-3 text-xs font-bold cursor-grab bg-stone-100" aria-label={`Μετακίνηση ${item.name}`}>⠿ Σύρε για αλλαγή σειράς</button>
                                     <div className="aspect-square bg-stone-100 flex items-center justify-center overflow-hidden relative">
                                         <label onClick={(e) => e.stopPropagation()} className="absolute top-2 left-2 z-10 bg-white/90 backdrop-blur-sm border border-stone-200 rounded-lg p-1 shadow-sm cursor-pointer">
                                             <input type="checkbox" className="w-4 h-4 rounded border-stone-300 accent-stone-900 cursor-pointer" checked={selectedItemIds.includes(item.id)} onClick={(event) => { event.stopPropagation(); selectItem(item.id, event.shiftKey); }} onChange={() => {}} />
@@ -557,6 +564,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                                 <div
                                     key={item.id}
                                     data-product-id={item.id}
+                                    {...touchReorder(item.id)}
                                     draggable
                                     onClick={(event) => handleProductSelectionClick(event, item.id)}
                                     onDragStart={(event) => handleProductDragStart(event, item)}
@@ -565,6 +573,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                                     onDragEnd={handleProductDragEnd}
                                     className={`flex flex-col md:flex-row items-start md:items-center p-3 bg-white border rounded-xl shadow-sm gap-4 transition hover:bg-stone-50 cursor-grab active:cursor-grabbing ${selectedItemIds.includes(item.id) ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200'} ${dragOverProductId === item.id ? 'ring-2 ring-amber-400 border-amber-300 shadow-lg' : ''} ${draggedProductId === item.id || isBulkDragged ? 'opacity-60 scale-[0.99]' : ''} ${isSold ? 'opacity-80' : ''}`}
                                 >
+                                    <button type="button" data-reorder-handle style={{ touchAction: 'none' }} onClick={event => event.stopPropagation()} className="min-h-11 px-3 text-xs font-bold cursor-grab bg-stone-100" aria-label={`Μετακίνηση ${item.name}`}>⠿ Σύρε για αλλαγή σειράς</button>
                                     <div className="hidden md:flex h-10 w-6 items-center justify-center text-stone-300 font-black select-none">::</div>
                                     <label onClick={(e) => e.stopPropagation()} className="flex items-center justify-center p-2 cursor-pointer">
                                         <input type="checkbox" className="w-4 h-4 rounded border-stone-300 accent-stone-900 cursor-pointer" checked={selectedItemIds.includes(item.id)} onClick={(event) => { event.stopPropagation(); selectItem(item.id, event.shiftKey); }} onChange={() => {}} />

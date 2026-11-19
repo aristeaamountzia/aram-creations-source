@@ -1,3 +1,4 @@
+import { useTouchReorder } from '../../lib/use-touch-reorder';
 import { SlidersHorizontal } from 'lucide-react';
 import { portfolioStatusLabel } from '../../lib/portfolio-settings';
 import { portfolioMedia } from '../../lib/video-links';
@@ -42,6 +43,7 @@ export function PortfolioCatalogPanel(props: Props) {
     lassoRect, loading, portfolioGridRef, remove, reorder, reordering, restore, selectItem, setDraggedId,
     setImageEditorTarget, setInspectItem
   } = props;
+  const touchReorder = useTouchReorder((from, to) => { void reorder(from, to); }, reordering || statsFilter !== 'active');
   return (
     <>{showHistory && <section aria-label="Ιστορικό Portfolio" className="p-4 mb-4 border rounded-xl max-h-64 overflow-auto">
             <h2 className="font-bold">Ιστορικό Portfolio</h2>
@@ -288,6 +290,7 @@ export function PortfolioCatalogPanel(props: Props) {
                     key={item.id}
                     data-product-id={item.id}
                     onClick={e => handleArtworkSelectionClick(e, item.id)}
+                    {...touchReorder(item.id)}
                     draggable={statsFilter === 'active' && !reordering}
                     onDragStart={e => {
                       if ((e.target as HTMLElement).closest('button,input,select,a')) {
@@ -310,6 +313,7 @@ export function PortfolioCatalogPanel(props: Props) {
                       isSelected ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200'
                     } ${isArchived ? 'opacity-75' : ''}`}
                   >
+                    <button type="button" data-reorder-handle disabled={reordering || statsFilter !== 'active'} style={{ touchAction: 'none' }} onClick={event => event.stopPropagation()} className="min-h-11 px-3 text-xs font-bold cursor-grab bg-stone-100">⠿ Σύρε για αλλαγή σειράς</button>
                     {/* Image / Video Media Thumbnail */}
                     <div className="aspect-square bg-stone-100 flex items-center justify-center overflow-hidden relative">
                       {/* Select Checkbox */}

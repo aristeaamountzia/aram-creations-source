@@ -27,6 +27,12 @@
   node_bundler = "esbuild"
 
 [[redirects]]
+  from = "/api/artist-profile"
+  to = "/.netlify/functions/artist-profile"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/catalog-backups"
   to = "/.netlify/functions/catalog-backups"
   status = 200

@@ -1,3 +1,4 @@
+import { useTouchReorder } from '../../lib/use-touch-reorder';
 import { useState, type DragEvent } from 'react';
 
 export function moveMediaItem<T>(items: readonly T[], fromIndex: number, toIndex: number): T[] {
@@ -24,9 +25,12 @@ export function useMediaOrdering<T>(
     onReorder?.(next, fromIndex, toIndex);
   };
 
+  const touchProps = useTouchReorder((from, to) => reorder(Number(from), Number(to)));
+
   return {
     draggedIndex,
     dragProps: (index: number) => ({
+      ...touchProps(String(index)),
       draggable: true,
       onDragStart: (event: DragEvent<HTMLElement>) => {
         setDraggedIndex(index);

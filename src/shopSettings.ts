@@ -1,3 +1,4 @@
+import type { HeroAppearance } from './lib/hero-appearance';
 import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from './lib/design-studio';
 import { DEFAULT_SHIPPING_SETTINGS, normalizeShippingSettings, type ShippingSettings } from './lib/shipping';
 import { DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, type PortfolioDesign } from './lib/portfolio-settings';
@@ -14,6 +15,7 @@ export interface ShopSettings {
   heroTitleColor: string;
   heroSubtitleColor: string;
   heroTitleSize: string;
+  heroAppearance?: HeroAppearance;
   borderRadius: string | number;
   heroTitle: string;
   heroSubtitle: string;

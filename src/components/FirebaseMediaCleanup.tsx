@@ -29,11 +29,13 @@ import {
   CheckSquare,
   Square
 } from 'lucide-react';
+import { CleanupFileCard } from './CleanupFileCard';
 import { auth, db, storage } from '../firebase';
 import { equalHistoryValue, loadHistory, stageHistory } from '../lib/catalog-history';
 import { assertInventoryChangeAllowed } from '../lib/stock-edit';
 import {
   buildFirebaseMediaCleanupPlan,
+  selectedCleanupFiles,
   collectKnownUrlByPath,
   extractAllStoragePathsDeep,
   formatBytes,
@@ -112,7 +114,8 @@ export function FirebaseMediaCleanup({
   // Controls which categories of cleanup the admin wants to execute
   const [cleanDuplicates, setCleanDuplicates] = useState(true);
   const [cleanOrphans, setCleanOrphans] = useState(true);
-  const [cleanDocReferences, setCleanDocReferences] = useState(true);
+  const [cleanDocReferences, setCleanDocReferences] = useState(false);
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [protectHistoryFiles, setProtectHistoryFiles] = useState(true);
   const [selectedDuplicateVintedDocIds, setSelectedDuplicateVintedDocIds] = useState<Set<string>>(
     new Set()
@@ -138,6 +141,7 @@ export function FirebaseMediaCleanup({
   const startScan = async () => {
     setIsScanning(true);
     setStorageFiles(null);
+    setSelectedPaths(new Set());
     setErrorMessage(null);
     setExecutionSummary(null);
     setProgress({
@@ -363,10 +367,10 @@ export function FirebaseMediaCleanup({
 
       const docUpdatesToRun = cleanDocReferences ? activePlan.documentUpdates : [];
       const vintedDocsToDelete = Array.from(selectedDuplicateVintedDocIds);
-      let storageFilesToRemove: StorageFileEntry[] = [
+      let storageFilesToRemove: StorageFileEntry[] = selectedCleanupFiles([
         ...(cleanDuplicates ? activePlan.duplicateFilesToDelete : []),
         ...(cleanOrphans ? activePlan.orphanedFiles : [])
-      ];
+      ], selectedPaths);
 
       const totalOperations =
         docUpdatesToRun.length + vintedDocsToDelete.length + storageFilesToRemove.length;
@@ -594,13 +598,15 @@ export function FirebaseMediaCleanup({
     }
   };
 
-  const selectedFilesToDeleteCount =
-    (cleanDuplicates ? plan?.duplicateFilesToDelete.length || 0 : 0) +
-    (cleanOrphans ? plan?.orphanedFiles.length || 0 : 0);
-
-  const selectedBytesToReclaim =
-    (cleanDuplicates ? plan?.duplicateBytes || 0 : 0) +
-    (cleanOrphans ? plan?.orphanedBytes || 0 : 0);
+  const candidates = [...new Map([...(cleanDuplicates ? plan?.duplicateFilesToDelete || [] : []), ...(cleanOrphans ? plan?.orphanedFiles || [] : [])].map(file => [file.fullPath, file])).values()];
+  const selectedFiles = selectedCleanupFiles(candidates, selectedPaths);
+  const selectedFilesToDeleteCount = selectedFiles.length;
+  const selectedBytesToReclaim = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+  const togglePath = (path: string) => setSelectedPaths(previous => {
+    const next = new Set(previous);
+    if (next.has(path)) next.delete(path); else next.add(path);
+    return next;
+  });
 
   const selectedDocsToUpdateCount = cleanDocReferences
     ? plan?.documentUpdates.length || 0
@@ -890,6 +896,20 @@ export function FirebaseMediaCleanup({
                       </div>
                     </label>
                   </div>
+
+                  <section className="rounded-xl border border-stone-200 bg-white p-4 space-y-4">
+                    <h3 className="font-bold">Επιλογή αρχείων για διαγραφή</h3>
+                    <p className="text-xs text-stone-600">Κανένα αρχείο δεν επιλέγεται αυτόματα. Δες την προεπισκόπηση, την πλήρη διαδρομή και πού χρησιμοποιείται πριν επιλέξεις. Τα μη επιλεγμένα αρχεία διατηρούνται. Πριν από τη διαγραφή επανελέγχονται οι αναφορές και το ιστορικό· όσα χρειάζονται ακόμη παραλείπονται.</p>
+                    <div className="flex gap-4 text-xs">
+                      <button type="button" disabled={isExecuting} className="underline" onClick={() => setSelectedPaths(new Set(candidates.map(file => file.fullPath)))}>Επιλογή όλων ({candidates.length})</button>
+                      <button type="button" disabled={isExecuting} className="underline" onClick={() => setSelectedPaths(new Set())}>Καμία επιλογή</button>
+                      <span>{selectedFilesToDeleteCount} επιλεγμένα · {formatBytes(selectedBytesToReclaim)}</span>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-3 max-h-[65vh] overflow-y-auto">
+                      {candidates.map(file => <CleanupFileCard key={file.fullPath} file={file} selected={selectedPaths.has(file.fullPath)} disabled={isExecuting} onToggle={() => togglePath(file.fullPath)} documents={firestoreDocs || []} canonical={plan.duplicateGroups.find(group => group.duplicates.some(duplicate => duplicate.fullPath === file.fullPath))?.canonical} />)}
+                    </div>
+                    {!candidates.length && <p className="text-sm">Δεν υπάρχουν αρχεία στις ενεργές κατηγορίες καθαρισμού.</p>}
+                  </section>
 
                   {/* Section 1: Duplicate Storage Groups Breakdown */}
                   {plan.duplicateGroups.length > 0 && (

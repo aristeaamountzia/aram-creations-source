@@ -51,6 +51,7 @@ export function buildBackofficeAiPrompt(input: BackofficeAiInput): string {
   const qualityRules = `
 - Μην επαναλαμβάνεις λέξεις ή φράσεις και έλεγξε τη γραμματική πριν απαντήσεις.
 - Σύνδεσε το κείμενο με τουλάχιστον ένα από τα παρεχόμενα στοιχεία.
+- Μην προτείνεις και μην αλλάζεις status, διαθεσιμότητα ή απόθεμα.
 - Μην επινοείς υλικά, τεχνικές, διαστάσεις, χρώματα ή προέλευση.
 - Επίστρεψε μόνο τα πεδία που γνωρίζεις, χωρίς Markdown.${taskInstructions}`;
 
@@ -80,7 +81,7 @@ ${extra ? `- Ειδική απαίτηση: ${extra}` : ''}${qualityRules}
 - Χρώματα: ${listField(product, 'colors')}
 - Εργασία: ${task}
 ${extra ? `- Ειδική απαίτηση: ${extra}` : ''}${qualityRules}
-Απάντησε αποκλειστικά με έγκυρο JSON με πεδία title, description, category, status, colors (array), materials (array), tags (array), shortDescription, instagramCaption, altText.`;
+Απάντησε αποκλειστικά με έγκυρο JSON με πεδία title, description, category, colors (array), materials (array), tags (array), shortDescription, instagramCaption, altText.`;
 }
 
 function normalizedWords(value: string): string[] {
@@ -164,7 +165,7 @@ export function validateBackofficeAiSuggestion(raw: Record<string, unknown>, inp
 
   const output: Record<string, unknown> = {};
   const fields: Array<[string, number]> = [
-    ['title', 160], ['description', 2_000], ['category', 100], ['status', 80],
+    ['title', 160], ['description', 2_000], ['category', 100],
     ['shortDescription', 300], ['instagramCaption', 1_000], ['altText', 300]
   ];
   for (const [key, max] of fields) {

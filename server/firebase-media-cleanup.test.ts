@@ -200,3 +200,11 @@ test('buildFirebaseMediaCleanupPlan detects orphaned files, 2x/3x/4x duplicates,
   assert.ok(protectedPlan.duplicateGroups.every(group => group.duplicates.every(file => file.fullPath !== dupPath2)));
   assert.ok(protectedPlan.orphanedFiles.every(file => file.fullPath !== dupPath2));
 });
+
+test('cleanup selection deletes only explicitly chosen paths and deduplicates overlapping categories', async () => {
+  const { selectedCleanupFiles } = await import('../src/lib/firebase-media-cleanup');
+  const files = [{ fullPath: 'jewelry/keep.jpg', name: 'keep.jpg', size: 10 }, { fullPath: 'jewelry/remove.jpg', name: 'remove.jpg', size: 20 }];
+  assert.deepEqual(selectedCleanupFiles(files, new Set()), []);
+  assert.deepEqual(selectedCleanupFiles([...files, files[1]], new Set(['jewelry/remove.jpg'])), [files[1]]);
+  assert.deepEqual(selectedCleanupFiles(files, new Set(['jewelry/stale.jpg'])), []);
+});

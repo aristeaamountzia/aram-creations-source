@@ -53,7 +53,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               {type === 'returns' && <RotateCcw className="w-4 h-4" />}
             </div>
             <div>
-              <h3 className="text-base font-bold text-stone-900 tracking-tight" style={{ fontFamily: 'Jura, sans-serif' }}>
+              <h3 className="text-base font-bold text-stone-900 tracking-tight" style={{ fontFamily: 'inherit' }}>
                 {type === 'terms' && 'Όροι Χρήσης & Συναλλαγών'}
                 {type === 'privacy' && 'Πολιτική Απορρήτου & Δεδομένων (GDPR)'}
                 {type === 'returns' && 'Πολιτική Αποστολών & Επιστροφών'}

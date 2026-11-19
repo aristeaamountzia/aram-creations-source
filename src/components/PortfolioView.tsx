@@ -278,7 +278,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
       style={{
         backgroundColor: designStudio.pageBackground || '#fafaf9',
         color: designStudio.ink || '#18181b',
-        fontFamily: designStudio.fontFamily || "'Jura', sans-serif"
+        fontFamily: 'var(--ds-font-family, Jura, sans-serif)'
       }}>
       
       {/* Toast Notification */}

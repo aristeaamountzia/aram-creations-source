@@ -197,7 +197,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </button>
             )}
             <div>
-              <h2 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
+              <h2 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>
                 {completedOrderNumber
                   ? 'Επιβεβαίωση Παραγγελίας'
                   : isCheckoutStep
@@ -236,7 +236,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <div className="text-center space-y-1">
-                <h3 className="text-2xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
+                <h3 className="text-2xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>
                   Η παραγγελία καταχωρήθηκε!
                 </h3>
                 <p className="text-xs text-stone-500">
@@ -263,7 +263,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 {savedTotal !== null && (
                   <div className="flex justify-between items-center text-xs pt-2 border-t border-stone-200">
                     <span className="text-stone-500 font-medium">Σύνολο Πληρωμής:</span>
-                    <span className="font-bold text-stone-900 text-base" style={{ fontFamily: 'Jura, sans-serif' }}>
+                    <span className="font-bold text-stone-900 text-base" style={{ fontFamily: 'inherit' }}>
                       €{savedTotal.toFixed(2)}
                     </span>
                   </div>
@@ -470,7 +470,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                           Custom: {customInscription}
                         </p>
                       )}
-                      <div className="text-xs font-bold text-stone-900 mt-0.5" style={{ fontFamily: 'Jura, sans-serif' }}>
+                      <div className="text-xs font-bold text-stone-900 mt-0.5" style={{ fontFamily: 'inherit' }}>
                         €{item.price}
                       </div>
 
@@ -563,7 +563,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
               <div className="flex justify-between text-sm font-bold text-stone-900 pt-2 border-t border-stone-200">
                 <span>Τελικό Σύνολο:</span>
-                <span className="text-xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
+                <span className="text-xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>
                   €{total.toFixed(2)}
                 </span>
               </div>
