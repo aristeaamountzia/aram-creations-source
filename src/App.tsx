@@ -1,3 +1,5 @@
+import { ArtistProfileDialog } from './components/ArtistProfile';
+import { initialHeroSnapshot } from './lib/hero-media';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SectionMode, ArtItem, JewelryItem, CartItem } from './types';
 import { searchPages, SITE_URL, studioContent } from './lib/search-content';
@@ -44,9 +46,9 @@ const getInitialThemeState = () => {
     }
   } catch {}
   return {
-    visualTheme: 'atelier' as const,
-    designStudioContent: DEFAULT_DESIGN_STUDIO,
-    designStudioCss: designStudioCss(DEFAULT_DESIGN_STUDIO)
+    visualTheme: initialHeroSnapshot().visualTheme || 'atelier',
+    designStudioContent: normalizeDesignStudio(initialHeroSnapshot().designStudio),
+    designStudioCss: designStudioCss(initialHeroSnapshot().designStudio)
   };
 };
 
@@ -56,6 +58,9 @@ export const App: React.FC = () => {
   const [visualTheme, setVisualTheme] = useState<'atelier' | 'classic'>(initialTheme.visualTheme);
   const [designStudio, setDesignStudio] = useState<Record<string, string>>(initialTheme.designStudioCss);
   const [designStudioContent, setDesignStudioContent] = useState<DesignStudio>(initialTheme.designStudioContent);
+  useEffect(() => {
+    for (const [key, value] of Object.entries(designStudio)) document.documentElement.style.setProperty(key, value);
+  }, [designStudio]);
   const hasInitializedHistory = useRef(false);
   const selectMode = useCallback((mode: SectionMode) => {
     const target = mode === 'portfolio' ? '/portfolio/' : mode === 'admin' ? '/#admin' : '/';
@@ -84,6 +89,8 @@ export const App: React.FC = () => {
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [shopSettingsData, setShopSettingsData] = useState<ShopSettings>(DEFAULT_SHOP_SETTINGS);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const closeAbout = useCallback(() => setIsAboutOpen(false), []);
   const [legalModalType, setLegalModalType] = useState<LegalPolicyType>(null);
   // This listener is intentionally presentation-only: the existing shop settings
   // document remains the single source of truth and no commerce data is touched.
@@ -416,6 +423,7 @@ export const App: React.FC = () => {
         </div>
       )}
 
+      {isAboutOpen && <ArtistProfileDialog onClose={closeAbout} />}
       {/* Footer (hidden in admin mode) */}
       {currentMode !== 'admin' && (
       <footer className="site-footer bg-stone-950 border-t border-stone-800 text-stone-300 py-12 px-4 sm:px-6 lg:px-8">
@@ -437,7 +445,7 @@ export const App: React.FC = () => {
                   if (!target.src.endsWith(fallback)) target.src = fallback;
                 }}
               />
-              <span className="font-bold uppercase tracking-tight text-white text-base" style={{ fontFamily: 'Jura, sans-serif' }}>
+              <span className="font-bold uppercase tracking-tight text-white text-base" style={{ fontFamily: 'inherit' }}>
                 aram.creations
               </span>
             </div>
@@ -449,6 +457,8 @@ export const App: React.FC = () => {
           {/* Quick links - Clean & Customer-focused */}
           <div className="space-y-2 text-xs">
             <h3 className="font-bold uppercase tracking-wider text-white mb-3 text-xs">Πλοήγηση</h3>
+            <button type="button" onClick={() => setIsAboutOpen(true)} className="text-xs underline underline-offset-4 py-2 mb-2">About me · Βιογραφικό</button>
+            <a href="https://linktr.ee/aristeaamnt" target="_blank" rel="noopener noreferrer" className="block text-xs underline underline-offset-4 py-2 mb-2">Linktree ↗</a>
             <div>
               <a href="/" className="text-stone-300 hover:text-white transition font-medium py-1">
                 Shop (Κοσμήματα)

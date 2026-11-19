@@ -1,5 +1,5 @@
 import type { HTMLAttributes, MouseEvent } from 'react';
-import { Pencil, RotateCcw, X } from 'lucide-react';
+import { GripVertical, Pencil, RotateCcw, X } from 'lucide-react';
 import { MediaDownload } from '../MediaDownload';
 import { VideoPlayer } from '../VideoPlayer';
 import type { ManagedMedia } from './types';
@@ -57,6 +57,7 @@ export function MediaCard({
 
   if (isPortfolio) return (
     <div {...dragProps} className="overflow-hidden rounded-xl border border-stone-200 p-2 bg-stone-50 space-y-2 cursor-grab active:cursor-grabbing touch-manipulation">
+      <button type="button" data-reorder-handle style={{ touchAction: 'none' }} onClick={event => event.stopPropagation()} className="min-h-11 px-3 flex items-center gap-2 text-xs cursor-grab" aria-label={`Σύρε για αλλαγή σειράς media ${index + 1}`}><GripVertical className="w-4 h-4" />Σύρε</button>
       <div className="aspect-square w-full rounded-lg bg-stone-200 overflow-hidden relative">
         {mediaPreview}
         {index === 0 && <span className="absolute top-1 left-1 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">Κεντρική</span>}
@@ -85,6 +86,7 @@ export function MediaCard({
       className={`relative aspect-square border-2 ${isPrivate ? 'border-stone-300 bg-stone-200 opacity-80' : index === 0 ? 'border-emerald-500 bg-stone-100 shadow-md' : 'border-stone-200 bg-stone-100'} rounded-xl overflow-hidden group cursor-grab active:cursor-grabbing hover:opacity-90 transition`}
     >
       {mediaPreview}
+      <button type="button" data-reorder-handle style={{ touchAction: 'none' }} onClick={event => event.stopPropagation()} className="absolute top-1 left-1/2 -translate-x-1/2 min-h-11 min-w-11 bg-white/95 rounded-lg flex items-center justify-center z-10 cursor-grab" aria-label={`Σύρε για αλλαγή σειράς media ${index + 1}`}><GripVertical className="w-5 h-5" /></button>
 
       {isPrivate && <span className="absolute top-1 left-1 bg-stone-800 text-white text-[9px] px-1 rounded shadow-sm">Κρυφό</span>}
       <MediaDownload media={media} name={downloadName} className={`absolute ${isPrivate ? 'top-8' : 'bottom-1'} right-1 z-10`} />

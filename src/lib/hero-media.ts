@@ -1,3 +1,4 @@
+import type { DesignStudio } from './design-studio';
 // Hero media helpers shared by the browser bundle and the Vite build.
 // Keep this file free of React/Firebase imports so vite.config.ts can use it.
 
@@ -41,6 +42,8 @@ export function heroPosterFor(resolvedVideoUrl: string): string | undefined {
 }
 
 export interface HeroSnapshot {
+  designStudio?: Partial<DesignStudio>;
+  visualTheme?: 'classic' | 'atelier';
   heroTitle: string;
   heroSubtitle: string;
   heroTitleSize: string;
@@ -63,8 +66,10 @@ export function pickHeroSnapshot(data: unknown, base: HeroSnapshot = FALLBACK_HE
   const source = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
   const result = { ...base };
   for (const key of HERO_KEYS) {
-    if (typeof source[key] === 'string') result[key] = source[key] as string;
+    if (typeof source[key] === 'string') (result as any)[key] = source[key];
   }
+  if (source.designStudio && typeof source.designStudio === 'object' && !Array.isArray(source.designStudio)) result.designStudio = source.designStudio as Partial<DesignStudio>;
+  if (source.visualTheme === 'classic' || source.visualTheme === 'atelier') result.visualTheme = source.visualTheme;
   // Store resolved (optimised/local) video URLs so the shell and first render agree.
   result.heroVideoUrl = portfolioHeroVideoUrl(result.heroVideoUrl);
   result.portfolioHeroVideoUrl = portfolioHeroVideoUrl(result.portfolioHeroVideoUrl);
@@ -100,12 +105,14 @@ export async function fetchHeroSnapshot(projectId: string | undefined): Promise<
   try {
     const response = await fetch(`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/settings/shop`, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) return FALLBACK_HERO_SNAPSHOT;
-    const doc = await response.json() as { fields?: Record<string, { stringValue?: string }> };
+    const doc = await response.json() as { fields?: Record<string, any> };
     const flat: Record<string, string> = {};
     for (const [key, value] of Object.entries(doc.fields || {})) {
       if (typeof value?.stringValue === 'string') flat[key] = value.stringValue;
     }
-    return pickHeroSnapshot(flat);
+    const designFields = doc.fields?.designStudio?.mapValue?.fields || {};
+    const designStudio = Object.fromEntries(Object.entries(designFields).filter(([, val]: any) => typeof val?.stringValue === 'string').map(([key, val]: any) => [key, val.stringValue]));
+    return pickHeroSnapshot({ ...flat, designStudio });
   } catch {
     return FALLBACK_HERO_SNAPSHOT;
   }

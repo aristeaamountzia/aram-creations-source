@@ -3,28 +3,23 @@ import type { Thumbnail } from './catalog-excel';
 
 export async function loadExcelThumbnail(url: string, signal?: AbortSignal): Promise<Thumbnail> {
   signal?.throwIfAborted();
-  let blob: Blob;
-  const controller = new AbortController();
-  const cancel = () => controller.abort();
-  signal?.addEventListener('abort', cancel, { once: true });
-  const timer = setTimeout(cancel, 15000);
+  const blob = await editableBlob({ url }, signal);
+  signal?.throwIfAborted();
+  // Safari and some image formats cannot be decoded with createImageBitmap.
+  let image: ImageBitmap | HTMLImageElement;
   try {
-    // Firebase and Google Cloud Storage do not expose browser-fetchable CORS headers on direct URLs;
-    // route directly through the authenticated media proxy to prevent console CORS failures and network aborts.
-    if (/firebasestorage\.googleapis\.com|storage\.googleapis\.com/i.test(url)) {
-      blob = await editableBlob({ url }, signal);
-    } else {
-      const response = await fetch(url, { signal: controller.signal });
-      if (!response.ok || !response.headers.get('content-type')?.startsWith('image/')) throw new Error('Η εικόνα δεν φορτώθηκε.');
-      blob = await response.blob();
-    }
+    image = await createImageBitmap(blob, { resizeWidth: 160, resizeQuality: 'high' });
   } catch {
     signal?.throwIfAborted();
-    // Authenticated existing media proxy also handles missing CORS headers/tokens.
-    blob = await editableBlob({ url }, signal);
-  } finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); }
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      const element = new Image();
+      element.src = objectUrl;
+      await element.decode();
+      image = element;
+    } finally { URL.revokeObjectURL(objectUrl); }
+  }
   signal?.throwIfAborted();
-  const image = await createImageBitmap(blob, { resizeWidth: 160, resizeQuality: 'high' });
   try {
     const canvas = document.createElement('canvas'); canvas.width = 160; canvas.height = 160;
     const context = canvas.getContext('2d');
@@ -34,5 +29,5 @@ export async function loadExcelThumbnail(url: string, signal?: AbortSignal): Pro
     const width = image.width * scale, height = image.height * scale;
     context.drawImage(image, (160 - width) / 2, (160 - height) / 2, width, height);
     return { base64: canvas.toDataURL('image/jpeg', 0.76), extension: 'jpeg' };
-  } finally { image.close(); }
+  } finally { if ('close' in image) image.close(); }
 }

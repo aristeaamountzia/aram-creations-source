@@ -32,7 +32,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
         </div>
 
         <div className="space-y-1.5">
-          <h3 className="text-2xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
+          <h3 className="text-2xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>
             Η πληρωμή ολοκληρώθηκε!
           </h3>
           <p className="text-xs uppercase tracking-widest text-stone-500 font-bold">

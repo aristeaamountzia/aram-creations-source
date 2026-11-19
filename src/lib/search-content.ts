@@ -30,7 +30,7 @@ const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': 
 function heroShell(portfolio: boolean) {
   const hero = getBuildHeroSnapshot();
   const poster = heroPosterFor(portfolio ? hero.portfolioHeroVideoUrl : hero.heroVideoUrl);
-  const text = portfolio ? '' : `<div style="position:relative;max-width:896px;padding:0 16px;"><div style="font-family:Georgia,'Times New Roman',serif;font-weight:500;font-size:clamp(28px,5vw,40px);line-height:1.2;letter-spacing:.025em;margin:0 0 16px;">${escapeHtml(hero.heroTitle)}</div><div style="font-family:system-ui,sans-serif;font-size:16px;line-height:1.6;color:#e7e5e4;max-width:672px;margin:0 auto;">${escapeHtml(hero.heroSubtitle)}</div></div>`;
+  const text = portfolio ? '' : `<div style="position:relative;max-width:896px;padding:0 16px;"><div style="font-family:var(--ds-font-family,Jura,sans-serif);font-weight:500;font-size:clamp(28px,5vw,40px);line-height:1.2;letter-spacing:.025em;margin:0 0 16px;">${escapeHtml(hero.heroTitle)}</div><div style="font-family:var(--ds-font-family,Jura,sans-serif);font-size:16px;line-height:1.6;color:#e7e5e4;max-width:672px;margin:0 auto;">${escapeHtml(hero.heroSubtitle)}</div></div>`;
   return `<section aria-hidden="true" style="position:relative;height:clamp(520px,62svh,680px);overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;background:#0c0a09;">${poster ? `<img src="${poster}" alt="" fetchpriority="high" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /><div style="position:absolute;inset:0;background:rgba(0,0,0,.55);"></div>` : ''}${text}</section>`;
 }
 

@@ -1,3 +1,5 @@
+import { ArtistProfileEditor } from '../ArtistProfile';
+import { HeroAppearanceSettings } from '../HeroAppearanceSettings';
 import { IconSettings, IconX, IconBolt, IconGripVertical, IconCheck } from './icons';
 import { VintedReviewsSettings } from './VintedReviewsSettings';
 import { PortfolioDesignSettings } from '../PortfolioDesignSettings';
@@ -231,6 +233,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
 
                     {activeSettingsTab === 'shop' && (
                         <div className="animate-fade-in space-y-6">
+                            <HeroAppearanceSettings value={shopSettings.heroAppearance} defaults={shopSettings.designStudio} onChange={value => setShopSettings(prev => ({ ...prev, heroAppearance: value }))} />
                             <div className="rounded-2xl border border-emerald-200 bg-linear-to-r from-emerald-50 to-teal-50 p-4.5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
@@ -260,19 +263,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                             placeholder="π.χ. Χειροποίητα Κοσμήματα με Ψυχή"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-stone-700 mb-1">Μέγεθος Τίτλου</label>
-                                        <select
-                                            className="w-full border border-stone-200 rounded-xl px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-900 transition outline-none text-sm font-bold text-stone-800"
-                                            value={shopSettings.heroTitleSize}
-                                            onChange={e => setShopSettings({ ...shopSettings, heroTitleSize: e.target.value })}
-                                        >
-                                            <option value="text-2xl md:text-3xl">Μικρό (2xl)</option>
-                                            <option value="text-3xl md:text-4xl">Κανονικό (3xl)</option>
-                                            <option value="text-4xl md:text-5xl">Μεγάλο (4xl)</option>
-                                            <option value="text-5xl md:text-6xl">Πολύ Μεγάλο (5xl)</option>
-                                        </select>
-                                    </div>
+
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-stone-700 mb-1">Υπότιτλος / Περιγραφή Shop</label>
@@ -614,6 +605,8 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                 <span className="text-[10px] font-black bg-amber-200/80 text-amber-900 px-3 py-1.5 rounded-xl uppercase tracking-wider shrink-0">Μόνο για το #portfolio</span>
                             </div>
 
+                            <HeroAppearanceSettings value={shopSettings.portfolioDesign.heroAppearance} defaults={shopSettings.designStudio} onChange={value => setShopSettings(prev => ({ ...prev, portfolioDesign: { ...prev.portfolioDesign, heroAppearance: value } }))} />
+                            <ArtistProfileEditor />
                             <PortfolioDesignSettings
                                 value={shopSettings.portfolioDesign}
                                 onChange={value => setShopSettings(prev => ({ ...prev, portfolioDesign: value }))}

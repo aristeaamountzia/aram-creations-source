@@ -156,7 +156,6 @@ export function useProductAi(dependencies: ProductAiDependencies) {
             shortDescription: suggestion.shortDescription || '',
             category: suggestion.category || '',
             collection: '',
-            status: suggestion.status || '',
             colors: normalizeAiList(suggestion.colors),
             materials: normalizeAiList(suggestion.materials),
             tags: normalizeAiList(suggestion.tags || suggestion.seoKeywords),
@@ -222,20 +221,11 @@ export function useProductAi(dependencies: ProductAiDependencies) {
         setIsCustomCollection(Boolean(trimmed) && !allCollections.includes(trimmed));
     };
 
-    const applyAiStatus = (value) => {
-        const trimmed = (value || '').trim();
-        if (!trimmed) return;
-        setFormStatus(trimmed);
-        setFormStock(stockForSelectedStatus(trimmed, Number(formStock)));
-        setIsCustomStatus(!allFormStatuses.includes(trimmed));
-    };
-
     const applyAiProductDraft = (fillOnly = false) => {
         if (!aiProductDraft) return;
         if (aiProductDraft.title && (!fillOnly || !formName.trim())) setFormName(aiProductDraft.title);
         if (aiProductDraft.description && (!fillOnly || !formNotes.trim())) setFormNotes(aiProductDraft.description);
         if (aiProductDraft.category && (!fillOnly || !formCategory.trim())) applyAiCategory(aiProductDraft.category);
-        if (aiProductDraft.status && (!fillOnly || !formStatus.trim())) applyAiStatus(aiProductDraft.status);
         if (aiProductDraft.colors.length && (!fillOnly || formColorsArr.length === 0)) {
             const nextColors = fillOnly ? aiProductDraft.colors : mergeUnique(formColorsArr, aiProductDraft.colors);
             setFormColorsArr(nextColors.slice(0, 8));

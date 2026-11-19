@@ -1,3 +1,4 @@
+import { heroAppearanceCss } from '../lib/hero-appearance';
 import React, { useEffect, useRef, useState } from 'react';
 import { Mail, ChevronDown } from 'lucide-react';
 import { PortfolioDesign, DEFAULT_PORTFOLIO_DESIGN } from '../lib/portfolio-settings';
@@ -38,7 +39,7 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
     : source;
 
   return (
-    <section className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video bg-stone-950 text-white' : 'bg-stone-950 text-white'} min-h-[520px] h-[62svh] max-h-[680px] flex flex-col justify-center items-center relative overflow-hidden border-b border-stone-800 px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8 transition-colors`}>
+    <section style={heroAppearanceCss(design.heroAppearance) as React.CSSProperties} className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video bg-stone-950 text-white' : 'bg-stone-950 text-white'} min-h-[520px] h-[62svh] max-h-[680px] flex flex-col justify-center items-center relative overflow-hidden border-b border-stone-800 px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8 transition-colors`}>
       {hasVideo && (
         <>
           {videoLink(source) ? (

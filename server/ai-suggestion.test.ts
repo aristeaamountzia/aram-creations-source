@@ -62,3 +62,11 @@ test('colors and materials task accepts lists without requiring a title or descr
   });
   assert.throws(() => validateBackofficeAiSuggestion({ tags: ['χειροποίητο'] }, input), /χρώματα ή υλικά/);
 });
+
+test('AI availability and inventory suggestions are discarded', () => {
+  const output = validateBackofficeAiSuggestion({ title: 'Ασημένιο κόσμημα', status: 'active', stock: 999, availability: 'active' }, { mode: 'product', task: 'title', product: { name: 'Ασημένιο κόσμημα' } });
+  assert.equal(output.status, undefined);
+  assert.equal(output.stock, undefined);
+  assert.equal(output.availability, undefined);
+  assert.doesNotMatch(buildBackofficeAiPrompt({ mode: 'product', task: 'title' }), /category, status/);
+});

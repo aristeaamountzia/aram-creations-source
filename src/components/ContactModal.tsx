@@ -71,7 +71,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
               Aram Creations • Atelier Inquiries
             </div>
-            <h3 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
+            <h3 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>
               Εκδήλωση Ενδιαφέροντος & Αναθέσεις
             </h3>
           </div>
@@ -91,7 +91,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               <CheckCircle2 className="w-7 h-7" />
             </div>
             <div className="space-y-1.5">
-              <h4 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'Jura, sans-serif' }}>
+              <h4 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>
                 Το μήνυμά σας εστάλη επιτυχώς
               </h4>
               <p className="text-xs text-stone-600 max-w-xs mx-auto leading-relaxed">

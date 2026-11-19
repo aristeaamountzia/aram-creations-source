@@ -1,4 +1,4 @@
-import { requestMedia } from './media-files';
+import { mediaResponse } from './media-files';
 export type ProjectArchive = {title:string;text:string;source:string;media:{url:string;type:'image'|'video';title?:string;filename?:string;description?:string}[];pages?:string[];links?:string[];warnings?:string[];complete?:boolean};
 const encoder=new TextEncoder();
 const escape=(v:string)=>v.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]!));
@@ -26,10 +26,7 @@ export async function exportProject(project:ProjectArchive,onProgress:(message:s
   for(let i=0;i<project.media.length;i++){
     const media=project.media[i];onProgress(`Λήψη αρχείου ${i+1} / ${project.media.length}…`);
     try {
-      // Wix CDN supports CORS. Download original public files directly, avoiding the function's binary response limit.
-      const url=new URL(media.url),direct=url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&((url.hostname==='static.wixstatic.com'&&url.pathname.startsWith('/media/'))||(url.hostname==='video.wixstatic.com'&&url.pathname.startsWith('/video/')));
-      let response=direct?await fetch(url,{signal:AbortSignal.timeout(120000)}):await requestMedia(media.url,'download',`media-${i+1}`);
-      if(response.headers.get('content-type')?.includes('application/json')){const data=await response.json();response=await fetch(data.url,{signal:AbortSignal.timeout(45000)});}
+      const response = await mediaResponse(media.url);
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const type=response.headers.get('content-type')||'';if(!/^(image|video)\//.test(type))throw new Error('Δεν είναι αρχείο media.');
       const blob=await response.blob(); if(files.length&&total+blob.size>ZIP_PART_BYTES)await flush(false); total+=blob.size;
