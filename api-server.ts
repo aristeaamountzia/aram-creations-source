@@ -26,6 +26,7 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import {
   BackofficeAiConfigurationError,
+  BackofficeAiGenerationError,
   generateBackofficeAiJson,
   getBackofficeAiAccessCode,
 } from "./server/backoffice-ai";
@@ -73,8 +74,8 @@ async function handleBackofficeAi(req: Request, res: Response) {
     let verifiedAdmin = false;
     if (bearer) {
       try {
-        if (!getApps().length) initializeApp({ projectId: 'aramcreations-e1529' });
-        const decoded = await getAdminAuth().verifyIdToken(bearer);
+        const app = getApps().find(app => app.name === 'backoffice-ai') || initializeApp({ projectId: 'aramcreations-e1529' }, 'backoffice-ai');
+        const decoded = await getAdminAuth(app).verifyIdToken(bearer);
         verifiedAdmin = decoded.admin === true || decoded.email?.toLowerCase() === 'aristeaamnta@gmail.com';
       } catch (error) {
         console.warn('Invalid Firebase admin token for AI request');
@@ -100,7 +101,7 @@ async function handleBackofficeAi(req: Request, res: Response) {
       ? imageDataUrls
       : imageDataUrl ? [imageDataUrl] : [];
 
-    const aiInput = { product, task, prompt, mode: req.body?.mode };
+    const aiInput = { product, task, prompt, mode: req.body?.mode, imageDataUrls: imageList };
     const systemPrompt = buildBackofficeAiPrompt(aiInput);
 
     const parsedData = await generateBackofficeAiJson(systemPrompt, imageList);
@@ -121,6 +122,7 @@ async function handleBackofficeAi(req: Request, res: Response) {
         code: "AI_SUGGESTION_INVALID",
       });
     }
+    if (error instanceof BackofficeAiGenerationError) return res.status(502).json({ ok: false, error: error.message });
     console.error("Back Office AI generation failed (502).");
     return res.status(502).json({
       ok: false,

@@ -2,6 +2,7 @@ import { DEFAULT_SHOP_SETTINGS, mergeUnique } from './catalog-config';
 import { stockForSelectedStatus } from '../../lib/stock-edit';
 import { useState, useMemo } from 'react';
 import { requestBackofficeAi } from '../../lib/backoffice-ai-client';
+import { prepareAiImages } from '../../lib/ai-images';
 import { auth } from '../../firebase';
 import type { CatalogOptions } from './useCatalogOptions';
 import type { BackOfficeSharedState } from './backoffice-types';
@@ -110,37 +111,7 @@ export function useProductAi(dependencies: ProductAiDependencies) {
         };
     };
 
-    const mediaToAiImageDataUrl = async (media) => {
-        if (!media?.url) return '';
-        let loaded = null;
-        try {
-            loaded = await loadEditableImage(media);
-            const img = loaded.img;
-            const canvas = document.createElement('canvas');
-            const ratio = Math.min(768 / img.width, 768 / img.height, 1);
-            canvas.width = Math.max(Math.round(img.width * ratio), 1);
-            canvas.height = Math.max(Math.round(img.height * ratio), 1);
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            }
-            return canvas.toDataURL('image/jpeg', 0.78);
-        } catch { return ''; }
-        finally { loaded?.cleanup?.(); }
-    };
-
-    const getAiImageDataUrls = async () => {
-        const mediaItems = getAiImageMediaCandidates().slice(0, 3);
-        const dataUrls = await Promise.all(mediaItems.map(mediaToAiImageDataUrl));
-        return dataUrls.filter(Boolean);
-    };
-
-    const getAiImageDataUrl = async () => {
-        const dataUrls = await getAiImageDataUrls();
-        return dataUrls[0] || '';
-    };
+    const getAiImageDataUrls = () => prepareAiImages(getAiImageMediaCandidates(), loadEditableImage);
 
     const normalizeAiList = (value) => {
         if (Array.isArray(value)) return value.map(item => String(item || '').trim()).filter(Boolean);

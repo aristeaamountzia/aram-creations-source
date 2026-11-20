@@ -3,6 +3,7 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import {
   BackofficeAiConfigurationError,
+  BackofficeAiGenerationError,
   generateBackofficeAiJson,
   getBackofficeAiAccessCode,
 } from "../../server/backoffice-ai";
@@ -24,8 +25,8 @@ async function isAuthorized(request: Request): Promise<boolean> {
   const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (bearer) {
     try {
-      if (!getApps().length) initializeApp({ projectId: "aramcreations-e1529" });
-      const user = await getAuth().verifyIdToken(bearer);
+      const app = getApps().find(app => app.name === 'backoffice-ai') || initializeApp({ projectId: "aramcreations-e1529" }, 'backoffice-ai');
+      const user = await getAuth(app).verifyIdToken(bearer);
       if (user.admin === true || user.email?.toLowerCase() === "aristeaamnta@gmail.com") return true;
     } catch {
       console.warn("Invalid Firebase admin token for AI request");
@@ -59,6 +60,7 @@ export default async function handleRequest(request: Request) {
   } catch (error) {
     if (error instanceof BackofficeAiConfigurationError) return json({ error: error.message }, 503);
     if (error instanceof AiSuggestionValidationError) return json({ error: error.message }, 422);
+    if (error instanceof BackofficeAiGenerationError) return json({ error: error.message }, 502);
     console.error("Back Office AI generation failed (502).");
     return json({ error: "Δεν λήφθηκε έγκυρη πρόταση από τον πάροχο AI. Δοκίμασε ξανά." }, 502);
   }

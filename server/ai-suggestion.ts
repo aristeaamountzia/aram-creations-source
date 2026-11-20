@@ -8,9 +8,16 @@ export interface BackofficeAiInput {
   task?: string;
   prompt?: string;
   mode?: string;
+  imageDataUrl?: string;
+  imageDataUrls?: string[];
 }
 
 export class AiSuggestionValidationError extends Error {}
+
+function hasImageInput(input: BackofficeAiInput): boolean {
+  return [...(Array.isArray(input.imageDataUrls) ? input.imageDataUrls : []), input.imageDataUrl]
+    .some(value => typeof value === 'string' && /^data:image\/[\w.+-]+;base64,.+/.test(value));
+}
 
 const text = (value: unknown, max = 2_000) => String(value ?? '').trim().slice(0, max);
 const greek = /[Α-Ωα-ωΆ-ώ]/;
@@ -41,6 +48,9 @@ export function buildBackofficeAiPrompt(input: BackofficeAiInput): string {
   const product = input.product || {};
   const task = normalizeAiTask(input.task);
   const extra = text(input.prompt, 800);
+  const requestedFields = task === 'title' ? 'title'
+    : task === 'description' ? 'description'
+      : task === 'tags' ? 'colors (array), materials (array), tags (array)' : '';
   const taskInstructions = task === 'tags'
     ? '\n- Για αυτή την εργασία δώσε χρώματα και υλικά ως πίνακες colors και materials. Μην απαιτείς τίτλο ή περιγραφή.'
     : task === 'title'
@@ -50,13 +60,13 @@ export function buildBackofficeAiPrompt(input: BackofficeAiInput): string {
         : '\n- Για την πλήρη πρόταση δώσε οπωσδήποτε title και description.';
   const qualityRules = `
 - Μην επαναλαμβάνεις λέξεις ή φράσεις και έλεγξε τη γραμματική πριν απαντήσεις.
-- Σύνδεσε το κείμενο με τουλάχιστον ένα από τα παρεχόμενα στοιχεία.
+- Σύνδεσε το κείμενο με τουλάχιστον ένα από τα παρεχόμενα στοιχεία ή με όσα βλέπεις στις εικόνες.
 - Μην προτείνεις και μην αλλάζεις status, διαθεσιμότητα ή απόθεμα.
 - Μην επινοείς υλικά, τεχνικές, διαστάσεις, χρώματα ή προέλευση.
 - Επίστρεψε μόνο τα πεδία που γνωρίζεις, χωρίς Markdown.${taskInstructions}`;
 
   if (normalizeAiMode(input.mode) === 'portfolio_item') {
-    if (!hasPortfolioAiContext(product, extra)) throw new AiSuggestionValidationError(portfolioContextMessage);
+    if (!hasPortfolioAiContext(product, extra, hasImageInput(input))) throw new AiSuggestionValidationError(portfolioContextMessage);
     return `Είσαι επιμελητής εικαστικού Portfolio για το Aram Creations. Γράψε φυσικά και συγκεκριμένα στα Ελληνικά.
 Στοιχεία έργου:
 - Τίτλος: ${productField(product, 'name', 'title')}
@@ -67,7 +77,7 @@ export function buildBackofficeAiPrompt(input: BackofficeAiInput): string {
 - Περιγραφή: ${productField(product, 'description')}
 - Εργασία: ${task}
 ${extra ? `- Ειδική απαίτηση: ${extra}` : ''}${qualityRules}
-Απάντησε αποκλειστικά με έγκυρο JSON με πεδία title, description, shortDescription, tags (array), altText.`;
+Απάντησε αποκλειστικά με έγκυρο JSON με πεδία ${requestedFields || 'title, description, shortDescription, tags (array), altText'}.`;
   }
 
   return `Είσαι copywriter και catalog manager για τα χειροποίητα κοσμήματα Aram Creations. Γράψε φυσικά και συγκεκριμένα στα Ελληνικά.
@@ -81,7 +91,7 @@ ${extra ? `- Ειδική απαίτηση: ${extra}` : ''}${qualityRules}
 - Χρώματα: ${listField(product, 'colors')}
 - Εργασία: ${task}
 ${extra ? `- Ειδική απαίτηση: ${extra}` : ''}${qualityRules}
-Απάντησε αποκλειστικά με έγκυρο JSON με πεδία title, description, category, colors (array), materials (array), tags (array), shortDescription, instagramCaption, altText.`;
+Απάντησε αποκλειστικά με έγκυρο JSON με πεδία ${requestedFields || 'title, description, category, colors (array), materials (array), tags (array), shortDescription, instagramCaption, altText'}.`;
 }
 
 function normalizedWords(value: string): string[] {
@@ -142,6 +152,10 @@ function validatedList(raw: Record<string, unknown>, key: string): string[] | un
 
 export function validateBackofficeAiSuggestion(raw: Record<string, unknown>, input: BackofficeAiInput): Record<string, unknown> {
   const task = normalizeAiTask(input.task);
+  // Focused actions must neither fail on nor apply unrelated provider fields.
+  if (task === 'title') raw = { title: raw.title };
+  else if (task === 'description') raw = { description: raw.description };
+  else if (task === 'tags') raw = { colors: raw.colors, materials: raw.materials, tags: raw.tags };
   const title = validatedString(raw, 'title', 160);
   const description = validatedString(raw, 'description', 2_000);
   if ((task === 'full' || task === 'title') && (!title || title.length < 3)) {
@@ -158,7 +172,7 @@ export function validateBackofficeAiSuggestion(raw: Record<string, unknown>, inp
   if (description) {
     const context = contextWords(input);
     const result = new Set(normalizedWords(description));
-    if (context.size > 0 && ![...context].some(word => result.has(word))) {
+    if (!hasImageInput(input) && context.size > 0 && ![...context].some(word => result.has(word))) {
       throw new AiSuggestionValidationError('Η περιγραφή του AI είναι γενική και δεν χρησιμοποιεί τα στοιχεία της φόρμας.');
     }
   }

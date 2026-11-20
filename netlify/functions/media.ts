@@ -2,14 +2,14 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getStorage } from 'firebase-admin/storage';
 import { mediaFilename, mediaLocation } from '../../server/media-path';
+import { firebaseCredentials, FirebaseConfigurationError } from '../../server/firebase-credentials';
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 export default async function handler(request: Request) {
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
   if (!token) return json({ error: 'Συνδέσου στο Back Office.' }, 401);
   try {
-    const credentials = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
-    if (credentials.project_id !== 'aramcreations-e1529') return json({ error: 'Η πρόσβαση στα media δεν είναι διαθέσιμη.' }, 503);
+    const credentials = firebaseCredentials();
     const app = getApps().find(app => app.name === 'media') || initializeApp({ credential: cert(credentials) }, 'media');
     const user = await getAuth(app).verifyIdToken(token).catch(() => null);
     if (!user || !(user.admin === true || user.email?.toLowerCase() === 'aristeaamnta@gmail.com')) return json({ error: 'Δεν επιτρέπεται η πρόσβαση.' }, 403);
@@ -45,6 +45,7 @@ export default async function handler(request: Request) {
     const bytes = new Uint8Array(size); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
     return new Response(bytes, { headers: { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Aram-Filename': encodeURIComponent(mediaFilename(body.filename || '', type)) } });
   } catch (error: any) {
+    if (error instanceof FirebaseConfigurationError) return json({ error: error.message }, 503);
     console.error('Media request failed', { code: error?.code || error?.name });
     return json({ error: error?.code === 404 ? 'Το αρχείο δεν υπάρχει πλέον στο Storage.' : 'Δεν ολοκληρώθηκε η πρόσβαση στο αρχείο. Δοκίμασε ξανά.' }, error?.code === 404 ? 404 : 502);
   }

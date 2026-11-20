@@ -4,16 +4,19 @@
   functions = ".netlify/functions-dist"
 
 [build.environment]
-  SECRETS_SCAN_ENABLED = "false"
+  SECRETS_SCAN_ENABLED = "true"
   SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+  # Public client configuration, model names and published contact details.
+  # API credentials and FIREBASE_SERVICE_ACCOUNT remain protected.
+  SECRETS_SCAN_OMIT_KEYS = "ADMIN_EMAIL,ADMIN_EMAILS,FIREBASE_PROJECT_ID,ORDER_NOTIFICATION_FROM,URL,PUBLIC_SITE_URL,AI_PROVIDER,AI_PROVIDER_ORDER,GEMINI_MODEL,GEMINI_MODEL_ORDER,OPENAI_MODEL,OPENAI_MODEL_ORDER,VITE_FIREBASE_API_KEY,VITE_FIREBASE_AUTH_DOMAIN,VITE_FIREBASE_PROJECT_ID,VITE_FIREBASE_STORAGE_BUCKET,VITE_FIREBASE_MESSAGING_SENDER_ID,VITE_FIREBASE_APP_ID"
   URL = "https://aramcreationsofficial.netlify.app"
   PUBLIC_SITE_URL = "https://aramcreationsofficial.netlify.app"
   ADMIN_EMAIL = "aristeaamnta@gmail.com"
   ADMIN_EMAILS = "aristeaamnta@gmail.com"
-  AI_PROVIDER = "gemini"
+  AI_PROVIDER = "auto"
   AI_PROVIDER_ORDER = "gemini,openai"
-  GEMINI_MODEL = "gemini-3.5-flash"
-  GEMINI_MODEL_ORDER = "gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-flash-latest"
+  GEMINI_MODEL = "gemini-3.1-flash-lite"
+  GEMINI_MODEL_ORDER = "gemini-3.1-flash-lite,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-flash-latest"
   OPENAI_MODEL = "gpt-4o-mini"
   ORDER_NOTIFICATION_FROM = "onboarding@resend.dev"
   FIREBASE_PROJECT_ID = "aramcreations-e1529"
@@ -25,6 +28,7 @@
 
 [functions]
   node_bundler = "esbuild"
+  external_node_modules = ["firebase-admin"]
 
 [[redirects]]
   from = "/api/artist-profile"

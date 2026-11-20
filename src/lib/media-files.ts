@@ -1,4 +1,9 @@
 import { auth } from '../firebase';
+import { mediaFilename } from '../../server/media-path';
+
+const mediaSignal = (signal?: AbortSignal) => signal ? AbortSignal.any([signal, AbortSignal.timeout(120000)]) : AbortSignal.timeout(120000);
+const isStoredMedia = (url: string) => /^https:\/\/(?:firebasestorage|storage)\.googleapis\.com\//.test(url);
+
 export async function requestMedia(url: string, action: 'edit' | 'download' | 'read', filename = '', signal?: AbortSignal) {
   const user = auth.currentUser;
   if (!user) throw new Error('Συνδέσου στο Back Office.');
@@ -12,16 +17,27 @@ export async function mediaResponse(url: string, signal?: AbortSignal): Promise<
   if (!url) throw new Error('Δεν υπάρχει σύνδεσμος αρχείου.');
   signal?.throwIfAborted();
   try {
-    const response = await fetch(url, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000) });
-    if (!response.ok || !/^(image|video)\//i.test(response.headers.get('content-type') || '')) throw new Error('Δεν φορτώθηκε το αρχείο.');
+    const response = await fetch(url, { signal: mediaSignal(signal), referrerPolicy: 'no-referrer' });
+    if (!response.ok) throw new Error(`Δεν φορτώθηκε το αρχείο (HTTP ${response.status}).`);
+    if (!/^(image|video)\//i.test(response.headers.get('content-type') || '')) throw new Error('Ο σύνδεσμος δεν επέστρεψε εικόνα ή βίντεο.');
     return response;
   } catch (error) {
     signal?.throwIfAborted();
     if (/^(blob:|data:|\/)/.test(url)) throw error;
-    return requestMedia(url, 'read', '', signal);
+    if (!auth.currentUser) throw error;
+    // Reuse the signed download route: large files must not pass through a
+    // buffered Function response. External providers still return media bytes.
+    const response = await requestMedia(url, 'download', '', signal);
+    if (!response.headers.get('content-type')?.includes('application/json')) return response;
+    const download = await response.json();
+    if (typeof download.url !== 'string') throw new Error('Δεν επιστράφηκε σύνδεσμος λήψης αρχείου.');
+    const signed = await fetch(download.url, { signal: mediaSignal(signal), referrerPolicy: 'no-referrer' });
+    if (!signed.ok) throw new Error(`Δεν φορτώθηκε το αρχείο από το Storage (HTTP ${signed.status}).`);
+    return signed;
   }
 }
 export async function editableBlob(media: any, signal?: AbortSignal) {
+  if (!media) throw new Error('Δεν υπάρχει εικόνα για επεξεργασία.');
   if (media.fileObj) return media.fileObj as Blob;
   return (await mediaResponse(typeof media === 'string' ? media : media.url, signal)).blob();
 }
@@ -29,6 +45,17 @@ export async function downloadMedia(media: any, filename = 'aram-media') {
   const source = typeof media === 'string' ? { url: media } : media;
   if (!source) throw new Error('Δεν υπάρχει αρχείο για λήψη.');
   let name = source.fileObj?.name || source.fileName || filename;
+  if (!source.fileObj && isStoredMedia(source.url || '') && auth.currentUser) {
+    const response = await requestMedia(source.url, 'download', name);
+    const download = await response.json();
+    if (typeof download.url !== 'string') throw new Error('Δεν επιστράφηκε σύνδεσμος λήψης αρχείου.');
+    const link = document.createElement('a');
+    link.href = download.url;
+    link.download = download.filename || name;
+    link.referrerPolicy = 'no-referrer';
+    document.body.appendChild(link); link.click(); link.remove();
+    return;
+  }
   let blob: Blob;
   if (source.fileObj) blob = source.fileObj;
   else {
@@ -36,8 +63,7 @@ export async function downloadMedia(media: any, filename = 'aram-media') {
     name = decodeURIComponent(response.headers.get('X-Aram-Filename') || '') || name;
     blob = await response.blob();
   }
-  const extension = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif', 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' } as Record<string, string>)[blob.type.split(';')[0]];
-  if (extension && !new RegExp(`\\.${extension}$`, 'i').test(name)) name = name.replace(/\.[a-z0-9]{1,5}$/i, '') + '.' + extension;
+  name = mediaFilename(name, blob.type);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a'); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);

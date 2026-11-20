@@ -15,8 +15,11 @@ export function mediaLocation(raw: string) {
   if (/^images\d*\.vinted\.net$/.test(url.hostname) || ['static.wixstatic.com', 'video.wixstatic.com'].includes(url.hostname)) return { bucket: '', object: '', external: url.href };
   throw new Error('Αυτός ο πάροχος αρχείων δεν υποστηρίζεται.');
 }
+export function mediaExtension(contentType: string): string | undefined {
+  return ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif', 'image/bmp': 'bmp', 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' } as Record<string, string>)[contentType.split(';')[0].trim().toLowerCase()];
+}
 export function mediaFilename(name: string, contentType: string) {
-  const extension = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' } as Record<string, string>)[contentType.split(';')[0]];
+  const extension = mediaExtension(contentType);
   const clean = String(name || 'aram-media').normalize('NFKC').replace(/[\x00-\x1f<>:"/\\|?*]/g, '-').slice(0, 160).replace(/^\.+/, '') || 'aram-media';
   return extension && !new RegExp(`\\.${extension}$`, 'i').test(clean) ? clean.replace(/\.[a-z0-9]{1,5}$/i, '') + '.' + extension : clean;
 }

@@ -1,4 +1,5 @@
 import { mediaResponse } from './media-files';
+import { mediaExtension } from '../../server/media-path';
 export type ProjectArchive = {title:string;text:string;source:string;media:{url:string;type:'image'|'video';title?:string;filename?:string;description?:string}[];pages?:string[];links?:string[];warnings?:string[];complete?:boolean};
 const encoder=new TextEncoder();
 const escape=(v:string)=>v.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]!));
@@ -30,7 +31,7 @@ export async function exportProject(project:ProjectArchive,onProgress:(message:s
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const type=response.headers.get('content-type')||'';if(!/^(image|video)\//.test(type))throw new Error('Δεν είναι αρχείο media.');
       const blob=await response.blob(); if(files.length&&total+blob.size>ZIP_PART_BYTES)await flush(false); total+=blob.size;
-      const extension=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif','image/gif':'gif','video/mp4':'mp4','video/webm':'webm'} as Record<string,string>)[type.split(';')[0]]||'bin';
+      const extension=mediaExtension(type)||'bin';
       const original=(media.filename||'').normalize('NFKC').replace(/[\x00-\x1f<>:"/\\|?*]/g,'-').replace(/\.[a-z0-9]{1,5}$/i,'').slice(0,80).replace(/^\.+/,'');
       const name=`media/${String(i+1).padStart(3,'0')}${original?'-'+original:''}.${extension}`;files.push({name,bytes:new Uint8Array(await blob.arrayBuffer())});mediaNames.push({name,type:media.type,title:media.title||'',description:media.description||''});downloaded++;
     } catch(error:any){failed.push(`${media.url}\n${error.message}`);}

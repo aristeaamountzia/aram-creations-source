@@ -1,6 +1,6 @@
-import { copyFile, mkdir } from "node:fs/promises";
+import { copyFile, mkdir, readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -16,6 +16,7 @@ await build({
   platform: "node",
   format: "esm",
   packages: "bundle",
+  external: ["firebase-admin"],
   target: "node20",
   banner: {
     js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);',
@@ -25,16 +26,24 @@ await build({
 await build({
   entryPoints: [join(source, "orders.ts")], outfile: join(output, "orders.mjs"),
   bundle: true, platform: "node", format: "esm", packages: "bundle", target: "node20",
+  external: ["firebase-admin"],
   banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' },
 });
 
-console.log("Netlify Functions prepared in .netlify/functions-dist");
 await build({
   entryPoints: [join(source, 'media.ts')], outfile: join(output, 'media.mjs'), bundle: true,
   platform: 'node', format: 'esm', packages: 'bundle', target: 'node20',
+  external: ['firebase-admin'],
   banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' },
 });
 
 for (const name of ['artist-profile', 'shop-metrics', 'contact', 'catalog-backups', 'catalog-backup-schedule', 'catalog-backup-worker', 'order-email-retry', 'order-email-test', 'wix-project', 'stripe-confirm', 'stripe-webhook', 'vinted-reviews']) {
-  await build({ entryPoints: [join(source, `${name}.ts`)], outfile: join(output, `${name}.mjs`), bundle: true, platform: 'node', format: 'esm', packages: 'bundle', target: 'node20', banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' } });
+  await build({ entryPoints: [join(source, `${name}.ts`)], outfile: join(output, `${name}.mjs`), bundle: true, platform: 'node', format: 'esm', packages: 'bundle', target: 'node20', external: ['firebase-admin'], banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' } });
 }
+
+// Firebase's Firestore SDK loads protobuf files relative to its own CommonJS
+// modules. Keep it external here and in netlify.toml so those paths survive.
+// Importing the finished bundles catches runtime failures before a deploy.
+const bundles = (await readdir(output)).filter(name => name.endsWith('.mjs'));
+for (const name of bundles) await import(pathToFileURL(join(output, name)).href);
+console.log(`Netlify Functions prepared and import-checked (${bundles.length} bundles).`);

@@ -171,6 +171,7 @@ export function useMediaStudio(dependencies: MediaStudioDependencies) {
         try {
             const img = await new Promise<HTMLImageElement>((resolve, reject) => {
                 const nextImg = new Image();
+                nextImg.referrerPolicy = 'no-referrer';
                 nextImg.onload = () => resolve(nextImg);
                 nextImg.onerror = () => reject(new Error('Το αρχείο δεν είναι έγκυρη στατική εικόνα.'));
                 nextImg.src = url;

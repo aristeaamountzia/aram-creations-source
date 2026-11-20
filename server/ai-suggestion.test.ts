@@ -30,6 +30,13 @@ test('portfolio prompt includes context and explicit quality constraints', () =>
   assert.match(prompt, /Μην επινοείς υλικά/);
 });
 
+test('Portfolio accepts image-only context and does not require English default categories in Greek image descriptions', () => {
+  const input = { mode: 'portfolio_item', product: { year: '2026', category: 'handcrafted-memories' }, imageDataUrls: ['data:image/jpeg;base64,fixture'] };
+  assert.doesNotThrow(() => buildBackofficeAiPrompt(input));
+  assert.doesNotThrow(() => validateBackofficeAiSuggestion({ title: 'Κλαδί ελιάς', description: 'Ένα ανάγλυφο κλαδί ελιάς ξεδιπλώνεται σε λευκό φόντο με απαλή υφή και λιτή σύνθεση.' }, input));
+  assert.throws(() => buildBackofficeAiPrompt({ ...input, imageDataUrls: ['not-an-image'] }), /Πρόσθεσε/);
+});
+
 test('validates and trims a contextual Greek portfolio suggestion', () => {
   const result = validateBackofficeAiSuggestion({
     title: '  Ίχνος των Κυκλάδων  ',
@@ -52,6 +59,24 @@ test('title-only tasks do not require a description', () => {
     validateBackofficeAiSuggestion({ title: 'Κυκλαδικό ίχνος' }, { ...portfolioInput, task: 'title' }),
     { title: 'Κυκλαδικό ίχνος' }
   );
+});
+
+test('title-only actions ignore unrelated invalid descriptions and catalog fields', () => {
+  const input = { ...portfolioInput, task: 'title' };
+  assert.match(buildBackofficeAiPrompt(input), /JSON με πεδία title\./);
+  assert.deepEqual(validateBackofficeAiSuggestion({ title: 'Κυκλαδικό ίχνος', description: 'Generic text', category: 'Unrequested', colors: 'not a list' }, input), { title: 'Κυκλαδικό ίχνος' });
+});
+
+test('description-only actions ignore unrelated title and metadata fields', () => {
+  const input = { ...portfolioInput, task: 'description' };
+  const description = 'Το κυκλαδικό ειδώλιο αποδίδεται με χαρτοπολτό και ακρυλικά, συνδέοντας τη λιτή φόρμα με μια σύγχρονη χειροποίητη υφή.';
+  assert.match(buildBackofficeAiPrompt(input), /JSON με πεδία description\./);
+  assert.deepEqual(validateBackofficeAiSuggestion({ title: 123, description, tags: 'not a list' }, input), { description });
+});
+
+test('color and material actions ignore unrelated invalid prose', () => {
+  const input = { mode: 'product', task: 'tags', product: { name: 'Κολιέ' } };
+  assert.deepEqual(validateBackofficeAiSuggestion({ title: '', description: '', colors: ['Μπλε'], materials: ['Γυαλί'] }, input), { colors: ['Μπλε'], materials: ['Γυαλί'] });
 });
 
 test('colors and materials task accepts lists without requiring a title or description', () => {

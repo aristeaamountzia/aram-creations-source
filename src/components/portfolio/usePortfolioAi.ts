@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { hasPortfolioAiContext, portfolioContextMessage } from '../../lib/portfolio-ai-context';
 import { requestBackofficeAi } from '../../lib/backoffice-ai-client';
+import { prepareAiImages } from '../../lib/ai-images';
 import { auth } from '../../firebase';
 
 import type { PortfolioWorkspace } from './usePortfolioWorkspace';
@@ -22,7 +23,7 @@ export function usePortfolioAi(dependencies: Dependencies) {
   const generateAiSuggestion = async (task: 'full' | 'title' | 'description') => {
     if (!form) return;
     setAiSuggestion(null);
-    if (!hasPortfolioAiContext(form, aiPrompt)) {
+    if (!hasPortfolioAiContext(form, aiPrompt, form.mediaList.some(media => media.type !== 'video' && Boolean(media.url)))) {
       setError(portfolioContextMessage);
       return;
     }
@@ -31,10 +32,12 @@ export function usePortfolioAi(dependencies: Dependencies) {
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('Συνδέσου ξανά ως διαχειριστής.');
+      const imageDataUrls = await prepareAiImages(form.mediaList);
       const data = await requestBackofficeAi({
           mode: 'portfolio_item',
           task,
           prompt: aiPrompt,
+          imageDataUrls,
           product: {
             name: form.title,
             category: form.category,

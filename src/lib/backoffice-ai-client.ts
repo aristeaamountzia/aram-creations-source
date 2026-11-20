@@ -6,7 +6,8 @@ export async function requestBackofficeAi(
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(65000)
   });
   const data = await response.json().catch(() => null);
   if (!response.ok || !data || typeof data !== 'object' || Array.isArray(data) || data.error) {

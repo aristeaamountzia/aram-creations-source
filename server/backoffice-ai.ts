@@ -22,6 +22,40 @@ export class BackofficeAiConfigurationError extends Error {}
 
 export class BackofficeAiGenerationError extends Error {}
 
+type FailureReason = 'authentication' | 'quota' | 'model' | 'timeout' | 'unavailable' | 'invalid_response' | 'request' | 'network';
+class ProviderFailure extends Error {
+  constructor(readonly reason: FailureReason, readonly status?: number) { super(reason); }
+}
+
+function providerFailure(error: unknown): ProviderFailure {
+  if (error instanceof ProviderFailure) return error;
+  const value = error as { status?: unknown; code?: unknown; name?: string; message?: string };
+  const httpCode = Number(value?.status || value?.code);
+  const status = httpCode >= 100 && httpCode <= 599 ? httpCode : undefined;
+  if (value?.name === 'TimeoutError' || value?.name === 'AbortError' || /timed? ?out|timeout/i.test(value?.message || '')) return new ProviderFailure('timeout', status);
+  if (status === 401 || status === 403 || /API_KEY_INVALID|API key not valid/i.test(value?.message || '')) return new ProviderFailure('authentication', status);
+  if (status === 429) return new ProviderFailure('quota', status);
+  if (status === 404) return new ProviderFailure('model', status);
+  if (status && status >= 500) return new ProviderFailure('unavailable', status);
+  if (status) return new ProviderFailure('request', status);
+  if (error instanceof SyntaxError) return new ProviderFailure('invalid_response');
+  return new ProviderFailure('network');
+}
+
+function failureMessage(provider: AiProvider, failure: ProviderFailure): string {
+  const reasons: Record<FailureReason, string> = {
+    authentication: 'το API key απορρίφθηκε ή δεν έχει δικαίωμα πρόσβασης',
+    quota: 'εξαντλήθηκε το όριο χρήσης ή τα διαθέσιμα credits',
+    model: 'το μοντέλο δεν είναι διαθέσιμο',
+    timeout: 'ξεπεράστηκε ο χρόνος αναμονής',
+    unavailable: 'ο πάροχος είναι προσωρινά μη διαθέσιμος',
+    invalid_response: 'ο πάροχος δεν επέστρεψε έγκυρο JSON',
+    request: 'ο πάροχος απέρριψε τα δεδομένα του αιτήματος',
+    network: 'απέτυχε η σύνδεση με τον πάροχο',
+  };
+  return `${provider === 'gemini' ? 'Gemini' : 'OpenAI'}${failure.status ? ` HTTP ${failure.status}` : ''}: ${reasons[failure.reason]}.`;
+}
+
 export function getBackofficeAiAccessCode(environment: AiEnvironment = process.env): string {
   return environment.AI_ACCESS_CODE?.trim() || environment.AI_BACKOFFICE_SECRET?.trim() || "";
 }
@@ -58,13 +92,13 @@ export function getAiProviderPlan(environment: AiEnvironment = process.env): AiP
 
 export function getAiModelOrder(provider: AiProvider, environment: AiEnvironment = process.env): string[] {
   const [configuredModels, preferredModel, defaultModel] = provider === "gemini"
-    ? [environment.GEMINI_MODEL_ORDER, environment.GEMINI_MODEL, "gemini-3.5-flash"]
+    ? [environment.GEMINI_MODEL_ORDER, environment.GEMINI_MODEL, "gemini-3.1-flash-lite"]
     : [environment.OPENAI_MODEL_ORDER, environment.OPENAI_MODEL, "gpt-4o-mini"];
   const models = [
     ...(configuredModels?.split(",").map(model => model.trim()).filter(Boolean) ?? []),
     ...(preferredModel?.trim() ? [preferredModel.trim()] : []),
     defaultModel,
-    ...(provider === "gemini" ? ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"] : []),
+    ...(provider === "gemini" ? ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"] : []),
   ];
   return [...new Set(models)];
 }
@@ -78,17 +112,22 @@ function parseJsonObject(text: string): Record<string, unknown> {
   const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
   const parsed: unknown = JSON.parse(cleaned);
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("The AI provider returned a non-object JSON value.");
+    throw new ProviderFailure('invalid_response');
   }
   return parsed as Record<string, unknown>;
 }
 
-async function generateWithGemini(prompt: string, images: string[], model: string, environment: AiEnvironment): Promise<Record<string, unknown>> {
+async function generateWithGemini(prompt: string, images: string[], model: string, environment: AiEnvironment, fetcher: typeof fetch, timeoutMs: number): Promise<Record<string, unknown>> {
   const apiKey = getGeminiApiKey(environment);
   if (!apiKey) throw new BackofficeAiConfigurationError("Set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini.");
   const ai = new GoogleGenAI({
     apiKey,
-    ...(environment.GOOGLE_GEMINI_BASE_URL ? { httpOptions: { baseUrl: environment.GOOGLE_GEMINI_BASE_URL } } : {}),
+    httpOptions: {
+      ...(environment.GOOGLE_GEMINI_BASE_URL ? { baseUrl: environment.GOOGLE_GEMINI_BASE_URL } : {}),
+      timeout: timeoutMs,
+      retryOptions: { attempts: 1 },
+      fetch: fetcher,
+    },
   });
   const contents: Array<string | { inlineData: { mimeType: string; data: string } }> = images
     .map(imageData)
@@ -99,13 +138,13 @@ async function generateWithGemini(prompt: string, images: string[], model: strin
   const response = await ai.models.generateContent({
     model,
     contents,
-    config: { responseMimeType: "application/json", temperature: 0.6 },
+    config: { responseMimeType: "application/json", temperature: 0.6, abortSignal: AbortSignal.timeout(timeoutMs) },
   });
-  if (!response.text) throw new Error("Gemini returned an empty response.");
+  if (!response.text) throw new ProviderFailure('invalid_response');
   return parseJsonObject(response.text);
 }
 
-async function generateWithOpenAi(prompt: string, images: string[], model: string, environment: AiEnvironment, fetcher: typeof fetch): Promise<Record<string, unknown>> {
+async function generateWithOpenAi(prompt: string, images: string[], model: string, environment: AiEnvironment, fetcher: typeof fetch, timeoutMs: number): Promise<Record<string, unknown>> {
   const apiKey = environment.OPENAI_API_KEY?.trim();
   if (!apiKey) throw new BackofficeAiConfigurationError("Set OPENAI_API_KEY to use OpenAI.");
   const content: Array<Record<string, unknown>> = [{ type: "text", text: prompt }];
@@ -121,12 +160,12 @@ async function generateWithOpenAi(prompt: string, images: string[], model: strin
       response_format: { type: "json_object" },
       temperature: 0.6,
     }),
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
-  if (!response.ok) throw new Error(`OpenAI request failed (HTTP ${response.status}).`);
+  if (!response.ok) throw providerFailure({ status: response.status });
   const result = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
   const text = result.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error("OpenAI returned an empty response.");
+  if (typeof text !== "string" || !text.trim()) throw new ProviderFailure('invalid_response');
   return parseJsonObject(text);
 }
 
@@ -137,18 +176,28 @@ export async function generateBackofficeAiJson(
   fetcher: typeof fetch = fetch,
 ): Promise<Record<string, unknown>> {
   const providers = getAiProviderPlan(environment);
-
-  for (const provider of providers) {
+  const deadline = Date.now() + 50_000;
+  const failures = new Map<AiProvider, ProviderFailure>();
+  for (const [index, provider] of providers.entries()) {
+    // Reserve time for the next provider instead of exhausting the Function's
+    // execution limit in SDK retries or an unbounded model loop.
+    const providerDeadline = Date.now() + Math.floor((deadline - Date.now()) / (providers.length - index));
     for (const model of getAiModelOrder(provider, environment)) {
+      const timeoutMs = Math.min(20_000, providerDeadline - Date.now());
+      if (timeoutMs <= 0) { failures.set(provider, new ProviderFailure('timeout')); break; }
       try {
         return provider === "gemini"
-          ? await generateWithGemini(prompt, images, model, environment)
-          : await generateWithOpenAi(prompt, images, model, environment, fetcher);
+          ? await generateWithGemini(prompt, images, model, environment, fetcher, timeoutMs)
+          : await generateWithOpenAi(prompt, images, model, environment, fetcher, timeoutMs);
       } catch (error) {
         if (error instanceof BackofficeAiConfigurationError) throw error;
-        console.warn(`Back Office AI: απέτυχε η κλήση στον πάροχο ${provider}.`);
+        const failure = providerFailure(error);
+        failures.set(provider, failure);
+        console.warn('Back Office AI provider failed', { provider, status: failure.status, reason: failure.reason });
+        // Retrying another model cannot repair credentials, quota or an outage.
+        if (failure.reason !== 'model' && failure.reason !== 'invalid_response') break;
       }
     }
   }
-  throw new BackofficeAiGenerationError('Δεν λήφθηκε έγκυρη πρόταση από τον πάροχο AI. Δοκίμασε ξανά.');
+  throw new BackofficeAiGenerationError(`Δεν ολοκληρώθηκε η πρόταση από τον πάροχο AI. ${[...failures].map(([provider, failure]) => failureMessage(provider, failure)).join(' ')}`);
 }

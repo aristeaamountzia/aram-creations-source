@@ -2,11 +2,11 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { getStorage } from 'firebase-admin/storage';
+import { firebaseCredentials } from './firebase-credentials';
 
 export function adminDatabase() {
-  const credentials = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
-  if (credentials.project_id !== 'aramcreations-e1529') throw new Error('Firebase credentials unavailable');
-  const app = getApps().find(a => a.name === 'catalog-services') || initializeApp({ credential: cert(credentials), projectId: credentials.project_id, storageBucket: 'aramcreations-e1529.firebasestorage.app' }, 'catalog-services');
+  const credentials = firebaseCredentials();
+  const app = getApps().find(a => a.name === 'catalog-services') || initializeApp({ credential: cert(credentials), projectId: credentials.projectId, storageBucket: 'aramcreations-e1529.firebasestorage.app' }, 'catalog-services');
   return { db: getFirestore(app), auth: getAuth(app), bucket: getStorage(app).bucket() };
 }
 
