@@ -1,3 +1,4 @@
+import { useDialogKeyboard } from '../lib/use-dialog-keyboard';
 import React, { useState, useMemo } from 'react';
 import { CartItem, OrderCustomerInfo } from '../types';
 import { ShippingSettings } from '../shopSettings';
@@ -6,7 +7,6 @@ import { notifyOperationSuccess, notifyOperationError } from '../lib/sound-notif
 import {
   X,
   Trash2,
-  ArrowRight,
   ShieldCheck,
   CheckCircle2,
   Truck,
@@ -78,6 +78,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   });
   const paymentMethod = 'stripe';
 
+  const handleClose = () => {
+    if (isSubmitting) return;
+    setIsCheckoutStep(false);
+    setCompletedOrderNumber(null);
+    setOrderError('');
+    onClose();
+  };
+  const dialog = useDialogKeyboard(isOpen, handleClose);
+
   if (!isOpen) return null;
 
   const subtotal = items.reduce((sum, item) => sum + (Number(item.item.price) || 0) * item.quantity, 0);
@@ -99,7 +108,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     e.preventDefault();
     if (isSubmitting || !items.length) return;
     if (!customer.name.trim() || !customer.phone.trim() || !customer.email.trim() || !customer.address.trim() || !customer.city.trim()) {
-      alert('Παρακαλώ συμπληρώστε όλα τα απαιτούμενα πεδία αποστολής (Ονοματεπώνυμο, Τηλέφωνο, Email, Διεύθυνση, Πόλη).');
+      setOrderError('Συμπληρώστε το ονοματεπώνυμο, το τηλέφωνο, το email, τη διεύθυνση και την πόλη.');
       return;
     }
 
@@ -171,21 +180,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     }
   };
 
-  const handleClose = () => {
-    if (isSubmitting) return;
-    setIsCheckoutStep(false);
-    setCompletedOrderNumber(null);
-    setOrderError('');
-    onClose();
-  };
+
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex justify-end">
+    <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="drawer-title" tabIndex={-1} className="studio-overlay fixed inset-0 z-50 flex justify-end" onClick={event => { if (event.target === event.currentTarget) handleClose(); }}>
       <div 
-        className="w-full max-w-lg bg-white border-l border-stone-200 text-stone-900 h-full flex flex-col justify-between shadow-2xl animate-in slide-in-from-right duration-300"
+        className="studio-dialog studio-drawer w-full max-w-lg bg-white border-l border-stone-200 text-stone-900 h-full flex flex-col justify-between shadow-2xl animate-in slide-in-from-right duration-300"
       >
         {/* Drawer Header */}
-        <div className="p-6 border-b border-stone-200 flex items-center justify-between">
+        <div className="drawer-head p-6 border-b border-stone-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {isCheckoutStep && !completedOrderNumber && (
               <button
@@ -197,13 +200,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </button>
             )}
             <div>
-              <h2 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>
+              <h2 id="drawer-title" className="drawer-title">
                 {completedOrderNumber
                   ? 'Επιβεβαίωση Παραγγελίας'
                   : isCheckoutStep
                   ? 'Στοιχεία Αποστολής'
-                  : 'Τσάντα Αγορών'}
+                  : 'Καλάθι'}
               </h2>
+              {items.length > 0 && !completedOrderNumber && <p className="drawer-step">{isCheckoutStep ? '2 από 2 · Ολοκλήρωση' : '1 από 2 · Προϊόντα'}</p>}
             </div>
           </div>
           <button
@@ -215,20 +219,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           </button>
         </div>
 
-        {/* Reassuring Luxury Assurance Banner */}
-        <div className="bg-stone-50 border-b border-stone-200 px-6 py-2.5 flex items-center justify-between text-[11px] text-stone-600">
-          <div className="flex items-center gap-1.5 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5 text-stone-800 shrink-0" />
-            <span>Ασφαλείς πληρωμές & πιστοποιημένο εργαστήριο</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-stone-500">
-            <Truck className="w-3.5 h-3.5 text-stone-700 shrink-0" />
-            <span>BoxNow 24/7 & Courier</span>
-          </div>
-        </div>
-
         {/* Drawer Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="drawer-content flex-1 overflow-y-auto p-6 space-y-6">
           {completedOrderNumber ? (
             /* Success confirmation view */
             <div className="py-6 space-y-5">
@@ -306,41 +298,41 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             /* Checkout Form */
             <form id="order-form" onSubmit={handleSubmitOrder} className="space-y-4">
               <div>
-                <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+                <label htmlFor="checkout-name" className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                   Ονοματεπώνυμο *
                 </label>
                 <input
                   type="text"
                   required
-                  value={customer.name}
+                  id="checkout-name" autoComplete="name" value={customer.name}
                   onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
                   placeholder="π.χ. Μαρία Παπαδοπούλου"
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="checkout-contact-grid grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+                  <label htmlFor="checkout-phone" className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                     Τηλέφωνο *
                   </label>
                   <input
                     type="tel"
                     required
-                    value={customer.phone}
+                    id="checkout-phone" autoComplete="tel" value={customer.phone}
                     onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
                     placeholder="69XXXXXXXX"
                     className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+                  <label htmlFor="checkout-email" className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                     Email *
                   </label>
                   <input
                     type="email"
                     required
-                    value={customer.email}
+                    id="checkout-email" autoComplete="email" value={customer.email}
                     onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
                     placeholder="name@example.com"
                     className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
@@ -349,13 +341,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+                <label htmlFor="checkout-address" className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                   Διεύθυνση & Αριθμός *
                 </label>
                 <input
                   type="text"
                   required
-                  value={customer.address}
+                  id="checkout-address" autoComplete="street-address" value={customer.address}
                   onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
                   placeholder={selectedShipping === 'boxnow' ? 'Οδός/αριθμός ή σημείο BoxNow Locker' : 'Οδός και αριθμός κατοικίας ή γραφείου'}
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
@@ -369,25 +361,25 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+                  <label htmlFor="checkout-city" className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                     Πόλη / Περιοχή *
                   </label>
                   <input
                     type="text"
                     required
-                    value={customer.city}
+                    id="checkout-city" autoComplete="address-level2" value={customer.city}
                     onChange={(e) => setCustomer({ ...customer, city: e.target.value })}
                     placeholder="π.χ. Αθήνα, Θεσσαλονίκη, Πάτρα"
                     className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+                  <label htmlFor="checkout-postalCode" className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                     Τ.Κ.
                   </label>
                   <input
                     type="text"
-                    value={customer.postalCode}
+                    id="checkout-postalCode" autoComplete="postal-code" inputMode="numeric" value={customer.postalCode}
                     onChange={(e) => setCustomer({ ...customer, postalCode: e.target.value })}
                     placeholder="38500"
                     className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
@@ -418,12 +410,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+                <label htmlFor="checkout-notes" className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
                   Σημειώσεις / Οδηγίες Παράδοσης
                 </label>
                 <textarea
                   maxLength={1000}
-                  value={customer.notes}
+                  id="checkout-notes" value={customer.notes}
                   onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
                   placeholder="π.χ. Κουδούνι, όροφος, επιθυμητή ώρα παράδοσης"
                   rows={2}
@@ -440,8 +432,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             <div className="py-24 text-center text-stone-400">
               <p className="text-base font-bold text-stone-700">Η τσάντα αγορών σας είναι άδεια.</p>
               <p className="text-xs text-stone-500 mt-2 max-w-xs mx-auto">
-                Εξερευνήστε τη συλλογή χειροποίητων κοσμημάτων και μοναδικών έργων τέχνης.
+                Εξερευνήστε τη συλλογή χειροποίητων κοσμημάτων.
               </p>
+              <button type="button" onClick={handleClose} className="mt-5 bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white">Συνέχεια στο Shop</button>
             </div>
           ) : (
             /* Items List */
@@ -627,13 +620,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   ) : paymentMethod === 'stripe' ? (
                     <>
                       <span>Μετάβαση σε ασφαλή πληρωμή (Stripe)</span>
-                      <ArrowRight className="w-4 h-4" />
                     </>
                   ) : (
                     <>
                       <span>Καταχώρηση παραγγελίας</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
+                      </>
                   )}
                 </button>
               </div>
@@ -643,7 +634,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 className="w-full py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
               >
                 <span>Στοιχεία και επιβεβαίωση</span>
-                <ArrowRight className="w-4 h-4" />
               </button>
             )}
           </div>

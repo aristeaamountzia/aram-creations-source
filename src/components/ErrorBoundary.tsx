@@ -26,12 +26,12 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4 font-sans text-stone-900">
+        <div className="studio-shell min-h-screen bg-stone-50 flex items-center justify-center p-4 font-sans text-stone-900">
           <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-stone-200 p-8 text-center space-y-4">
             <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
               !
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-stone-900">
+            <h1 className="workspace-heading">
               Παρουσιάστηκε σφάλμα
             </h1>
             <p className="text-sm text-stone-600 leading-relaxed">

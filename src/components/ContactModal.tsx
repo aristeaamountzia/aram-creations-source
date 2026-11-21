@@ -1,3 +1,4 @@
+import { useDialogKeyboard } from '../lib/use-dialog-keyboard';
 import React, { useState } from 'react';
 import { ArtItem } from '../types';
 import { X, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
@@ -23,14 +24,17 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     message: '',
   });
 
-  if (!isOpen) return null;
-
   const handleClose = () => {
+    if (isSubmitting) return;
     setSubmitted(false);
     setIsSubmitting(false);
     setErrorMessage(null);
     onClose();
   };
+
+  const dialog = useDialogKeyboard(isOpen, handleClose);
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,21 +63,19 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"
+      ref={dialog} role="dialog" aria-modal="true" aria-labelledby="contact-title" tabIndex={-1}
+      className="studio-overlay fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"
       onClick={handleClose}
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="bg-white border border-stone-200 max-w-lg w-full rounded-3xl p-6 sm:p-8 shadow-2xl text-stone-900"
+        className="studio-dialog bg-white border border-stone-200 max-w-lg w-full rounded-3xl p-6 sm:p-8 shadow-2xl text-stone-900"
       >
         <div className="flex items-center justify-between pb-4 border-b border-stone-200">
           <div>
-            <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
-              Aram Creations • Atelier Inquiries
-            </div>
-            <h3 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>
-              Εκδήλωση Ενδιαφέροντος & Αναθέσεις
-            </h3>
+            <h2 id="contact-title" className="studio-dialog-title">
+              Επικοινωνία με το εργαστήριο
+            </h2>
           </div>
           <button 
             type="button"
@@ -118,10 +120,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             )}
 
             <div>
-              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+              <label htmlFor="contact-name" className="block text-sm text-stone-700 mb-1 font-semibold">
                 Ονοματεπώνυμο *
               </label>
-              <input
+              <input id="contact-name" autoComplete="name"
                 required
                 type="text"
                 disabled={isSubmitting}
@@ -133,10 +135,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+              <label htmlFor="contact-email" className="block text-sm text-stone-700 mb-1 font-semibold">
                 Email Επικοινωνίας *
               </label>
-              <input
+              <input id="contact-email" autoComplete="email"
                 required
                 type="email"
                 disabled={isSubmitting}
@@ -148,10 +150,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+              <label htmlFor="contact-interest" className="block text-sm text-stone-700 mb-1 font-semibold">
                 Αντικείμενο Ενδιαφέροντος
               </label>
-              <input
+              <input id="contact-interest"
                 type="text"
                 disabled={isSubmitting}
                 value={formData.interest}
@@ -161,10 +163,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1 font-bold">
+              <label htmlFor="contact-message" className="block text-sm text-stone-700 mb-1 font-semibold">
                 Μήνυμα / Περιγραφή Ανάθεσης *
               </label>
-              <textarea
+              <textarea id="contact-message"
                 required
                 rows={3}
                 disabled={isSubmitting}

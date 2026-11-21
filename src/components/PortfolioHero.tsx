@@ -39,7 +39,7 @@ export function PortfolioHero({ videoUrl = '', design = DEFAULT_PORTFOLIO_DESIGN
     : source;
 
   return (
-    <section style={heroAppearanceCss(design.heroAppearance) as React.CSSProperties} className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video bg-stone-950 text-white' : 'bg-stone-950 text-white'} min-h-[520px] h-[62svh] max-h-[680px] flex flex-col justify-center items-center relative overflow-hidden border-b border-stone-800 px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8 transition-colors`}>
+    <section data-design-sample style={heroAppearanceCss(design.heroAppearance) as React.CSSProperties} className={`portfolio-hero ${hasVideo ? 'portfolio-hero--video bg-stone-950 text-white' : 'bg-stone-950 text-white'} min-h-[520px] h-[62svh] max-h-[680px] flex flex-col justify-center items-center relative overflow-hidden border-b border-stone-800 px-4 py-16 sm:py-24 text-center sm:px-6 lg:px-8 transition-colors`}>
       {hasVideo && (
         <>
           {videoLink(source) ? (

@@ -269,11 +269,11 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
             />
     );
 
-    if (!firebaseReady || !authReady) return null;
+    if (!firebaseReady || !authReady) return <p role="status" className="p-8 text-center text-stone-600">Φόρτωση διαχείρισης…</p>;
 
     if (currentUser && !isAdminClaim) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4 bg-stone-100">
+            <div className="workspace-login flex items-center justify-center">
                 <section role="alert" className="w-full max-w-md bg-white border border-amber-200 rounded-2xl shadow-xl p-6 space-y-3">
                     <h1 className="text-xl font-black text-stone-900">Δεν έχει δοθεί δικαίωμα διαχείρισης</h1>
                     <p className="text-sm text-stone-600">Ο λογαριασμός είναι συνδεδεμένος, αλλά δεν έχει το Firebase admin claim που απαιτείται για το Back Office.</p>
@@ -285,34 +285,48 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
 
     if (!currentUser) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4 bg-stone-100">
+            <div className="workspace-login flex items-center justify-center">
                 <form onSubmit={handleAdminLogin} className="w-full max-w-sm bg-white border border-stone-200 rounded-2xl shadow-xl p-6 space-y-4">
                     <div>
                         <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-400">Aram Creations</p>
-                        <h1 className="text-2xl font-black text-stone-900 mt-1">Secure Back Office</h1>
-                        <p className="text-sm text-stone-500 mt-2">Συνδεσου με τον Firebase admin λογαριασμο σου.</p>
+                        <h1 className="text-2xl font-black text-stone-900 mt-1">Σύνδεση στο Back Office</h1>
+                        <p className="text-sm text-stone-500 mt-2">Χρησιμοποίησε τον λογαριασμό διαχείρισης του εργαστηρίου.</p>
                     </div>
                     <label className="block">
                         <span className="text-xs font-bold text-stone-500 uppercase">Email</span>
                         <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} autoComplete="email" required className="mt-1 w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 focus:outline-none focus:border-stone-500" />
                     </label>
                     <label className="block">
-                        <span className="text-xs font-bold text-stone-500 uppercase">Password</span>
+                        <span className="text-xs font-bold text-stone-500 uppercase">Κωδικός πρόσβασης</span>
                         <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} autoComplete="current-password" required className="mt-1 w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 focus:outline-none focus:border-stone-500" />
                     </label>
-                    {loginError && <div className="text-sm font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl p-3">{loginError}</div>}
+                    {loginError && <div role="alert" className="text-sm font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl p-3">{loginError}</div>}
                     <button type="submit" disabled={isLoggingIn} className="w-full px-5 py-3 rounded-xl bg-stone-900 text-white font-black hover:bg-stone-800 disabled:opacity-50 transition">
-                        {isLoggingIn ? 'Συνδεση...' : 'Συνδεση'}
+                        {isLoggingIn ? 'Σύνδεση…' : 'Σύνδεση'}
                     </button>
                 </form>
             </div>
         );
     }
 
-    if (activeCollection === 'orders') return <OrdersManager onBack={() => setActiveCollection('jewelry')} />;
+    const workspaceNav = (
+        <nav className="workspace-nav" aria-label="Ενότητες Back Office">
+            <button type="button" aria-current={activeCollection === 'jewelry' ? 'page' : undefined}
+                onClick={() => { setActiveCollection('jewelry'); setSelectedCategory('Όλα'); setStatsFilter('all'); }}>Κατάλογος Shop</button>
+            <button type="button" aria-current={activeCollection === 'portfolio' ? 'page' : undefined}
+                onClick={() => setActiveCollection('portfolio')}>Portfolio</button>
+            <button type="button" aria-current={activeCollection === 'orders' ? 'page' : undefined}
+                onClick={() => setActiveCollection('orders')}>Παραγγελίες</button>
+        </nav>
+    );
+
+    if (activeCollection === 'orders') {
+        return <>{workspaceNav}<OrdersManager onBack={() => setActiveCollection('jewelry')} /></>;
+    }
     if (activeCollection === 'portfolio') {
         return (
             <>
+                {workspaceNav}
                 <PortfolioManager
                 history={versionHistory}
                 onBack={() => setActiveCollection('jewelry')}
@@ -327,33 +341,29 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
     }
 
     return (
-        <div className="backoffice-view min-h-screen p-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-20 relative">
+        <>{workspaceNav}<div className="backoffice-view min-h-screen p-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-20 relative">
 
+            <h1 className="workspace-heading">Κατάλογος Shop</h1>
             <header className="backoffice-toolbar flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-5 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-stone-200">
-                <div className="flex flex-wrap gap-2" role="tablist" aria-label="Κατάλογος">
-                    <button type="button" role="tab" aria-selected={false} onClick={() => setActiveCollection('orders')} className="px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold">Παραγγελίες</button>
-                    <button type="button" role="tab" aria-selected={activeCollection === 'jewelry'} onClick={() => { setActiveCollection('jewelry'); setSelectedCategory('Όλα'); setStatsFilter('all'); }} className={activeCollection === 'jewelry' ? 'px-3 py-2 rounded-lg bg-stone-900 text-white text-sm font-bold' : 'px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold'}>Shop</button>
-                    <button type="button" role="tab" aria-selected={(activeCollection as string) === 'portfolio'} onClick={() => { setActiveCollection('portfolio'); setSelectedCategory('Όλα'); setStatsFilter('all'); }} className={(activeCollection as string) === 'portfolio' ? 'px-3 py-2 rounded-lg bg-stone-900 text-white text-sm font-bold' : 'px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold'}>Portfolio</button>
-                </div>
                 <div className="backoffice-actions flex flex-col gap-3 w-full lg:w-auto">
                     <div className="backoffice-primary-actions flex flex-wrap items-center justify-start lg:justify-end gap-3">
                         <button onClick={handleOpenAdd} className="flex items-center gap-2 px-6 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-sm font-bold transition shadow-md">
                             <IconPlus /> Νέα Καταχώρηση
                         </button>
-                        <button onClick={() => setIsVintedImportOpen(true)} className="flex items-center gap-2 px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-sm font-black transition shadow-sm" title="Import προϊόντων από Vinted links">
-                            Import Vinted
+                        <button onClick={() => setIsVintedImportOpen(true)} className="flex items-center gap-2 border border-stone-300 px-5 py-2.5 bg-white hover:bg-stone-100 text-stone-900 rounded-lg text-sm font-semibold transition" title="Εισαγωγή προϊόντων από συνδέσμους Vinted">
+                            Εισαγωγή από Vinted
                         </button>
                         <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-100 text-xs font-bold min-w-0">
                             <span className="max-w-[190px] truncate">{currentUser.email}</span>
-                            <button onClick={handleAdminSignOut} className="text-emerald-900 underline underline-offset-2 whitespace-nowrap">Logout</button>
+                            <button onClick={handleAdminSignOut} className="text-emerald-900 underline underline-offset-2 whitespace-nowrap">Αποσύνδεση</button>
                         </div>
                     </div>
                     <div className="backoffice-utility-actions flex flex-wrap items-center justify-start lg:justify-end gap-2 pt-3 border-t border-stone-100">
                         <button onClick={handleUndo} disabled={!lastAction} className="flex items-center justify-center px-3 py-2 bg-stone-100 disabled:opacity-40 hover:bg-stone-200 text-stone-700 rounded-lg transition font-bold text-xs" title="Αναίρεση τελευταίας ενέργειας">
-                            <IconUndo /> <span className="ml-2">Undo</span>
+                            <IconUndo /> <span className="ml-2">Αναίρεση</span>
                         </button>
                         <button onClick={handleRedo} disabled={!redoAction} className="flex items-center justify-center px-3 py-2 bg-stone-100 disabled:opacity-40 hover:bg-stone-200 text-stone-700 rounded-lg transition font-bold text-xs" title="Επαναφορά τελευταίας αναίρεσης">
-                            Redo
+                            Επανάληψη
                         </button>
                         <button onClick={() => setIsHistoryOpen(true)} className="flex items-center justify-center px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg transition font-bold text-xs" title="Ιστορικό εκδόσεων">
                             Ιστορικό
@@ -676,6 +686,6 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                     <button onClick={() => setShowRedoToast(false)} className="text-stone-400 hover:text-stone-800 ml-2"><IconX /></button>
                 </div>
             )}
-        </div>
+</div></>
     );
 }

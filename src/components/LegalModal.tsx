@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import { useDialogKeyboard } from '../lib/use-dialog-keyboard';
 import { X, ShieldCheck, FileText, RotateCcw, Truck, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export type LegalPolicyType = 'terms' | 'privacy' | 'returns' | null;
@@ -14,34 +15,18 @@ export const LegalModal: React.FC<LegalModalProps> = ({
   onClose,
   onSelectType,
 }) => {
-  // Prevent background scrolling and handle Escape key when modal is open
-  useEffect(() => {
-    if (type) {
-      document.body.style.overflow = 'hidden';
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose();
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.body.style.overflow = '';
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    } else {
-      document.body.style.overflow = '';
-    }
-  }, [type, onClose]);
-
+  const dialog = useDialogKeyboard(Boolean(type), onClose);
   if (!type) return null;
 
   return (
     <div 
       role="dialog"
-      aria-modal="true"
+      aria-modal="true" ref={dialog} aria-labelledby="legal-title" tabIndex={-1}
       className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[88vh] animate-in zoom-in-95 duration-200"
+        className="studio-dialog w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[88vh] animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -53,7 +38,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               {type === 'returns' && <RotateCcw className="w-4 h-4" />}
             </div>
             <div>
-              <h3 className="text-base font-bold text-stone-900 tracking-tight" style={{ fontFamily: 'inherit' }}>
+              <h3 id="legal-title" className="studio-dialog-title">
                 {type === 'terms' && 'Όροι Χρήσης & Συναλλαγών'}
                 {type === 'privacy' && 'Πολιτική Απορρήτου & Δεδομένων (GDPR)'}
                 {type === 'returns' && 'Πολιτική Αποστολών & Επιστροφών'}

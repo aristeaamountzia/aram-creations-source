@@ -13,7 +13,6 @@ import { VintedReview, VintedReviewsStats, VintedReviewsPayload } from '../types
 interface VintedReviewsSectionProps {
   className?: string;
   theme?: 'atelier' | 'classic';
-  fontFamily?: string;
 }
 
 // Fallback dataset guarantees zero layout shift while Firestore/API connects
@@ -123,7 +122,6 @@ const INITIAL_REVIEWS: VintedReview[] = [
 
 export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
   className = '',
-  fontFamily = 'Jura, sans-serif'
 }) => {
   const [stats, setStats] = useState<VintedReviewsStats>(INITIAL_STATS);
   const [reviews, setReviews] = useState<VintedReview[]>(INITIAL_REVIEWS);
@@ -274,7 +272,6 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
 
             <h2
               className="text-2xl sm:text-3xl font-bold tracking-tight text-stone-900"
-              style={{ fontFamily }}
             >
               Εμπειρίες & Εντυπώσεις
             </h2>

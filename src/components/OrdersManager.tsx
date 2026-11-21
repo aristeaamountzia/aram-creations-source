@@ -83,7 +83,7 @@ export function OrdersManager({ onBack }: { onBack: () => void }) {
           <button type="button" onClick={onBack} className="mb-2 text-xs uppercase tracking-wider font-bold text-stone-500 hover:text-stone-900 transition flex items-center gap-1.5">
             <ArrowLeft className="w-3.5 h-3.5" /> Επιστροφή στον Κατάλογο
           </button>
-          <h1 className="text-2xl font-bold tracking-tight text-stone-900">Διαχείριση Παραγγελιών</h1>
+          <h1 className="workspace-heading">Διαχείριση Παραγγελιών</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a

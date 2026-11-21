@@ -24,36 +24,7 @@ export function PortfolioToolbar(props: Props) {
     showHistory, undo
   } = props;
   return (
-    <><header className="backoffice-toolbar flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-5 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-stone-200">
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Κατάλογος">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={false}
-          onClick={onNavigateOrders || onBack}
-          className="px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold hover:bg-stone-200 transition"
-        >
-          Παραγγελίες
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={false}
-          onClick={onBack}
-          className="px-3 py-2 rounded-lg bg-stone-100 text-stone-700 text-sm font-bold hover:bg-stone-200 transition"
-        >
-          Shop
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={true}
-          className="px-3 py-2 rounded-lg bg-stone-900 text-white text-sm font-bold shadow-xs"
-        >
-          Portfolio
-        </button>
-      </div>
-
+    <><h1 className="workspace-heading">Διαχείριση Portfolio</h1><header className="backoffice-toolbar flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-5 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-stone-200">
       <div className="backoffice-actions flex flex-col gap-3 w-full lg:w-auto">
         {/* Primary Action Row */}
         <div className="backoffice-primary-actions flex flex-wrap items-center justify-start lg:justify-end gap-3">
@@ -77,7 +48,7 @@ export function PortfolioToolbar(props: Props) {
                   onClick={onSignOut}
                   className="text-emerald-900 underline underline-offset-2 whitespace-nowrap"
                 >
-                  Logout
+                  Αποσύνδεση
                 </button>
               )}
             </div>

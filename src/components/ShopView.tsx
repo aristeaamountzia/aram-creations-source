@@ -1,4 +1,4 @@
-import { heroAppearanceCss } from '../lib/hero-appearance';
+import { CollectionHero } from './content/CollectionHero';
 import { ImageLightbox } from './ImageLightbox';
 import { compareSoldLast, inventoryLabel, isSoldItem } from '../lib/stock-edit';
 import { VintedReviewsSection } from './VintedReviewsSection';
@@ -13,9 +13,8 @@ import { JewelryItem } from '../types';
 import { JEWELRY_CATALOG } from '../data';
 import { db } from '../firebase';
 import { DEFAULT_SHOP_SETTINGS, normalizeShopSettings, ShopSettings } from '../shopSettings';
-import { DEFAULT_DESIGN_STUDIO } from '../lib/design-studio';
 import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
-import { portfolioHeroVideoUrl, heroPosterFor, initialHeroSnapshot, cacheHeroSnapshot } from '../lib/hero-media';
+import { portfolioHeroVideoUrl, initialHeroSnapshot, cacheHeroSnapshot } from '../lib/hero-media';
 import { isUnconfirmedEmptyCatalog } from '../lib/catalog-snapshot';
 import { trackShopMetric } from '../lib/shop-metrics';
 import {
@@ -28,7 +27,6 @@ import {
   ExternalLink,
   Heart,
   X,
-  ChevronDown,
   Eye,
   Check,
   Star
@@ -244,7 +242,6 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   // Start with the last-known (or build-time) hero content so the hero and its
   // video render immediately instead of waiting for the Firestore round trip.
   const [shopSettings, setShopSettings] = useState<ShopSettings>(() => normalizeShopSettings(initialHeroSnapshot()));
-  const [areShopSettingsReady, setAreShopSettingsReady] = useState(true);
   const [jewelryList, setJewelryList] = useState<JewelryItem[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const reviewsJumpDuringLoad = useRef(false);
@@ -254,23 +251,14 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const [sortBy, setSortBy] = useState<string>('featured');
   const [availableOnly, setAvailableOnly] = useState<boolean>(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
-  const [heroVideoFailed, setHeroVideoFailed] = useState<boolean>(false);
-  const [heroVideoRetry, setHeroVideoRetry] = useState<number>(0);
-
-  useEffect(() => {
-    setHeroVideoFailed(false);
-    setHeroVideoRetry(0);
-  }, [shopSettings.heroVideoUrl]);
 
   useEffect(() => {
     return onSnapshot(doc(db, 'settings', 'shop'), (snapshot) => {
       const data = snapshot.exists() ? snapshot.data() : undefined;
       setShopSettings(normalizeShopSettings(data));
       if (data) cacheHeroSnapshot(data);
-      setAreShopSettingsReady(true);
     }, (error) => {
       console.warn('Shop settings could not be loaded:', error);
-      setAreShopSettingsReady(true);
     });
   }, []);
 
@@ -492,9 +480,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
   const activeMedia = selectedMediaList[activeMediaIndex] || selectedMediaList[0];
   const zoomImages = selectedMediaList.map((media, index) => ({ ...media, mediaIndex: index })).filter(media => media.type !== 'video');
-  const ds = shopSettings.designStudio || DEFAULT_DESIGN_STUDIO;
   const resolvedHeroVideoUrl = portfolioHeroVideoUrl(shopSettings.heroVideoUrl);
-  const hasHeroVideo = Boolean(resolvedHeroVideoUrl) && !heroVideoFailed;
 
   useLayoutEffect(() => {
     if (isCatalogLoading || !reviewsJumpDuringLoad.current) return;
@@ -518,118 +504,34 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   };
 
   return (
-    <SectionShell section="shop" className="catalog-view" style={{ ...heroAppearanceCss(shopSettings.heroAppearance), backgroundColor: ds.pageBackground || shopSettings.bgColor, color: ds.ink || shopSettings.textColor, fontFamily: 'var(--ds-font-family, Jura, sans-serif)' }}>
-      {/* Authentic Artisan Hero Banner */}
-      <section
-        className={`shop-hero ${hasHeroVideo ? 'catalog-hero--video bg-stone-950' : 'bg-stone-950'} min-h-[520px] h-[62svh] max-h-[680px] flex flex-col justify-center items-center relative overflow-hidden py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-stone-800 text-center transition-colors`}
-        style={{
-          backgroundColor: hasHeroVideo ? '#0c0a09' : (shopSettings.heroBgColor && shopSettings.heroBgColor !== '#ffffff' ? shopSettings.heroBgColor : '#0c0a09'),
-          color: '#ffffff'
-        }}
-      >
-        {hasHeroVideo && (
-          <video
-            key={`${resolvedHeroVideoUrl}-${heroVideoRetry}`}
-            className="absolute inset-0 h-full w-full object-cover"
-            src={heroVideoRetry > 0
-              ? (resolvedHeroVideoUrl.includes('?') ? `${resolvedHeroVideoUrl}&_cb=${heroVideoRetry}` : `${resolvedHeroVideoUrl}?_cb=${heroVideoRetry}`)
-              : resolvedHeroVideoUrl
-            }
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            poster={heroPosterFor(resolvedHeroVideoUrl)}
-            referrerPolicy="no-referrer"
-            onError={() => {
-              if (heroVideoRetry < 2) {
-                setHeroVideoRetry(c => c + 1);
-              } else {
-                setHeroVideoFailed(true);
-              }
-            }}
-            aria-hidden="true"
-          />
-        )}
-        <div
-          className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"
-          style={{ opacity: Number(ds.heroOverlay) || 0.55 }}
-          aria-hidden="true"
-        />
-        <div className="relative z-10 w-full max-w-4xl mx-auto space-y-4 my-auto" aria-busy={!areShopSettingsReady}>
-          {areShopSettingsReady ? (
-            <>
-              <h1
-                className={`${shopSettings.heroTitleSize || 'text-3xl sm:text-4xl md:text-5xl'} font-bold tracking-tight break-words text-white drop-shadow-sm`}
-                style={{
-                  fontFamily: 'var(--ds-font-family, Jura, sans-serif)'
-                }}
-              >
-                {shopSettings.heroTitle}
-              </h1>
-              <p
-                className="text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed text-stone-200 opacity-95 drop-shadow-xs"
-              >
-                {shopSettings.heroSubtitle}
-              </p>
-
-              {/* Refined brand proof-point */}
-              <div className="pt-2 flex items-center justify-center gap-2 text-xs text-stone-300 font-medium">
-                <a
-                  href="#customer-reviews"
-                  onClick={handleScrollToReviews}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-xs text-stone-200 transition cursor-pointer"
-                  title="Δείτε τις επίσημες αξιολογήσεις των πελατών"
-                >
-                  <Star className="w-3 h-3 fill-amber-300 text-amber-300 shrink-0" strokeWidth={1.5} />
-                  <span>Αξιολογήσεις πελατών στο Vinted</span>
-                </a>
-              </div>
-            </>
-          ) : (
-            <p role="status" className="text-sm font-medium text-stone-200" aria-live="polite">
-              Φόρτωση βιτρίνας…
-            </p>
-          )}
-        </div>
-
-        {/* Animated scroll down indicator for mobile & desktop */}
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.getElementById('shop-catalog') || document.querySelector('.catalog-controls');
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
-          className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 cursor-pointer transition group focus:outline-hidden text-white/90 hover:text-white"
-          aria-label="Κύλιση για δημιουργίες — προβολή καταλόγου"
-        >
-          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest drop-shadow-md group-hover:scale-105 transition-transform">
-            Κύλιση για δημιουργίες
-          </span>
-          <div className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg animate-bounce group-hover:bg-black/60 transition">
-            <ChevronDown className="w-4 h-4 text-white drop-shadow" />
-          </div>
-        </button>
-      </section>
+    <SectionShell section="shop" className="catalog-view">
+      <CollectionHero key={resolvedHeroVideoUrl} collection="shop" videoUrl={resolvedHeroVideoUrl}
+        title={shopSettings.heroTitle.trim() || 'Χειροποίητα κοσμήματα'}
+        description={shopSettings.heroSubtitle.trim()} appearance={shopSettings.heroAppearance} />
 
       {shopSettings.announcementEnabled && shopSettings.announcementText && (
-        <div className="px-4 py-3 text-center text-sm font-semibold" style={{ backgroundColor: shopSettings.primaryColor, color: '#fff' }}>
+        <div className="bg-stone-900 px-4 py-3 text-center text-sm font-semibold text-white">
           {shopSettings.announcementLink ? <a href={shopSettings.announcementLink} className="underline underline-offset-2">{shopSettings.announcementText}</a> : shopSettings.announcementText}
         </div>
       )}
 
       {/* Main Content Area */}
-      <div id="shop-catalog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
+      <div id="shop-catalog" tabIndex={-1} className="public-catalog gallery-catalog max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="gallery-catalog-heading">
+          <h2 className="catalog-heading">Η συλλογή</h2>
+          <a href="#customer-reviews" onClick={handleScrollToReviews} className="inline-flex items-center gap-1 text-sm underline underline-offset-4"><Star size={14} aria-hidden="true" /> Αξιολογήσεις</a>
+        </div>
 
-        <FilterBar label="Φίλτρα Shop" search={searchQuery} onSearch={setSearchQuery}
+        <details className="gallery-filters">
+          <summary>Φίλτρα και αναζήτηση</summary>
+          <FilterBar label="Φίλτρα Shop" search={searchQuery} onSearch={setSearchQuery}
           placeholder="Αναζήτηση με όνομα, υλικό, χρώμα..."
           categories={visibleCategories.map(category => ({ id: category, label: category }))}
-          selectedCategory={selectedCategory} onCategory={setSelectedCategory} accent={shopSettings.primaryColor}
+          selectedCategory={selectedCategory} onCategory={setSelectedCategory}
           actions={<>
             <button
               onClick={() => setAvailableOnly(!availableOnly)}
-              aria-pressed={availableOnly}
+              aria-pressed={availableOnly} type="button"
               className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
                 availableOnly
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
@@ -641,7 +543,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-              aria-pressed={showFavoritesOnly}
+              aria-pressed={showFavoritesOnly} type="button"
               className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${
                 showFavoritesOnly
                   ? 'bg-rose-50 text-rose-700 border-rose-300'
@@ -672,12 +574,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
               </select>
             </div>
           </>} />
+        </details>
 
-        <h2 className="sr-only">Συλλογή Κοσμημάτων & Δημιουργιών</h2>
 
         {/* Catalog Results Header */}
-        <div className="flex items-center justify-between text-xs font-bold text-stone-500 px-1">
-          <span>{isCatalogLoading ? 'Φόρτωση καταλόγου…' : `${filteredItems.length} δημιουργίες βρέθηκαν`}</span>
+        <div className="gallery-results flex items-center justify-between text-xs font-bold text-stone-500 px-1">
+          <span aria-live="polite">{isCatalogLoading ? 'Φόρτωση καταλόγου…' : `${filteredItems.length} δημιουργίες βρέθηκαν`}</span>
           {(selectedCategory !== 'Όλα' || searchQuery || availableOnly || showFavoritesOnly) && (
             <button
               onClick={() => {
@@ -725,7 +627,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             </button>
           </div>
         ) : (
-          <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 ${shopSettings.catalogDensity === 'compact' ? 'gap-3 sm:gap-4' : shopSettings.catalogDensity === 'spacious' ? 'gap-8 sm:gap-10' : 'gap-6 sm:gap-8'}`}>
+          <div className="studio-product-grid grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4" data-density={shopSettings.catalogDensity}>
             {filteredItems.map((item) => {
               const isFav = favoriteIds.includes(item.id);
               const isAvailable = isAvailableForSale(item);
@@ -758,10 +660,9 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   aria-label={`${item.name || item.title || 'Κόσμημα'}. Πατήστε Enter για λεπτομέρειες.`}
                   muted={!isAvailable}
                   className="border-stone-200/80 hover:border-stone-400/80"
-                  style={{ borderRadius: ds.cardRadius || "12px", backgroundColor: ds.surface || "#ffffff", borderColor: ds.line || "#e4e4e7" }}
                 >
                   {/* Media Container (Clean 4:5 Luxury Jewelry Aspect) */}
-                  <div className="relative aspect-[4/5] overflow-hidden bg-stone-100">
+                  <div className="relative aspect-[3/4] overflow-hidden bg-stone-100">
                     {activeCardMedia.type === 'video' ? (
                       <video
                         src={activeCardMedia.url}
@@ -1160,7 +1061,6 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       {/* Official Customer Reviews & Social Proof */}
       <VintedReviewsSection
         theme={shopSettings.visualTheme}
-        fontFamily={shopSettings.fontFamily}
       />
     </SectionShell>
   );

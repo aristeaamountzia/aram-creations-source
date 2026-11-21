@@ -43,7 +43,7 @@ export function PortfolioEditorDialog(props: Props) {
       <form
         onSubmit={save}
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-3xl my-6 flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl border border-stone-200 animate-fade-in cursor-default"
+        className="w-full min-w-0 max-w-3xl my-6 flex max-h-[calc(100dvh-3rem)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl border border-stone-200 animate-fade-in cursor-default"
       >
         <div className="relative flex items-start border-b border-stone-200 bg-stone-50 p-5 pr-20 shrink-0">
           <div className="flex items-center gap-3.5 min-w-0">
@@ -62,8 +62,8 @@ export function PortfolioEditorDialog(props: Props) {
               );
             })()}
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black text-stone-900 truncate">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="min-w-0 break-words text-lg font-semibold text-stone-900">
                   {form.id ? (form.title || 'Επεξεργασία Έργου') : 'Νέα Καταχώρηση Portfolio'}
                 </h2>
                 {form.status && (
@@ -72,7 +72,7 @@ export function PortfolioEditorDialog(props: Props) {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-stone-500 mt-0.5 truncate">
+              <p className="text-xs text-stone-600 mt-0.5 break-words">
                 {form.category} {form.year ? `· ${form.year}` : ''} · Ενοποιημένη διαχείριση Portfolio
               </p>
             </div>
@@ -90,7 +90,7 @@ export function PortfolioEditorDialog(props: Props) {
         <div
           role="tablist"
           aria-label="Επεξεργασία έργου"
-          className="flex gap-1 border-b border-stone-200 px-5 pt-3 bg-stone-50/50"
+          className="flex shrink-0 flex-wrap gap-1 border-b border-stone-200 px-3 pt-3 sm:px-5 bg-stone-50/50"
         >
           {(
             [
@@ -106,7 +106,7 @@ export function PortfolioEditorDialog(props: Props) {
               role="tab"
               aria-selected={editorTab === key}
               onClick={() => setEditorTab(key)}
-              className={`px-4 py-2 text-xs font-bold border-b-2 transition ${
+              className={`px-2.5 py-2 text-xs font-bold border-b-2 transition sm:px-4 ${
                 editorTab === key
                   ? 'border-stone-900 text-stone-900'
                   : 'border-transparent text-stone-500 hover:text-stone-700'

@@ -1,12 +1,13 @@
 import { ArtistProfileEditor } from '../ArtistProfile';
+import { useDialogKeyboard } from '../../lib/use-dialog-keyboard';
 import { HeroAppearanceSettings } from '../HeroAppearanceSettings';
 import { IconSettings, IconX, IconBolt, IconGripVertical, IconCheck } from './icons';
 import { VintedReviewsSettings } from './VintedReviewsSettings';
 import { PortfolioDesignSettings } from '../PortfolioDesignSettings';
 import { DesignStudioSettings } from '../DesignStudioSettings';
-import { normalizePortfolioDesign } from '../../lib/portfolio-settings';
+import { CollectionHero } from '../content/CollectionHero';
 import {
-    PortfolioHero, portfolioHeroVideoUrl, isKnownUnplayableHevcHeroUrl, TRANSCODED_HERO_H264_PATH
+    portfolioHeroVideoUrl, isKnownUnplayableHevcHeroUrl, TRANSCODED_HERO_H264_PATH
 } from '../PortfolioHero';
 import { Check, X } from 'lucide-react';
 import { MediaDownload } from '../MediaDownload';
@@ -26,7 +27,7 @@ type ShopSettingsDialogProps = Pick<
     'handleSaveSettings' | 'heroUploadStatus' | 'isSavingSettings' | 'isSettingsOpen' |
     'portfolioHeroUploadStatus' | 'setActiveFieldFilter' | 'setActiveSettingsTab' | 'setDraggedCategoryIdx' |
     'setHeroUploadStatus' | 'setIsSettingsOpen' | 'setPortfolioHeroUploadStatus' | 'setSettingsSuccessMessage' |
-    'setShopSettings' | 'settingsLoadError' | 'settingsSuccessMessage' | 'shopSettings' |
+    'setShopSettings' | 'settingsLoaded' | 'settingsLoadError' | 'settingsSuccessMessage' | 'shopSettings' |
     'updateAssistantSetting'
 > &
     Pick<ProductAi, 'assistantSettings'> &
@@ -54,15 +55,19 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
         mediaPreparing, platformUsageCounts, portfolioHeroUploadStatus, renderFieldOptionManager,
         setActiveFieldFilter, setActiveSettingsTab, setDraggedCategoryIdx, setHeroUploadStatus,
         setIsSettingsOpen, setPortfolioHeroUploadStatus, setSettingsSuccessMessage, setShopSettings,
-        settingsCategoryOptions, settingsCollectionOptions, settingsColorOptions, settingsLoadError,
+        settingsCategoryOptions, settingsCollectionOptions, settingsColorOptions, settingsLoaded, settingsLoadError,
         settingsMaterialOptions, settingsPlatformOptions, settingsStatusOptions, settingsSuccessMessage,
         shopSettings, statusUsageCounts, updateAssistantSetting, videoAbort, videoCompressing, videoProgress,
         vintedReviews, vintedReviewsData
     } = props;
-    if (!(isSettingsOpen)) return null;
+    const dialog = useDialogKeyboard(isSettingsOpen, () => {
+        if (!mediaPreparing && !isSavingSettings) setIsSettingsOpen(false);
+    });
+    if (!isSettingsOpen) return null;
 
     return (
         <div
+            ref={dialog} role="dialog" aria-modal="true" aria-labelledby="shop-settings-title" tabIndex={-1}
             onClick={(e) => {
                 if (e.target === e.currentTarget && !mediaPreparing && !isSavingSettings) {
                     setIsSettingsOpen(false);
@@ -72,7 +77,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-2xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-stone-200 cursor-default animate-fade-in"
+                className="studio-dialog bg-white rounded-2xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-stone-200 cursor-default animate-fade-in"
             >
                 <div className="p-5 border-b border-stone-100 flex justify-between items-center bg-stone-50">
                     <div className="flex items-center gap-3">
@@ -81,7 +86,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h2 className="text-lg font-black text-stone-900 leading-tight">Διαχείριση Συστήματος & Εμφάνισης</h2>
+                                <h2 id="shop-settings-title" className="text-lg font-semibold text-stone-900 leading-tight">Διαχείριση Συστήματος & Εμφάνισης</h2>
                                 <span className="text-[10px] bg-stone-200 text-stone-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Aram Admin</span>
                             </div>
                             <p className="text-xs text-stone-500 mt-0.5">Ενιαίο Design Studio, περιεχόμενο Shop, Portfolio, προτάσεις πεδίων και AI Back Office.</p>
@@ -97,10 +102,11 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                     </button>
                 </div>
 
-                <div className="flex flex-wrap border-b border-stone-200 bg-stone-50 px-4 pt-2 gap-1.5">
+                <div role="group" aria-label="Καρτέλες ρυθμίσεων" className="flex flex-wrap border-b border-stone-200 bg-stone-50 px-4 pt-2 gap-1.5">
                     <button
                         type="button"
                         onClick={() => setActiveSettingsTab('design')}
+                        aria-pressed={activeSettingsTab === 'design'}
                         className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                             activeSettingsTab === 'design'
                                 ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
@@ -115,6 +121,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                     <button
                         type="button"
                         onClick={() => setActiveSettingsTab('shop')}
+                        aria-pressed={activeSettingsTab === 'shop'}
                         className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                             activeSettingsTab === 'shop'
                                 ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
@@ -129,6 +136,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                     <button
                         type="button"
                         onClick={() => setActiveSettingsTab('portfolio')}
+                        aria-pressed={activeSettingsTab === 'portfolio'}
                         className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                             activeSettingsTab === 'portfolio'
                                 ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
@@ -143,6 +151,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                     <button
                         type="button"
                         onClick={() => setActiveSettingsTab('fields')}
+                        aria-pressed={activeSettingsTab === 'fields'}
                         className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                             activeSettingsTab === 'fields'
                                 ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
@@ -157,6 +166,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                     <button
                         type="button"
                         onClick={() => setActiveSettingsTab('assistant')}
+                        aria-pressed={activeSettingsTab === 'assistant'}
                         className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                             activeSettingsTab === 'assistant'
                                 ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
@@ -171,6 +181,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                     <button
                         type="button"
                         onClick={() => setActiveSettingsTab('reviews')}
+                        aria-pressed={activeSettingsTab === 'reviews'}
                         className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition flex items-center gap-2 ${
                             activeSettingsTab === 'reviews'
                                 ? 'bg-white text-stone-900 border-t-2 border-stone-900 border-x border-stone-200 shadow-xs'
@@ -197,43 +208,20 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
 
                     {settingsLoadError && (
                         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-bold text-rose-800">
-                            Προσοχή: Δεν ήταν δυνατή η φόρτωση των αποθηκευμένων ρυθμίσεων Shop. Εμφανίζονται οι τοπικές προεπιλογές: {settingsLoadError}
+                            Δεν ήταν δυνατή η φόρτωση των κοινών ρυθμίσεων. {settingsLoadError}
                         </div>
                     )}
 
+                    {!settingsLoaded && !settingsLoadError && <p role="status" className="text-sm text-stone-600">Φόρτωση κοινών ρυθμίσεων…</p>}
+                    <fieldset disabled={!settingsLoaded || isSavingSettings} className="min-w-0 border-0 p-0">
                     {activeSettingsTab === 'design' && (
-                        <div className="animate-fade-in space-y-6">
-                            <div className="rounded-2xl border border-violet-200 bg-linear-to-r from-violet-50 to-purple-50 p-4.5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-stone-900"></span>
-                                        <h3 className="text-sm font-black text-stone-900 uppercase tracking-wider">Ενιαία Οπτική Ταυτότητα (Global Identity)</h3>
-                                    </div>
-                                    <p className="text-xs text-stone-600 leading-relaxed max-w-2xl">
-                                        Τα θέματα, η παλέτα χρωμάτων, οι γραμματοσειρές και οι στρογγυλάδες που ρυθμίζονται παρακάτω εφαρμόζονται αυτόματα σε ολόκληρο το κατάστημα: <strong>τόσο στο Shop (#shop) όσο και στο Portfolio (#portfolio)</strong>.
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0 bg-white px-3 py-2 rounded-xl border border-stone-200 shadow-2xs">
-                                    <span className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Ενεργό:</span>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="w-4 h-4 rounded-full border border-stone-300 shadow-2xs" style={{ backgroundColor: shopSettings.designStudio?.pageBackground || '#fafaf9' }} title={`Φόντο: ${shopSettings.designStudio?.pageBackground || '#fafaf9'}`} />
-                                        <span className="w-4 h-4 rounded-full border border-stone-300 shadow-2xs" style={{ backgroundColor: shopSettings.designStudio?.accent || '#18181b' }} title={`Accent: ${shopSettings.designStudio?.accent || '#18181b'}`} />
-                                        <span className="w-4 h-4 rounded-full border border-stone-300 shadow-2xs" style={{ backgroundColor: shopSettings.designStudio?.ink || '#18181b' }} title={`Κείμενο: ${shopSettings.designStudio?.ink || '#18181b'}`} />
-                                        <span className="text-xs font-bold text-stone-700 ml-1">{shopSettings.designStudio?.fontFamily?.split(',')[0]?.replace(/'/g, '') || 'Jura'}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <DesignStudioSettings
-                                value={shopSettings.designStudio}
-                                onChange={value => setShopSettings(prev => ({ ...prev, designStudio: value }))}
-                            />
-                        </div>
+                        <DesignStudioSettings value={shopSettings.designStudio}
+                            onChange={value => setShopSettings(prev => ({ ...prev, designStudio: value }))} />
                     )}
 
                     {activeSettingsTab === 'shop' && (
                         <div className="animate-fade-in space-y-6">
-                            <HeroAppearanceSettings value={shopSettings.heroAppearance} defaults={shopSettings.designStudio} onChange={value => setShopSettings(prev => ({ ...prev, heroAppearance: value }))} />
+                            <HeroAppearanceSettings value={shopSettings.heroAppearance} onChange={value => setShopSettings(prev => ({ ...prev, heroAppearance: value }))} />
                             <div className="rounded-2xl border border-emerald-200 bg-linear-to-r from-emerald-50 to-teal-50 p-4.5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
@@ -250,15 +238,15 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                             <section className="rounded-2xl border border-stone-200 bg-white p-5 shadow-2xs space-y-4">
                                 <div className="border-b border-stone-100 pb-3">
                                     <h3 className="text-sm font-black text-stone-900 uppercase tracking-wider">1. Κεντρικός Τίτλος & Υπότιτλος Hero</h3>
-                                    <p className="text-xs text-stone-500 mt-0.5">Το κείμενο που υποδέχεται τους επισκέπτες στην κορυφή του καταστήματος.</p>
+                                    <p className="text-xs text-stone-500 mt-0.5">Το κείμενο που υποδέχεται τους επισκέπτες στην κορυφή του καταστήματος. Ο υπότιτλος εμφανίζεται όταν συμπληρωθεί.</p>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="md:col-span-2">
-                                        <label className="block text-xs font-bold text-stone-700 mb-1">Κεντρικός Τίτλος Shop</label>
+                                        <label htmlFor="shop-hero-title-input" className="block text-xs font-bold text-stone-700 mb-1">Κεντρικός Τίτλος Shop</label>
                                         <input
                                             type="text"
                                             className="w-full border border-stone-200 rounded-xl px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-900 transition outline-none text-sm font-bold text-stone-900"
-                                            value={shopSettings.heroTitle}
+                                            id="shop-hero-title-input" value={shopSettings.heroTitle}
                                             onChange={e => setShopSettings({ ...shopSettings, heroTitle: e.target.value })}
                                             placeholder="π.χ. Χειροποίητα Κοσμήματα με Ψυχή"
                                         />
@@ -266,15 +254,23 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
 
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-700 mb-1">Υπότιτλος / Περιγραφή Shop</label>
+                                    <label htmlFor="shop-hero-description-input" className="block text-xs font-bold text-stone-700 mb-1">Υπότιτλος / Περιγραφή Shop</label>
                                     <textarea
                                         className="w-full border border-stone-200 rounded-xl px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-900 transition outline-none text-xs text-stone-700 h-20 resize-none leading-relaxed"
-                                        value={shopSettings.heroSubtitle}
+                                        id="shop-hero-description-input" value={shopSettings.heroSubtitle}
                                         onChange={e => setShopSettings({ ...shopSettings, heroSubtitle: e.target.value })}
                                         placeholder="Σύντομη περιγραφή του εργαστηρίου που εμφανίζεται κάτω από τον τίτλο..."
                                     />
                                 </div>
                             </section>
+
+                            <details className="overflow-hidden rounded-xl border border-stone-200">
+                                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Προεπισκόπηση βιτρίνας Shop</summary>
+                                <CollectionHero preview collection="shop" key={shopSettings.heroVideoUrl}
+                                    title={shopSettings.heroTitle.trim() || 'Χειροποίητα κοσμήματα'}
+                                    description={shopSettings.heroSubtitle.trim()} appearance={shopSettings.heroAppearance}
+                                    videoUrl={portfolioHeroVideoUrl(shopSettings.heroVideoUrl)} />
+                            </details>
 
                             <section className="rounded-2xl border border-stone-200 bg-white p-5 shadow-2xs space-y-4">
                                 <div className="border-b border-stone-100 pb-3 flex items-center justify-between">
@@ -605,7 +601,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                 <span className="text-[10px] font-black bg-amber-200/80 text-amber-900 px-3 py-1.5 rounded-xl uppercase tracking-wider shrink-0">Μόνο για το #portfolio</span>
                             </div>
 
-                            <HeroAppearanceSettings value={shopSettings.portfolioDesign.heroAppearance} defaults={shopSettings.designStudio} onChange={value => setShopSettings(prev => ({ ...prev, portfolioDesign: { ...prev.portfolioDesign, heroAppearance: value } }))} />
+                            <HeroAppearanceSettings value={shopSettings.portfolioDesign.heroAppearance} onChange={value => setShopSettings(prev => ({ ...prev, portfolioDesign: { ...prev.portfolioDesign, heroAppearance: value } }))} />
                             <ArtistProfileEditor />
                             <PortfolioDesignSettings
                                 value={shopSettings.portfolioDesign}
@@ -699,16 +695,11 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                     <p className="text-xs text-stone-500 mt-0.5">Έτσι εμφανίζεται ο κεντρικός τομέας του Portfolio στους επισκέπτες.</p>
                                 </div>
                                 <div className="overflow-hidden rounded-xl border border-stone-200 shadow-xs">
-                                    <PortfolioHero
-                                        design={normalizePortfolioDesign(shopSettings.portfolioDesign)}
-                                        videoUrl={shopSettings.portfolioHeroVideoUrl}
-                                        itemCount={0}
-                                        categoryCount={0}
-                                        videoCount={0}
-                                        onContactArtist={() => {}}
-                                        showContact={false}
-                                        showStats={false}
-                                    />
+                                    <CollectionHero preview collection="portfolio" key={shopSettings.portfolioHeroVideoUrl}
+                                        title={shopSettings.portfolioDesign.title}
+                                        description={shopSettings.portfolioDesign.subtitle}
+                                        appearance={shopSettings.portfolioDesign.heroAppearance}
+                                        videoUrl={portfolioHeroVideoUrl(shopSettings.portfolioHeroVideoUrl)} />
                                 </div>
                             </section>
                         </div>
@@ -890,11 +881,12 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                     )}
 
                     {activeSettingsTab === 'reviews' && (<VintedReviewsSettings {...vintedReviews} />)}
+                    </fieldset>
                 </div>
 
                 <div className="p-4 border-t border-stone-200 bg-stone-50 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="text-xs text-stone-500 font-medium hidden sm:block">
-                        Οι ρυθμίσεις αποθηκεύονται απευθείας στη βάση δεδομένων και εφαρμόζονται άμεσα.
+                    <div className="text-xs text-stone-600">
+                        Η αποθήκευση ενημερώνει τις κοινές ρυθμίσεις του καταστήματος.
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                         <button
@@ -908,7 +900,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                         <button
                             type="button"
                             onClick={handleSaveSettings}
-                            disabled={isSavingSettings || mediaPreparing}
+                            disabled={!settingsLoaded || isSavingSettings || mediaPreparing}
                             className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-emerald-700 transition shadow-md flex items-center gap-2 disabled:opacity-50"
                         >
                             <IconCheck />

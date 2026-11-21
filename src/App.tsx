@@ -19,7 +19,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { ContactModal } from './components/ContactModal';
 import { PaymentSuccessModal } from './components/PaymentSuccessModal';
 import { LegalModal, LegalPolicyType } from './components/LegalModal';
-import { ShieldCheck, Mail, MapPin, ExternalLink, Lock, X } from 'lucide-react';
+import { Lock, X } from 'lucide-react';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from './firebase';
 import { normalizeShopSettings, ShopSettings, DEFAULT_SHOP_SETTINGS } from './shopSettings';
@@ -278,16 +278,16 @@ export const App: React.FC = () => {
   const totalCartCount = cartItems.reduce((acc, ci) => acc + ci.quantity, 0);
 
   return (
-    <div style={designStudio as React.CSSProperties} data-section={currentMode} data-visual-theme={visualTheme} className={`aram-site ${visualTheme === 'atelier' ? 'atelier-theme' : ''} min-h-screen w-full min-w-0 flex flex-col bg-white text-[#1c1917]`}>
+    <div style={designStudio as React.CSSProperties} data-section={currentMode} data-visual-theme={visualTheme} className="aram-site studio-shell min-h-screen w-full min-w-0 flex flex-col">
+      <a href="#main-content" className="studio-skip">Μετάβαση στο περιεχόμενο</a>
       {/* Prominent Global Notification Toast with Luxury Audio Feedback */}
       <GlobalNotificationToast />
       {/* Discreet owner banner when admin view is active */}
       {currentMode === 'admin' && (
-        <div className="bg-stone-900 text-stone-200 border-b border-stone-800 px-4 py-2.5 flex flex-wrap gap-3 items-center justify-between text-xs z-50">
+        <div className="workspace-topbar bg-stone-900 text-stone-200 border-b border-stone-800 px-4 py-2.5 flex flex-wrap gap-3 items-center justify-between text-xs z-50">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-bold tracking-wider uppercase text-[11px] text-white">
-              Aram Creations • Περιβάλλον Διαχείρισης (Back Office)
+              Aram Creations / Back Office
             </span>
           </div>
           <button
@@ -314,7 +314,7 @@ export const App: React.FC = () => {
       )}
 
       {/* Main Content Body */}
-      <main className="flex-1 min-w-0 w-full">
+      <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 w-full">
         {currentMode === 'shop' && (
           <ShopView onAddToCart={handleAddToCart} />
         )}
@@ -373,6 +373,7 @@ export const App: React.FC = () => {
 
       {/* Contact Artist Modal */}
       <ContactModal
+        key={contactArtItem?.id || 'general'}
         isOpen={isContactOpen}
         onClose={() => setIsContactOpen(false)}
         artItem={contactArtItem}
@@ -426,171 +427,37 @@ export const App: React.FC = () => {
       {isAboutOpen && <ArtistProfileDialog onClose={closeAbout} />}
       {/* Footer (hidden in admin mode) */}
       {currentMode !== 'admin' && (
-      <footer className="site-footer bg-stone-950 border-t border-stone-800 text-stone-300 py-12 px-4 sm:px-6 lg:px-8">
-        <h2 className="sr-only">Πληροφορίες & Σύνδεσμοι Υποσέλιδου</h2>
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand Col */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <img
-                src={currentMode === 'portfolio' ? "/logo-portfolio.png" : "/logo.png"}
-                alt="Aram Creations"
-                referrerPolicy="no-referrer"
-                loading="lazy"
-                decoding="async"
-                className="w-8 h-8 object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  const fallback = currentMode === 'portfolio' ? '/logo-portfolio.svg' : '/logo.svg';
-                  if (!target.src.endsWith(fallback)) target.src = fallback;
-                }}
-              />
-              <span className="font-bold uppercase tracking-tight text-white text-base" style={{ fontFamily: 'inherit' }}>
-                aram.creations
-              </span>
-            </div>
-            <p className="text-xs text-stone-300 leading-relaxed font-sans">
-              Χειροποίητες δημιουργίες, γλυπτά, κοσμήματα και ψηφιακό design. Κάθε έργο δημιουργείται με αγάπη και έμφαση στη διαχρονική αισθητική.
-            </p>
+      <footer className="studio-footer">
+        <div className="studio-footer-grid">
+          <div className="studio-footer-brand">
+            <span>{designStudioContent.brandName}</span>
+            <p>Χειροποίητα κοσμήματα και εικαστικά έργα.</p>
           </div>
-
-          {/* Quick links - Clean & Customer-focused */}
-          <div className="space-y-2 text-xs">
-            <h3 className="font-bold uppercase tracking-wider text-white mb-3 text-xs">Πλοήγηση</h3>
-            <button type="button" onClick={() => setIsAboutOpen(true)} className="text-xs underline underline-offset-4 py-2 mb-2">About me · Βιογραφικό</button>
-            <a href="https://linktr.ee/aristeaamnt" target="_blank" rel="noopener noreferrer" className="block text-xs underline underline-offset-4 py-2 mb-2">Linktree ↗</a>
-            <div>
-              <a href="/" className="text-stone-300 hover:text-white transition font-medium py-1">
-                Shop (Κοσμήματα)
-              </a>
-            </div>
-            <div>
-              <a href="/portfolio/" className="text-stone-300 hover:text-white transition font-medium py-1">
-                Portfolio Έργων & Δημιουργιών
-              </a>
-            </div>
-            <div className="pt-2 border-t border-stone-800 space-y-1 text-xs text-stone-300">
-              <div>
-                <button onClick={() => setLegalModalType('terms')} className="text-stone-300 hover:text-white transition text-left cursor-pointer py-1.5 block">
-                  Όροι Χρήσης & Συναλλαγών
-                </button>
-              </div>
-              <div>
-                <button onClick={() => setLegalModalType('privacy')} className="text-stone-300 hover:text-white transition text-left cursor-pointer py-1.5 block">
-                  Πολιτική Απορρήτου (GDPR)
-                </button>
-              </div>
-              <div>
-                <button onClick={() => setLegalModalType('returns')} className="text-stone-300 hover:text-white transition text-left cursor-pointer py-1.5 block">
-                  Αποστολές & Επιστροφές
-                </button>
-              </div>
-            </div>
+          <div>
+            <h2>Εξερευνήστε</h2>
+            <a href="/">Shop</a>
+            <a href="/portfolio/">Portfolio</a>
+            <button type="button" onClick={() => setIsAboutOpen(true)}>Βιογραφικό</button>
           </div>
-
-          {/* Contact Atelier */}
-          <div className="space-y-2 text-xs">
-            <h3 className="font-bold uppercase tracking-wider text-white mb-3 text-xs">Επικοινωνία</h3>
-            <div className="flex items-center gap-2 text-stone-300">
-              <Mail className="w-3.5 h-3.5 text-stone-400" />
-              <span>aristeaamnta@gmail.com</span>
-            </div>
-            <div className="flex items-center gap-2 text-stone-300">
-              <MapPin className="w-3.5 h-3.5 text-stone-400" />
-              <span>Ελλάδα</span>
-            </div>
-            <div className="flex items-center gap-2 text-stone-300 pt-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Ασφαλείς Πληρωμές Stripe & BoxNow</span>
-            </div>
+          <div>
+            <h2>Επικοινωνία</h2>
+            <button type="button" onClick={() => handleContactArtist()}>Στείλτε μήνυμα</button>
+            <a href="mailto:aristeaamnta@gmail.com">aristeaamnta@gmail.com</a>
+            <a href="https://www.instagram.com/aram.creations/">Instagram</a>
+            <a href="https://www.vinted.gr/member/231329281">Vinted</a>
           </div>
-
-          {/* External Shops */}
-          <div className="space-y-3">
-            <h3 className="font-bold uppercase tracking-wider text-white mb-3 text-xs">Επίσημα Κανάλια</h3>
-            <div className="flex flex-col gap-2">
-              <a
-                href="https://www.vinted.gr/member/231329281"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-teal-300 hover:text-teal-200 hover:border-teal-400 text-xs font-bold hover:bg-stone-850 transition"
-              >
-                <span>Vinted Boutique</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-
-              <a
-                href="https://www.instagram.com/aram.creations/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-stone-200 hover:text-white hover:border-stone-500 text-xs font-bold hover:bg-stone-850 transition"
-              >
-                <span>Instagram Profile</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-
-              <a
-                href="https://www.tiktok.com/@aram.creations"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-stone-200 hover:text-white hover:border-stone-500 text-xs font-bold hover:bg-stone-850 transition"
-              >
-                <span>TikTok</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-
-              <a
-                href="https://www.facebook.com/share/1DmHHwXCMC/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-stone-200 hover:text-white hover:border-stone-500 text-xs font-bold hover:bg-stone-850 transition"
-              >
-                <span>Facebook</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
+          <div>
+            <h2>Πληροφορίες</h2>
+            <button type="button" onClick={() => setLegalModalType('terms')}>Όροι χρήσης</button>
+            <button type="button" onClick={() => setLegalModalType('privacy')}>Πολιτική απορρήτου</button>
+            <button type="button" onClick={() => setLegalModalType('returns')}>Αποστολές και επιστροφές</button>
+            <a href="https://linktr.ee/aristeaamnt">Όλα τα κανάλια</a>
+            <div className="studio-footer-social"><a href="https://www.tiktok.com/@aram.creations">TikTok</a><a href="https://www.facebook.com/share/1DmHHwXCMC/">Facebook</a></div>
           </div>
         </div>
-
-        <div className="max-w-7xl mx-auto pt-8 mt-8 border-t border-stone-800 flex flex-col md:flex-row items-center justify-between text-xs text-stone-400 gap-4">
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-            <span>© {new Date().getFullYear()} Aram Creations.</span>
-            <span>•</span>
-            <button 
-              onClick={() => setLegalModalType('terms')} 
-              className="text-stone-300 hover:text-white transition underline underline-offset-2 cursor-pointer py-1"
-            >
-              Όροι Χρήσης
-            </button>
-            <span>•</span>
-            <button 
-              onClick={() => setLegalModalType('privacy')} 
-              className="text-stone-300 hover:text-white transition underline underline-offset-2 cursor-pointer py-1"
-            >
-              Πολιτική Απορρήτου
-            </button>
-            <span>•</span>
-            <button 
-              onClick={() => setLegalModalType('returns')} 
-              className="text-stone-300 hover:text-white transition underline underline-offset-2 cursor-pointer py-1"
-            >
-              Αποστολές & Επιστροφές
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <span>Χειροποίητα Ελληνικά Κοσμήματα</span>
-            <span>•</span>
-            <span>Artisan Crafts</span>
-            <span className="opacity-30">•</span>
-            {/* Discreet atelier owner access */}
-            <button
-              onClick={() => selectMode('admin')}
-              title="Atelier Access"
-              className="text-stone-400 hover:text-stone-700 transition p-0.5 opacity-40 hover:opacity-100 flex items-center gap-1 cursor-pointer"
-            >
-              <Lock className="w-2.5 h-2.5" />
-            </button>
-          </div>
+        <div className="studio-footer-end">
+          <span>© {new Date().getFullYear()} Aram Creations</span>
+          <button type="button" onClick={() => selectMode('admin')}><Lock size={14} aria-hidden="true" /> Back Office</button>
         </div>
       </footer>
       )}

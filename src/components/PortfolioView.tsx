@@ -1,9 +1,9 @@
 import { usePortfolioDesign } from '../lib/use-portfolio-design';
-import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from '../lib/design-studio';
 import { portfolioStatusLabel } from '../lib/portfolio-settings';
 import { portfolioMedia } from '../lib/video-links';
 import { ImageLightbox } from './ImageLightbox';
-import { PortfolioHero, portfolioHeroVideoUrl } from './PortfolioHero';
+import { portfolioHeroVideoUrl } from '../lib/hero-media';
+import { CollectionHero } from './content/CollectionHero';
 import { ContentCard } from './content/ContentCard';
 import { DetailView } from './content/DetailView';
 import { FilterBar } from './content/FilterBar';
@@ -32,14 +32,10 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     const [searchTerm, setSearchTerm] = useState('');
     const [filterMode, setFilterMode] = useState<'all' | 'favorites'>('all');
     const [heroVideoUrl, setHeroVideoUrl] = useState(() => initialHeroSnapshot().portfolioHeroVideoUrl);
-    const [designStudio, setDesignStudio] = useState<DesignStudio>(DEFAULT_DESIGN_STUDIO);
     useEffect(() => onSnapshot(doc(db, 'settings', 'shop'), snapshot => {
         const data = snapshot.data();
         setHeroVideoUrl(portfolioHeroVideoUrl(data?.portfolioHeroVideoUrl));
         if (data) cacheHeroSnapshot(data);
-        if (data?.designStudio) {
-            setDesignStudio(normalizeDesignStudio(data.designStudio));
-        }
     }, error => console.warn('Portfolio hero settings could not be loaded:', error)), []);
     const [sortBy, setSortBy] = useState<'default' | 'newest' | 'title' | 'category'>('default');
     const [favorites, setFavorites] = useState<string[]>(() => {
@@ -271,15 +267,9 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
         }
     };
     const activeCategoryMeta = artCategories.find((c) => c.id === selectedCatId);
-    const totalVideoCount = items.filter(itemHasVideo).length;
     const zoomImages = (selectedItem ? getItemMediaList(selectedItem) : [])
         .map((media, index) => ({ ...media, mediaIndex: index }));
-    return (<SectionShell section="portfolio" className="pb-24 font-sans transition-colors duration-300 bg-[#fafaf9] text-[#18181b]"
-      style={{
-        backgroundColor: designStudio.pageBackground || '#fafaf9',
-        color: designStudio.ink || '#18181b',
-        fontFamily: 'var(--ds-font-family, Jura, sans-serif)'
-      }}>
+    return (<SectionShell section="portfolio" className="portfolio-view">
       
       {/* Toast Notification */}
       {copiedToast && (<div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-xs animate-in fade-in slide-in-from-bottom-2 border ${'bg-stone-900 text-white border-stone-800'}`}>
@@ -290,10 +280,15 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
           {shareError}
         </div>)}
 
-      <PortfolioHero design={design} videoUrl={heroVideoUrl} itemCount={items.length} categoryCount={artCategories.length}
-        videoCount={totalVideoCount} onContactArtist={() => onContactArtist()} />
+      <CollectionHero key={heroVideoUrl} collection="portfolio" videoUrl={heroVideoUrl}
+        title={design.title} description={design.subtitle} appearance={design.heroAppearance}>
+        <button type="button" className="studio-link" onClick={() => onContactArtist()}>
+          <Mail size={16} aria-hidden="true" /> {design.contactLabel}
+        </button>
+      </CollectionHero>
 
-      <div id="portfolio-catalog" className="catalog-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+      <div id="portfolio-catalog" tabIndex={-1} className="catalog-content public-catalog portfolio-gallery">
+        <h2 className="catalog-heading">Τα έργα</h2>
         <FilterBar label="Φίλτρα Portfolio" search={searchTerm} onSearch={setSearchTerm}
           placeholder="Αναζήτηση σε τίτλο, υλικά, διαστάσεις, τεχνική..."
           categories={[{ id: 'all', label: 'Όλες οι Κατηγορίες' }, ...artCategories.map(category => ({ id: category.id, label: category.title, count: items.filter(item => item.category === category.id).length }))]}
@@ -310,12 +305,11 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
       </div>
 
       {/* 3. Artwork Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="sr-only">Συλλογή Έργων Portfolio</h2>
+      <section className="portfolio-gallery" aria-label="Συλλογή έργων">
         
         {/* Results Header */}
         <div className="flex items-center justify-between text-xs mb-6 font-sans text-stone-500">
-          <span>Εμφάνιση {filteredAndSortedItems.length} έργων</span>
+          <span aria-live="polite">Εμφάνιση {filteredAndSortedItems.length} έργων</span>
           {searchTerm && (<button onClick={() => setSearchTerm('')} className={`underline underline-offset-4 ${'hover:text-stone-950'}`}>
               Καθαρισμός αναζήτησης
             </button>)}
@@ -334,7 +328,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
             }} className="mt-4 px-4 py-2 rounded-lg text-xs font-semibold transition-colors bg-stone-900 hover:bg-stone-800 text-white">
               Επαναφορά Όλων
             </button>
-          </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          </div>) : (<div className="portfolio-art-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {filteredAndSortedItems.map((item) => {
                 const cat = artCategories.find((c) => c.id === item.category);
                 const mediaList = getItemMediaList(item);
@@ -359,11 +353,6 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                     tabIndex={0}
                     aria-label={`${item.title}. Πατήστε Enter για άνοιγμα έργου.`}
                     className="border-stone-200/80 hover:border-stone-400/80"
-                    style={{
-                      borderRadius: designStudio.cardRadius || '12px',
-                      backgroundColor: designStudio.surface || '#ffffff',
-                      borderColor: designStudio.line || '#e4e4e7'
-                    }}
                   >
                     {/* Media Container aspect-[4/5] identical to Shop */}
                     <div className="relative aspect-[4/5] overflow-hidden bg-stone-100">

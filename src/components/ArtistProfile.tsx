@@ -36,8 +36,8 @@ export function ArtistProfileDialog({ onClose }: { onClose: () => void }) {
     return () => { controller.abort(); document.body.style.overflow = overflow; document.removeEventListener('keydown', key); previous?.focus(); };
   }, [onClose]);
   return <div className="fixed inset-0 z-[90] bg-stone-950/70 p-4 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
-    <div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="artist-profile-title" className="max-w-2xl w-full max-h-[85svh] overflow-y-auto rounded-2xl p-6 sm:p-10 bg-white text-stone-900 shadow-xl" style={{ background: 'var(--ds-modal-background, white)', color: 'var(--ds-modal-ink, #292524)' }}>
-      <div className="flex justify-between items-start gap-4 border-b pb-5 mb-6"><div><p className="text-[10px] uppercase tracking-[.25em] opacity-60 mb-2">Aristea Amountzia</p><h2 id="artist-profile-title" className="text-3xl">About me</h2></div><button type="button" onClick={onClose} aria-label="Κλείσιμο παρουσίασης" className="min-h-11 min-w-11 flex items-center justify-center"><X className="w-5 h-5" /></button></div>
+    <div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="artist-profile-title" className="studio-dialog max-w-2xl w-full max-h-[85svh] overflow-y-auto border p-6 sm:p-10 bg-white text-stone-900 shadow-xl">
+      <div className="flex justify-between items-start gap-4 border-b pb-5 mb-6"><div><p className="text-sm text-stone-600 mb-2">Aristea Amountzia</p><h2 id="artist-profile-title" className="studio-dialog-title">Βιογραφικό</h2></div><button type="button" onClick={onClose} aria-label="Κλείσιμο παρουσίασης" className="min-h-11 min-w-11 flex items-center justify-center"><X className="w-5 h-5" /></button></div>
       {!profile && !error && <p role="status" className="animate-pulse text-sm">Φόρτωση παρουσίασης…</p>}
       {error && <p role="alert" className="text-sm text-amber-800">{error}</p>}
       {profile?.biography && <p className="whitespace-pre-wrap leading-relaxed text-sm sm:text-base">{profile.biography}</p>}

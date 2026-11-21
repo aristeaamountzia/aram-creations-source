@@ -5,11 +5,12 @@ import {
     DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, validatePortfolioDesign
 } from '../../lib/portfolio-settings';
 import { portfolioHeroVideoUrl } from '../PortfolioHero';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { mergeSettings, settingsChanges } from '../../lib/settings-changes';
 import { notifyOperationSuccess, notifyOperationError } from '../../lib/sound-notifications';
 import { validatePreparedMedia, verifyStoredMedia } from '../../lib/media-validation';
 import { db, storage } from '../../firebase';
-import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { ref as firebaseRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { CatalogPreferences } from './useCatalogPreferences';
 import type { ShopSettings, BackOfficeSharedState } from './backoffice-types';
@@ -47,23 +48,56 @@ export function useShopSettings(dependencies: ShopSettingsControllerDependencies
     } = dependencies;
 
     const [settingsLoadError, setSettingsLoadError] = useState('');
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
     const [shopSettings, setShopSettings] = useState<ShopSettings>(DEFAULT_SHOP_SETTINGS);
     const [heroUploadStatus, setHeroUploadStatus] = useState('');
     const [portfolioHeroUploadStatus, setPortfolioHeroUploadStatus] = useState('');
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [activeSettingsTab, setActiveSettingsTab] = useState('design');
     const [settingsSuccessMessage, setSettingsSuccessMessage] = useState('');
+    const [settingsSaveError, setSettingsSaveError] = useState('');
     const [activeFieldFilter, setActiveFieldFilter] = useState('all');
     const [draggedCategoryIdx, setDraggedCategoryIdx] = useState(null);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isSettingsOpen, setSettingsOpen] = useState(false);
+    const editing = useRef(false);
+    const baseline = useRef<Record<string, unknown> | null>(null);
+    const syncLatest = useRef<(() => void) | null>(null);
+
+    const collectSettings = () => ({
+        ...shopSettings,
+        customFields: { customCategories, customCollections, customStatuses, customMaterials, customPlatforms, customColors, statusOptionOrder, collectionOptionOrder, platformOptionOrder, colorOptionOrder, materialOptionOrder, hiddenCategoryOptions, hiddenStatusOptions, hiddenCollectionOptions, hiddenPlatformOptions, hiddenColorOptions, hiddenMaterialOptions }
+    });
+
+    const setIsSettingsOpen = (open: boolean) => {
+        if (open && !editing.current) {
+            baseline.current = settingsLoaded ? collectSettings() : null;
+            setSettingsSuccessMessage('');
+            setSettingsSaveError('');
+        }
+        if (!open && editing.current) syncLatest.current?.();
+        editing.current = open;
+        setSettingsOpen(open);
+    };
+
+    useEffect(() => {
+        if (isSettingsOpen && settingsLoaded && !baseline.current) baseline.current = collectSettings();
+    }, [isSettingsOpen, settingsLoaded]);
 
     useEffect(() => {
         if (!firebaseReady || !currentUser) return;
         const settingsDocRef = doc(db, "settings", "shop");
-        const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
+        setSettingsLoaded(false);
+        syncLatest.current = null;
+        const unsubscribe = onSnapshot(settingsDocRef, { includeMetadataChanges: true }, (docSnap) => {
+            if (docSnap.metadata.fromCache) return;
             setSettingsLoadError('');
-            if (docSnap.exists()) {
-                const data = docSnap.data();
+            setSettingsLoaded(true);
+            const data = docSnap.data();
+            syncLatest.current = () => {
+                if (!data) {
+                    setShopSettings(DEFAULT_SHOP_SETTINGS);
+                    return;
+                }
                 if (Array.isArray(data.customFields?.customCategories)) setCustomCategories(data.customFields.customCategories);
                 if (Array.isArray(data.customFields?.customCollections)) setCustomCollections(data.customFields.customCollections);
                 if (Array.isArray(data.customFields?.customStatuses)) setCustomStatuses(data.customFields.customStatuses);
@@ -82,8 +116,10 @@ export function useShopSettings(dependencies: ShopSettingsControllerDependencies
                 if (Array.isArray(data.customFields?.hiddenColorOptions)) setHiddenColorOptions(data.customFields.hiddenColorOptions);
                 if (Array.isArray(data.customFields?.hiddenMaterialOptions)) setHiddenMaterialOptions(data.customFields.hiddenMaterialOptions);
                 setShopSettings(normalizeShopSettings(data));
-            }
+            };
+            if (!editing.current || !baseline.current) syncLatest.current();
         }, (error) => {
+            setSettingsLoaded(false);
             console.error('Could not load shop settings:', error);
             setSettingsLoadError(error?.message || 'Δεν ήταν δυνατή η φόρτωση των ρυθμίσεων Shop.');
         });
@@ -91,8 +127,10 @@ export function useShopSettings(dependencies: ShopSettingsControllerDependencies
     }, [firebaseReady, currentUser]);
 
     const handleSaveSettings = async () => {
+        if (!settingsLoaded || isSavingSettings) return;
         setIsSavingSettings(true);
         setSettingsSuccessMessage('');
+        setSettingsSaveError('');
         try {
             const settingsRef = doc(db, "settings", "shop");
             if (shopSettings.portfolioHeroVideoUrl && shopSettings.portfolioHeroVideoUrl.trim() && !portfolioHeroVideoUrl(shopSettings.portfolioHeroVideoUrl)) {
@@ -102,21 +140,19 @@ export function useShopSettings(dependencies: ShopSettingsControllerDependencies
                 throw new Error('Εισάγετε έγκυρο σύνδεσμο http ή https για το βίντεο Hero του Shop.');
             }
             validatePortfolioDesign(normalizePortfolioDesign(shopSettings.portfolioDesign));
-            const beforeSettings = (await getDoc(settingsRef)).data() || {};
-            const ds = shopSettings.designStudio || DEFAULT_DESIGN_STUDIO;
-            const savedSettings = {
-                ...shopSettings,
-                designStudio: ds,
-                bgColor: ds.pageBackground || shopSettings.bgColor,
-                textColor: ds.ink || shopSettings.textColor,
-                primaryColor: ds.accent || shopSettings.primaryColor,
-                fontFamily: ds.fontFamily || shopSettings.fontFamily,
-                borderRadius: ds.cardRadius || shopSettings.borderRadius,
-                heroTitleColor: ds.heroTitleInk || shopSettings.heroTitleColor,
-                heroSubtitleColor: ds.heroBodyInk || shopSettings.heroSubtitleColor,
-                customFields: { customCategories, customCollections, customStatuses, customMaterials, customPlatforms, customColors, statusOptionOrder, collectionOptionOrder, platformOptionOrder, colorOptionOrder, materialOptionOrder, hiddenCategoryOptions, hiddenStatusOptions, hiddenCollectionOptions, hiddenPlatformOptions, hiddenColorOptions, hiddenMaterialOptions }
-            };
-            await setDoc(settingsRef, savedSettings, { merge: true });
+            const current = collectSettings();
+            if (!baseline.current) return;
+            const savedSettings = settingsChanges(baseline.current, current);
+            if (!Object.keys(savedSettings).length) {
+                setSettingsSuccessMessage('Δεν υπάρχουν αλλαγές προς αποθήκευση.');
+                return;
+            }
+            const beforeSettings = await runTransaction(db, async transaction => {
+                const previous = (await transaction.get(settingsRef)).data() || {};
+                transaction.set(settingsRef, savedSettings, { merge: true });
+                return previous;
+            });
+            baseline.current = current;
             pushVersionHistory({
                 type: 'SETTINGS_UPDATE',
                 id: 'settings/shop',
@@ -124,14 +160,15 @@ export function useShopSettings(dependencies: ShopSettingsControllerDependencies
                 message: 'Επιτυχής ενημέρωση ρυθμίσεων συστήματος και εμφάνισης.',
                 collection: 'settings',
                 before: beforeSettings,
-                after: { ...beforeSettings, ...savedSettings }
+                after: mergeSettings(beforeSettings, savedSettings)
             });
-            setSettingsSuccessMessage('Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς! Οι αλλαγές εφαρμόστηκαν άμεσα.');
+            setSettingsSuccessMessage('Οι αλλαγές αποθηκεύτηκαν στις κοινές ρυθμίσεις του καταστήματος.');
             notifyOperationSuccess('Αποθήκευση Ρυθμίσεων', 'Οι ρυθμίσεις του καταστήματος αποθηκεύτηκαν επιτυχώς.');
             setTimeout(() => setSettingsSuccessMessage(''), 5000);
         } catch (err) {
-            notifyOperationError('Σφάλμα Ρυθμίσεων', err.message || String(err));
-            alert("Σφάλμα κατά την αποθήκευση των ρυθμίσεων: " + (err.message || err));
+            const message = err instanceof Error ? err.message : String(err);
+            setSettingsSaveError(message);
+            notifyOperationError('Σφάλμα Ρυθμίσεων', message);
         } finally {
             setIsSavingSettings(false);
         }
@@ -207,7 +244,7 @@ export function useShopSettings(dependencies: ShopSettingsControllerDependencies
     };
 
     return {
-        settingsLoadError, shopSettings, setShopSettings, heroUploadStatus, setHeroUploadStatus,
+        settingsLoaded, settingsLoadError, settingsSaveError, shopSettings, setShopSettings, heroUploadStatus, setHeroUploadStatus,
         portfolioHeroUploadStatus, setPortfolioHeroUploadStatus, isSavingSettings, activeSettingsTab,
         setActiveSettingsTab, settingsSuccessMessage, setSettingsSuccessMessage, activeFieldFilter,
         setActiveFieldFilter, draggedCategoryIdx, setDraggedCategoryIdx, isSettingsOpen, setIsSettingsOpen,

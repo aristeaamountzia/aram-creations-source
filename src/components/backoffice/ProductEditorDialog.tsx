@@ -1,4 +1,5 @@
 import { IconEye, IconX, IconExternalLink } from './icons';
+import { useDialogKeyboard } from '../../lib/use-dialog-keyboard';
 import { stockForSelectedStatus } from '../../lib/stock-edit';
 import { AlertTriangle } from 'lucide-react';
 import { MediaManager } from '../media/MediaManager';
@@ -90,10 +91,14 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
         setShowAiAccessCode, showAiAccessCode, smartSuggestions, uploadProgress, uploadStatus, videoAbort,
         videoCompressing, videoProgress
     } = props;
-    if (!(isAddOpen)) return null;
+    const dialog = useDialogKeyboard(isAddOpen, () => {
+        if (!isSaving && !mediaPreparing) closeItemEditor();
+    });
+    if (!isAddOpen) return null;
 
     return (
         <div
+            ref={dialog} role="dialog" aria-modal="true" aria-labelledby="product-editor-title" tabIndex={-1}
             onClick={(e) => {
                 if (e.target === e.currentTarget && !isSaving && !mediaPreparing) {
                     closeItemEditor();
@@ -118,7 +123,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
 
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl relative border border-stone-200 cursor-default animate-fade-in"
+                className="studio-dialog bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl relative border border-stone-200 cursor-default animate-fade-in"
             >
                 {(() => {
                     const modalPreviewMedia = formShopMediaList?.[0]?.url || currentItem?.imageUrl || currentItem?.mediaList?.[0]?.url || formPrivateMediaList?.[0]?.url;
@@ -164,7 +169,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                             </span>
                                         )}
                                     </div>
-                                    <h2 className="text-base sm:text-lg font-black text-stone-900 leading-tight truncate">
+                                    <h2 id="product-editor-title" className="break-words text-base sm:text-lg font-semibold text-stone-900 leading-tight">
                                         {formName || currentItem?.name || (isEditMode ? 'Επεξεργασία υπάρχουσας καταχώρησης' : 'Νέα καταχώρηση καταλόγου')}
                                     </h2>
                                 </div>
@@ -193,7 +198,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                         </div>
                     );
                 })()}
-                <div className="px-5 py-2.5 border-b border-stone-200 bg-stone-50/90 flex flex-wrap items-center gap-2 shrink-0">
+                <div role="group" aria-label="Ενότητες προϊόντος" className="px-5 py-2.5 border-b border-stone-200 bg-stone-50/90 flex flex-wrap items-center gap-2 shrink-0">
                     {[
                         ['form-basic', 'Βασικά'],
                         ['form-pricing', 'Τιμές'],
@@ -206,6 +211,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                         <button
                             key={id}
                             type="button"
+                            aria-pressed={activeFormTab === id}
                             onClick={() => {
                                 setActiveFormTab(id);
                                 document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });

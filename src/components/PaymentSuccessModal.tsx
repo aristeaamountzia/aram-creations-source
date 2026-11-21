@@ -1,5 +1,6 @@
+import { useDialogKeyboard } from '../lib/use-dialog-keyboard';
 import React, { useState } from 'react';
-import { CheckCircle2, ShieldCheck, ArrowRight, Package, Copy, Check } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Package, Copy, Check } from 'lucide-react';
 
 interface PaymentSuccessModalProps {
   orderNumber: string;
@@ -12,6 +13,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
   total,
   onClose
 }) => {
+  const dialog = useDialogKeyboard(true, onClose);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -25,14 +27,14 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 text-center space-y-6">
+    <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="payment-title" tabIndex={-1} className="studio-overlay fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="studio-dialog bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 text-center space-y-6">
         <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200 shadow-xs">
           <CheckCircle2 className="w-8 h-8" />
         </div>
 
         <div className="space-y-1.5">
-          <h3 className="text-2xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>
+          <h3 id="payment-title" className="studio-dialog-title">
             Η πληρωμή ολοκληρώθηκε!
           </h3>
           <p className="text-xs uppercase tracking-widest text-stone-500 font-bold">
@@ -79,7 +81,6 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
           className="w-full py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm"
         >
           <span>Συνέχεια στο Κατάστημα</span>
-          <ArrowRight className="w-4 h-4" />
         </button>
       </div>
     </div>

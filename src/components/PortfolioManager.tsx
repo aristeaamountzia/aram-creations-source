@@ -49,7 +49,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   }, [inspectItem, isBulkEditOpen, imageEditorTarget, form, saving, uploading]);
 
   return (
-    <main className="backoffice-view min-h-screen p-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-20 relative">
+    <div className="backoffice-view min-h-screen p-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-20 relative">
       <PortfolioToolbar
         {...actions}
         {...historyController}
@@ -91,6 +91,6 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         {...workspace}
         {...selection}
       />
-    </main>
+    </div>
   );
 };

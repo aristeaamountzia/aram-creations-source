@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { SectionMode } from '../types';
-import { ShoppingBag, Palette, Mail } from 'lucide-react';
+import { ShoppingBag, Mail } from 'lucide-react';
 import { DesignStudio } from '../lib/design-studio';
 
 interface HeaderProps {
@@ -30,8 +30,8 @@ export const Header: React.FC<HeaderProps> = ({ currentMode, onSelectMode, cartC
     <header ref={headerRef} className="site-header sticky top-0 z-40 border-b" data-section={isPortfolio ? 'portfolio' : 'shop'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="header-row">
-          <button id="header-brand" type="button" onClick={() => onSelectMode(isPortfolio ? 'portfolio' : 'shop')}
-            aria-label={`Aram Creations — ${isPortfolio ? 'Portfolio' : 'επιστροφή στο Shop'}`}
+          <button id="header-brand" type="button" onClick={() => { onSelectMode('shop'); window.scrollTo({ top: 0, behavior: 'instant' }); }}
+            aria-label="Aram Creations, αρχική σελίδα"
             className="header-brand flex min-w-0 items-center gap-2.5 text-left cursor-pointer">
             <img src={isPortfolio ? "/logo-portfolio.png" : "/logo.png"} alt="Aram Creations"
               referrerPolicy="no-referrer"
@@ -45,19 +45,16 @@ export const Header: React.FC<HeaderProps> = ({ currentMode, onSelectMode, cartC
               }} />
             <span className="min-w-0">
               <span className="brand-name block text-lg sm:text-xl font-semibold tracking-tight">{design?.brandName || 'aram.creations'}</span>
-              <span className="brand-caption block text-[9px] sm:text-[10px] uppercase tracking-wide mt-0.5">
-                {isPortfolio ? (design?.portfolioCaption || 'Τέχνη & δημιουργίες') : (design?.shopCaption || 'Χειροποίητα κοσμήματα')}
-              </span>
             </span>
           </button>
           <nav aria-label="Shop και Portfolio" className="section-entrances">
             <a id="nav-btn-shop" href="/"
               aria-current={currentMode === 'shop' ? 'page' : undefined} className="section-entrance entrance-shop cursor-pointer">
-              <ShoppingBag className="h-4 w-4 shrink-0" aria-hidden="true" /><span>{design?.shopNavLabel || 'Shop'}</span>
+              <span>{design?.shopNavLabel || 'Shop'}</span>
             </a>
             <a id="nav-btn-portfolio" href="/portfolio/"
               aria-current={currentMode === 'portfolio' ? 'page' : undefined} className="section-entrance entrance-portfolio cursor-pointer">
-              <Palette className="h-4 w-4 shrink-0" aria-hidden="true" /><span>{design?.portfolioNavLabel || 'Portfolio'}</span>
+              <span>{design?.portfolioNavLabel || 'Portfolio'}</span>
             </a>
           </nav>
           {isPortfolio ? (
