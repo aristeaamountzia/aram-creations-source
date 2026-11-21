@@ -116,20 +116,17 @@
 .collection-hero-media { position: relative; overflow: hidden; min-height: 29rem; isolation: isolate; background: #c4c4c4; }
 .collection-hero-media :is(img, video) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .collection-hero-media .hero-embed { background: #171717; }
-.collection-video-toggle {
-  position: absolute;
-  right: 1rem;
-  bottom: 1rem;
+.gallery-motion-pause {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  background: #ffffff;
-  color: var(--studio-ink);
-  border: 1px solid var(--studio-line);
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  color: #f2f2f2;
+  border: 1px solid #f0f0f066;
   cursor: pointer;
 }
-.collection-video-toggle:hover { background: var(--studio-highlight); }
+.gallery-motion-pause:hover { background: #181818bf; }
 .studio-shell .public-catalog { padding-top: clamp(2.3rem, 5vw, 4.5rem); padding-bottom: 2rem; scroll-margin-top: calc(var(--aram-header-height, 72px) + 1rem); }
 .catalog-heading, .studio-shell .studio-information h2 {
   margin-bottom: 1.25rem;
@@ -291,8 +288,7 @@ body:has(.studio-shell [role="dialog"][aria-modal="true"]) { overflow: hidden; }
 .gallery-hero .collection-hero-media :is(img, video) { object-position: 66% center; }
 .gallery-hero .collection-hero-media > img { filter: grayscale(1); }
 .gallery-hero .collection-hero-copy { z-index: 1; width: max-content; max-width: min(100%, var(--gallery-hero-content-width, 100%)); padding: var(--gallery-hero-top-padding, 6.75rem) clamp(1rem, 4.85vw, 4.5rem) var(--gallery-hero-bottom-padding, 3rem); pointer-events: none; }
-.gallery-hero .collection-hero-actions, .gallery-hero .collection-video-toggle { pointer-events: auto; }
-.gallery-hero .collection-video-toggle { z-index: 2; background: #181818bf; color: #f2f2f2; border-color: #f0f0f066; }
+.gallery-hero .collection-hero-actions { pointer-events: auto; }
 .gallery-hero .collection-title { max-width: 11ch; font: 400 min(var(--gallery-hero-title-size, 6.6rem), clamp(3.1rem, 9vw, 7.5rem))/.98 var(--studio-display); font-size: var(--gallery-hero-title-size, clamp(3.1rem, 6.35vw, 6.6rem)); letter-spacing: -.055em; overflow-wrap: anywhere; margin: 0; }
 .gallery-hero--portfolio .collection-title { max-width: 14ch; margin-block: .65rem .95rem; }
 .gallery-hero--shop .collection-intro { max-width: 28rem; margin-top: 1rem; }
@@ -334,13 +330,26 @@ body:has(.studio-shell [role="dialog"][aria-modal="true"]) { overflow: hidden; }
 .studio-shell[data-section="admin"] .workspace-login form { border-radius: 8px; }
 
 @media (max-width: 767px) {
-  .gallery-hero { min-height: var(--gallery-hero-min-height, 34rem); }
+  .gallery-hero { min-height: var(--gallery-hero-min-height, min(34rem, 64svh)); }
   .gallery-hero .collection-hero-media :is(img, video) { object-position: 63% center; }
   .gallery-hero .collection-hero-media::after { background: linear-gradient(0deg, #090909ed, #09090936 72%), linear-gradient(180deg, #090909de, transparent 28%); }
-  .gallery-hero .collection-hero-copy { width: 100%; justify-content: flex-end; padding: var(--gallery-hero-top-padding, 6rem) 1rem var(--gallery-hero-bottom-padding, 3.6rem); }
+  .gallery-hero .collection-hero-copy { width: 100%; justify-content: flex-end; padding: var(--gallery-hero-top-padding, 6rem) 1rem var(--gallery-hero-bottom-padding, 2rem); }
   .gallery-hero .collection-title { font-size: min(var(--gallery-hero-title-size, 4.4rem), clamp(2.7rem, 11vw, 4.4rem)); }
   .gallery-hero .collection-hero-actions { margin-top: .95rem; }
   .gallery-hero .studio-primary { padding-inline: .95rem; }
+}
+@media (max-width: 639px) {
+  .studio-shell .catalog-categories--compact { display: none; }
+  .catalog-category-select {
+    min-height: 44px;
+    width: 100%;
+    padding: .55rem .75rem;
+    border: 1px solid var(--studio-line);
+    border-radius: 8px;
+    background: white;
+    color: var(--studio-ink);
+    font-size: 1rem;
+  }
 }
 .gallery-hero .collection-hero-media::after { background-color: rgb(0 0 0 / var(--gallery-hero-overlay, 0)); }
 .gallery-hero--preview { border-radius: 0; overflow: hidden; }

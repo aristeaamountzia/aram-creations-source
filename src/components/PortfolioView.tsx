@@ -245,7 +245,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: `${item.title} • Aristea Amountzia Fine Art`,
+                    title: `${item.title} • Aram Creations`,
                     text: item.description,
                     url: url.toString()
                 });
@@ -290,8 +290,8 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
       <div id="portfolio-catalog" tabIndex={-1} className="catalog-content public-catalog portfolio-gallery">
         <h2 className="catalog-heading">Τα έργα</h2>
         <FilterBar label="Φίλτρα Portfolio" search={searchTerm} onSearch={setSearchTerm}
-          placeholder="Αναζήτηση σε τίτλο, υλικά, διαστάσεις, τεχνική..."
-          categories={[{ id: 'all', label: 'Όλες οι Κατηγορίες' }, ...artCategories.map(category => ({ id: category.id, label: category.title, count: items.filter(item => item.category === category.id).length }))]}
+          placeholder="Αναζήτηση έργων" compactCategories
+          categories={[{ id: 'all', label: 'Όλες οι κατηγορίες' }, ...artCategories.map(category => ({ id: category.id, label: category.title, count: items.filter(item => item.category === category.id).length }))]}
           selectedCategory={selectedCatId} onCategory={id => setSelectedCatId(id as CategoryId | 'all')}
           actions={<>
             <button type="button" aria-pressed={filterMode === 'all'} onClick={() => setFilterMode('all')}>Όλα ({items.length})</button>

@@ -1,7 +1,7 @@
 {
   "name": "Aram Creations",
   "short_name": "Aram",
-  "description": "Χειροποίητες δημιουργίες, κοσμήματα και portfolio έργων τέχνης",
+  "description": "Χειροποίητα κοσμήματα και portfolio.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fafafa",

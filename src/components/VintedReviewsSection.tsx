@@ -179,75 +179,6 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
     return reviews.filter(isAuthenticVintedReview);
   }, [reviews]);
 
-  // 3. Dynamically keep Schema.org JSON-LD in <head> synchronized with live Vinted stats & reviews
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const scriptEl = document.getElementById('aram-schema-jsonld');
-    if (!scriptEl) return;
-
-    const liveRatingCount = Math.max(Number(stats.feedbackCount) || 0, reviews.length || 10);
-    const liveRatingValue = Number(stats.ratingScore || 5.0).toFixed(1);
-
-    const schemaPayload = {
-      '@context': 'https://schema.org',
-      '@graph': [
-        {
-          '@type': ['OnlineStore', 'JewelryStore'],
-          '@id': 'https://aramcreationsofficial.netlify.app/#store',
-          name: 'Aram Creations',
-          alternateName: 'Aram Creations Χειροποίητα Κοσμήματα & Δημιουργίες',
-          url: 'https://aramcreationsofficial.netlify.app/',
-          logo: 'https://aramcreationsofficial.netlify.app/logo.png',
-          image: 'https://aramcreationsofficial.netlify.app/logo.png',
-          description:
-            'Ανακαλύψτε μοναδικά χειροποίητα κοσμήματα, δημιουργίες από υγρό γυαλί (resin art), σκουλαρίκια, κολιέ, δαχτυλίδια και custom παραγγελίες από το Aram Creations.',
-          priceRange: '€',
-          currenciesAccepted: 'EUR',
-          paymentAccepted: 'Credit Card, Debit Card, Apple Pay, Google Pay, Revolut, IRIS, Bank Transfer',
-          sameAs: [`https://www.vinted.gr/member/${stats.memberId || '231329281'}`],
-          areaServed: {
-            '@type': 'Country',
-            name: 'GR'
-          },
-          aggregateRating: {
-            '@type': 'AggregateRating',
-            ratingValue: liveRatingValue,
-            bestRating: '5',
-            worstRating: '1',
-            ratingCount: String(liveRatingCount)
-          },
-          review: authenticReviews.slice(0, 8).map((r) => ({
-            '@type': 'Review',
-            author: {
-              '@type': 'Person',
-              name: r.userLogin || 'Πελάτης Vinted'
-            },
-            datePublished: (r.date || '').slice(0, 10) || undefined,
-            reviewBody: sanitizeVintedDescription(r.feedback),
-            reviewRating: {
-              '@type': 'Rating',
-              ratingValue: String(r.rating || 5),
-              bestRating: '5',
-              worstRating: '1'
-            }
-          }))
-        },
-        {
-          '@type': 'WebSite',
-          '@id': 'https://aramcreationsofficial.netlify.app/#website',
-          url: 'https://aramcreationsofficial.netlify.app/',
-          name: 'Aram Creations | Χειροποίητες Δημιουργίες & Κοσμήματα',
-          inLanguage: 'el-GR',
-          publisher: {
-            '@id': 'https://aramcreationsofficial.netlify.app/#store'
-          }
-        }
-      ]
-    };
-
-    scriptEl.textContent = JSON.stringify(schemaPayload);
-  }, [stats, reviews, authenticReviews]);
-
   const displayedReviews = authenticReviews.slice(0, visibleCount);
   const hasMore = visibleCount < authenticReviews.length;
   const totalReviewCount = Math.max(Number(stats.feedbackCount) || 0, reviews.length || 10);
@@ -256,7 +187,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
     <section
       id="customer-reviews"
       tabIndex={-1}
-      aria-label="Εμπειρίες & Αξιολογήσεις Πελατών"
+      aria-label="Αξιολογήσεις"
       className={`scroll-mt-20 py-14 sm:py-20 border-t border-stone-200/80 transition-colors ${className}`}
     >
       <div id="reviews" className="sr-only" aria-hidden="true" />
@@ -264,22 +195,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Sleek Luxury Header & Trust Summary */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10 pb-6 border-b border-stone-200/70">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100 border border-stone-200/80 text-stone-700 text-[10px] font-bold uppercase tracking-widest shadow-2xs">
-              <BadgeCheck className="w-3.5 h-3.5 text-stone-900 shrink-0" strokeWidth={1.5} />
-              <span>Επαληθευμένες Αγορές</span>
-            </div>
-
-            <h2
-              className="text-2xl sm:text-3xl font-bold tracking-tight text-stone-900"
-            >
-              Εμπειρίες & Εντυπώσεις
-            </h2>
-
-            <p className="text-xs sm:text-sm text-stone-600 font-sans max-w-xl">
-              Αυθεντικά σχόλια από πραγματικούς πελάτες για την ποιότητα των δημιουργιών, τη συσκευασία και την άμεση εξυπηρέτηση.
-            </p>
-          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-stone-900">Αξιολογήσεις</h2>
 
           {/* Inline Rating & Boutique Link */}
           <div className="flex flex-wrap items-center gap-4 sm:gap-6 bg-stone-50 border border-stone-200/80 rounded-2xl px-5 py-3.5 shrink-0 shadow-2xs">
@@ -311,7 +227,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-700 hover:text-stone-950 transition group"
             >
-              <span>Vinted Boutique</span>
+              <span>Vinted</span>
               <ExternalLink className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-900 transition-colors" strokeWidth={1.5} />
             </a>
           </div>

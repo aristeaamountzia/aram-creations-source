@@ -23,5 +23,11 @@ test('search landing pages include readable content and distinct portfolio metad
   assert.ok(!portfolio.includes(initialContent()));
   assert.ok(portfolio.includes(`<title>${searchPages.portfolio.title}</title>`));
   assert.ok(portfolio.includes('rel="canonical" href="https://aramcreationsofficial.netlify.app/portfolio/"'));
-  assert.equal(portfolio.split(searchPages.portfolio.description).length - 1, 3);
+  for (const tag of ['name="description"', 'property="og:description"', 'name="twitter:description"']) {
+    assert.ok(portfolio.includes(`<meta ${tag} content="${searchPages.portfolio.description}"`));
+  }
+  assert.ok(html.includes(`<title>${searchPages.shop.title}</title>`));
+  for (const page of [html, portfolio]) {
+    assert.doesNotMatch(page, /βόλος|βόλου|volos|artisan|εικαστικ/i);
+  }
 });

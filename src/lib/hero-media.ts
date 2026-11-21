@@ -52,12 +52,19 @@ export interface HeroSnapshot {
 }
 
 export const FALLBACK_HERO_SNAPSHOT: HeroSnapshot = {
-  heroTitle: 'Χειροποίητες Δημιουργίες',
-  heroSubtitle: 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.',
+  heroTitle: 'Χειροποίητα κοσμήματα',
+  heroSubtitle: 'Κοσμήματα με άνθη, ρητίνη και χάλκινο σύρμα.',
   heroTitleSize: 'text-3xl md:text-4xl',
   heroVideoUrl: SHOP_HERO_VIDEO_PATH,
   portfolioHeroVideoUrl: TRANSCODED_HERO_H264_PATH,
 };
+
+export function shopHeroCopy(title?: string, subtitle?: string) {
+  return {
+    heroTitle: !title?.trim() || ['Χειροποίητες Δημιουργίες', 'Χειροποίητα κοσμήματα & μοναδικές δημιουργίες'].includes(title.trim()) ? FALLBACK_HERO_SNAPSHOT.heroTitle : title,
+    heroSubtitle: subtitle === undefined || subtitle.trim() === 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.' ? FALLBACK_HERO_SNAPSHOT.heroSubtitle : subtitle,
+  };
+}
 
 const HERO_KEYS = Object.keys(FALLBACK_HERO_SNAPSHOT) as Array<keyof HeroSnapshot>;
 const CACHE_KEY = 'aram_hero_cache_v1';
@@ -73,7 +80,7 @@ export function pickHeroSnapshot(data: unknown, base: HeroSnapshot = FALLBACK_HE
   // Store resolved (optimised/local) video URLs so the shell and first render agree.
   result.heroVideoUrl = portfolioHeroVideoUrl(result.heroVideoUrl);
   result.portfolioHeroVideoUrl = portfolioHeroVideoUrl(result.portfolioHeroVideoUrl);
-  return result;
+  return { ...result, ...shopHeroCopy(result.heroTitle, result.heroSubtitle) };
 }
 
 // Build-time snapshot (set by vite.config.ts) used for the static HTML shell.

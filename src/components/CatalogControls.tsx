@@ -12,14 +12,20 @@ export interface CatalogControlsProps {
   actions: React.ReactNode;
   children?: React.ReactNode;
   accent?: string;
+  compactCategories?: boolean;
 }
 
 /** The same layout and controls serve both public catalogs and their editors. */
-export function CatalogControls({ label, search, onSearch, placeholder, categories, selectedCategory, onCategory, actions, children, accent }: CatalogControlsProps) {
+export function CatalogControls({ label, search, onSearch, placeholder, categories, selectedCategory, onCategory, actions, children, accent, compactCategories }: CatalogControlsProps) {
   return <section aria-label={label} className="catalog-controls" style={accent ? { '--ui-accent': accent } as React.CSSProperties : undefined}>
     {categories.length > 0 && (
       <div className="relative min-w-0">
-        <nav aria-label={`${label} — κατηγορίες`} className="catalog-categories horizontal-scrollbar">
+        {compactCategories && (
+          <select className="catalog-category-select sm:hidden" aria-label="Κατηγορία" value={selectedCategory} onChange={event => onCategory(event.target.value)}>
+            {categories.map(category => <option key={category.id} value={category.id}>{category.label}{category.count !== undefined ? ` (${category.count})` : ''}</option>)}
+          </select>
+        )}
+        <nav aria-label={`${label} — κατηγορίες`} className={`catalog-categories horizontal-scrollbar${compactCategories ? ' catalog-categories--compact' : ''}`}>
           {categories.map(category => (
             <button
               key={category.id}
@@ -33,7 +39,7 @@ export function CatalogControls({ label, search, onSearch, placeholder, categori
             </button>
           ))}
         </nav>
-        <div aria-hidden="true" className="pointer-events-none absolute right-0 top-0 bottom-4 w-6 bg-gradient-to-l from-white/90 to-transparent sm:hidden" />
+        {!compactCategories && <div aria-hidden="true" className="pointer-events-none absolute right-0 top-0 bottom-4 w-6 bg-gradient-to-l from-white/90 to-transparent sm:hidden" />}
       </div>
     )}
     <div className="catalog-filter-panel">

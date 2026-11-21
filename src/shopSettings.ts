@@ -1,3 +1,4 @@
+import { shopHeroCopy } from './lib/hero-media';
 import type { HeroAppearance } from './lib/hero-appearance';
 import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from './lib/design-studio';
 import { DEFAULT_SHIPPING_SETTINGS, normalizeShippingSettings, type ShippingSettings } from './lib/shipping';
@@ -45,8 +46,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   heroSubtitleColor: '#a1a1aa',
   heroTitleSize: 'text-3xl md:text-4xl',
   borderRadius: '0.625rem',
-  heroTitle: 'Χειροποίητα κοσμήματα & μοναδικές δημιουργίες',
-  heroSubtitle: 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.',
+  ...shopHeroCopy(),
   heroVideoUrl: '',
   portfolioHeroVideoUrl: '',
   portfolioDesign: DEFAULT_PORTFOLIO_DESIGN,
@@ -82,6 +82,7 @@ export function normalizeShopSettings(value?: ShopSettingsInput): ShopSettings {
   return {
     ...DEFAULT_SHOP_SETTINGS,
     ...data,
+    ...shopHeroCopy(data.heroTitle, data.heroSubtitle),
     visualTheme: data.visualTheme === 'classic' ? 'classic' : 'atelier',
     categoryOrder: Array.isArray(data.categoryOrder) ? data.categoryOrder : DEFAULT_SHOP_SETTINGS.categoryOrder,
     fallbackLinks: { ...DEFAULT_SHOP_SETTINGS.fallbackLinks, ...(data.fallbackLinks || {}) },

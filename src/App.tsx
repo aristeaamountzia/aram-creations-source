@@ -431,7 +431,7 @@ export const App: React.FC = () => {
         <div className="studio-footer-grid">
           <div className="studio-footer-brand">
             <span>{designStudioContent.brandName}</span>
-            <p>Χειροποίητα κοσμήματα και εικαστικά έργα.</p>
+            <p>Χειροποίητα κοσμήματα.</p>
           </div>
           <div>
             <h2>Εξερευνήστε</h2>
