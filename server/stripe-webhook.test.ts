@@ -15,3 +15,13 @@ test('Stripe webhook signature requires a valid recent signature', () => {
   assert.equal(verifyStripeSignature(payload, header, secret, now + 301_000), false);
   assert.equal(verifyStripeSignature(payload, '', secret, now), false);
 });
+
+test('Stripe webhook accepts a valid signature during signing-secret rotation', () => {
+  const payload = JSON.stringify({ id: 'evt_rotation' });
+  const now = 1_800_000_000_000;
+  const timestamp = String(now / 1000);
+  const sign = (secret: string) => createHmac('sha256', secret).update(timestamp + '.' + payload).digest('hex');
+  const header = 't=' + timestamp + ', v1=' + sign('whsec_previous') + ', v1=' + sign('whsec_current');
+  assert.equal(verifyStripeSignature(payload, header, 'whsec_current', now), true);
+  assert.equal(verifyStripeSignature(payload, header, 'whsec_unrelated', now), false);
+});

@@ -18,6 +18,12 @@
 
 Η επιστροφή από Stripe δείχνει επιτυχία και αδειάζει το καλάθι μόνο μετά από επιβεβαίωση πληρωμής από τον server. Η ακύρωση πελάτη απαιτεί τον μυστικό σύνδεσμο της συγκεκριμένης προσπάθειας. Πριν ελευθερωθεί απόθεμα, ο server κλείνει την πληρώσιμη συνεδρία Stripe· αν έχει ήδη πληρωθεί, επιβεβαιώνει την πληρωμή. Σε timeout διατηρεί την προσπάθεια και χρησιμοποιεί το ίδιο idempotency key στην επανάληψη. Τα προϊόντα με ενεργές δεσμεύσεις δεν επιτρέπουν χειροκίνητη αλλαγή αποθέματος/κατάστασης ή διαγραφή. Τα αντίγραφά τους δεν κληρονομούν τις δεσμεύσεις.
 
+## Μετάβαση στο νέο Netlify project
+
+Η παρουσίαση καλλιτέχνη και το PDF χρησιμοποιούν το κοινό Firestore και Firebase Storage. Πριν από το πρώτο deploy αυτού του κώδικα, εκτέλεσε `npx tsx scripts/migrate-artist-profile.ts` για έλεγχο της δημόσιας παρουσίασης από το προηγούμενο site. Με το υπάρχον `FIREBASE_SERVICE_ACCOUNT` στο τοπικό περιβάλλον, εκτέλεσε την ίδια εντολή με `--apply` για εισαγωγή. Η εισαγωγή δεν αντικαθιστά υφιστάμενη παρουσίαση στο Firebase.
+
+Στο Netlify όρισε `STRIPE_WEBHOOK_SECRET` με το κλειδί υπογραφής του ενεργού endpoint `https://aramcreationsofficial.netlify.app/api/stripe-webhook` και κάνε deploy για να φορτωθεί η ρύθμιση. Στο Stripe επίλεξε τα συμβάντα `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded` και `checkout.session.async_payment_failed`. Ένα ανυπόγραφο αίτημα μετά το deploy πρέπει να επιστρέφει `400 Invalid signature`. Για έλεγχο ολοκλήρωσης χρησιμοποίησε δοκιμαστική συνεδρία με τους αντίστοιχους δοκιμαστικούς κωδικούς και webhook.
+
 ## Έλεγχοι
 
 `pnpm exec tsx --test server/orders-core.test.ts`, `pnpm lint`, `pnpm build`.

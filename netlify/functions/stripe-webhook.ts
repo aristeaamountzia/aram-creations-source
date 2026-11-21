@@ -16,19 +16,20 @@ function database() {
 
 export function verifyStripeSignature(payload: string, header: string, secret: string, now = Date.now()): boolean {
   try {
-    const parts = header.split(',');
+    const parts = header.split(',').map(part => part.trim());
     const timestampPart = parts.find(p => p.startsWith('t='));
-    const sigPart = parts.find(p => p.startsWith('v1='));
-    if (!timestampPart || !sigPart) return false;
+    if (!timestampPart) return false;
 
     const timestamp = timestampPart.slice(2);
     const timestampSeconds = Number(timestamp);
-    if (!Number.isFinite(timestampSeconds) || Math.abs(now / 1000 - timestampSeconds) > 300) return false;
-    const signature = sigPart.slice(3);
+    if (!/^\d+$/.test(timestamp) || !Number.isSafeInteger(timestampSeconds) || Math.abs(now / 1000 - timestampSeconds) > 300) return false;
     const signedPayload = `${timestamp}.${payload}`;
     const expected = createHmac('sha256', secret).update(signedPayload).digest('hex');
 
-    return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+    return parts.some(part => {
+      if (!/^v1=[a-f\d]{64}$/i.test(part)) return false;
+      return timingSafeEqual(Buffer.from(part.slice(3), 'hex'), Buffer.from(expected, 'hex'));
+    });
   } catch {
     return false;
   }
@@ -42,7 +43,7 @@ export default async function handler(request: Request) {
   try {
     const rawBody = await request.text();
     const sigHeader = request.headers.get('stripe-signature');
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
 
     if (!webhookSecret) return new Response('Webhook configuration missing', { status: 503 });
     if (!sigHeader || !verifyStripeSignature(rawBody, sigHeader, webhookSecret)) {
@@ -52,7 +53,7 @@ export default async function handler(request: Request) {
 
     const event = JSON.parse(rawBody);
 
-    if (event.type === 'checkout.session.completed') {
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       const sessionData = event.data.object;
       const sessionId = sessionData.id;
 
@@ -75,10 +76,11 @@ export default async function handler(request: Request) {
       await notifyOrder(db, targetOrderId).catch((err) => {
         console.error('Failed to notify owner via webhook:', err);
       });
-    } else if (event.type === 'checkout.session.expired') {
+    } else if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed') {
       const session = event.data.object;
       const targetOrderId = session.client_reference_id || session.metadata?.orderId;
-      if (targetOrderId) await cancelOrder(database(), targetOrderId, 'stripe_checkout_expired', ['waiting_payment', 'pending']);
+      const reason = event.type === 'checkout.session.expired' ? 'stripe_checkout_expired' : 'stripe_async_payment_failed';
+      if (targetOrderId) await cancelOrder(database(), targetOrderId, reason, ['waiting_payment', 'pending']);
     }
 
     return Response.json({ received: true });
