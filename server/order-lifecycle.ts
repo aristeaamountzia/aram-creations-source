@@ -81,12 +81,17 @@ export async function markStripeOrderPaid(db: any, orderId: string, session: Str
     const orderSnap = await tx.get(orderRef);
     if (!orderSnap.exists) throw new OrderError('Η παραγγελία δεν βρέθηκε.', 404);
     const order = orderSnap.data();
-    if (order.status === 'paid') return { id: orderId, number: order.number, total: order.total, alreadyPaid: true };
-    if (!['pending', 'waiting_payment'].includes(order.status) || order.paymentMethod !== 'stripe') {
+    if (order.paymentMethod !== 'stripe') {
       throw new OrderError('Η παραγγελία δεν μπορεί να επιβεβαιωθεί ως πληρωμένη.', 409);
     }
     if (order.stripeSessionId && order.stripeSessionId !== session.id) {
       throw new OrderError('Η συνεδρία Stripe δεν αντιστοιχεί στην παραγγελία.', 409);
+    }
+    if (['paid', 'shipped', 'delivered'].includes(order.status)) {
+      return { id: orderId, number: order.number, total: order.total, alreadyPaid: true };
+    }
+    if (!['pending', 'waiting_payment'].includes(order.status)) {
+      throw new OrderError('Η παραγγελία δεν μπορεί να επιβεβαιωθεί ως πληρωμένη.', 409);
     }
 
     const products = await readOrderProducts(db, tx, order.items);
@@ -108,7 +113,7 @@ export async function markStripeOrderPaid(db: any, orderId: string, session: Str
   });
 }
 
-export async function cancelOrder(db: any, orderId: string, reason: string, allowedStatuses = ['pending', 'waiting_payment', 'paid']) {
+export async function cancelOrder(db: any, orderId: string, reason: string, allowedStatuses = ['pending', 'waiting_payment', 'paid'], stripeSessionId?: string) {
   return db.runTransaction(async (tx: any) => {
     const orderRef = db.doc(`orders/${orderId}`);
     const orderSnap = await tx.get(orderRef);
@@ -116,6 +121,15 @@ export async function cancelOrder(db: any, orderId: string, reason: string, allo
     const order = orderSnap.data();
     const alreadyCancelled = order.status === 'cancelled';
     if (alreadyCancelled && reason !== 'admin_cancelled') return { alreadyCancelled, restored: 0 };
+    if (stripeSessionId) {
+      if (order.paymentMethod !== 'stripe' || !allowedStatuses.includes(order.status) ||
+          (order.stripeSessionId && order.stripeSessionId !== stripeSessionId)) {
+        return { alreadyCancelled, restored: 0 };
+      }
+      if (!order.stripeSessionId) {
+        throw new OrderError('Η συνεδρία πληρωμής προετοιμάζεται. Δοκίμασε ξανά σε λίγο.', 409);
+      }
+    }
     if (!alreadyCancelled && !allowedStatuses.includes(order.status)) throw new OrderError('Η παραγγελία δεν μπορεί να ακυρωθεί.', 409);
 
     const restored = await releaseOrderStock(db, tx, order.items, orderId);

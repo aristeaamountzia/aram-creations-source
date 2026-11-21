@@ -101,6 +101,31 @@ test('expired checkout releases reservation and cannot release it twice', async 
   assert.equal(db.docs.get('orders/order-1').status, 'cancelled');
 });
 
+test('signed cancellation for an old Stripe session preserves the active reservation', async () => {
+  const db = fakeDb({
+    'orders/order-1': { status: 'waiting_payment', paymentMethod: 'stripe', stripeSessionId: 'cs_current', items: [{ id: 'product-1' }], history: [] },
+    'jewelry/product-1': { stock: 0, checkoutReservations: { 'order-1': 1 } },
+  });
+  const awaitingPayment = ['waiting_payment', 'pending'];
+  const stale = await cancelOrder(db, 'order-1', 'stripe_async_payment_failed', awaitingPayment, 'cs_old');
+  assert.equal(stale.restored, 0);
+  assert.equal(db.docs.get('orders/order-1').status, 'waiting_payment');
+  assert.equal(db.docs.get('jewelry/product-1').stock, 0);
+  const current = await cancelOrder(db, 'order-1', 'stripe_async_payment_failed', awaitingPayment, 'cs_current');
+  assert.equal(current.restored, 1);
+  assert.equal(db.docs.get('orders/order-1').status, 'cancelled');
+});
+
+test('delivered Stripe orders acknowledge matching webhook retries without mutating stock', async () => {
+  const db = fakeDb({
+    'orders/order-1': { status: 'delivered', paymentMethod: 'stripe', stripeSessionId: 'cs_current', history: [] },
+  });
+  assert.equal((await markStripeOrderPaid(db, 'order-1', { id: 'cs_current' }, 'stripe_webhook')).alreadyPaid, true);
+  await assert.rejects(markStripeOrderPaid(db, 'order-1', { id: 'cs_old' }, 'stripe_webhook'), { status: 409 });
+  assert.equal(db.docs.get('orders/order-1').status, 'delivered');
+  assert.deepEqual(db.docs.get('orders/order-1').history, []);
+});
+
 test('payment without this order reservation is rejected', () => {
   assert.throws(() => paidPatch({ stock: 0, checkoutReservations: {} }, 'order-1'));
 });

@@ -1,18 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { adminDatabase } from '../../server/admin-database';
 import { retrieveStripeCheckoutSession } from '../../server/stripe-service';
 import { notifyOrder } from '../../server/order-notifications';
 import { cancelOrder, markStripeOrderPaid } from '../../server/order-lifecycle';
-
-function database() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) throw new Error('Firebase configuration missing');
-  const credentials = JSON.parse(raw);
-  let app = getApps().find(a => a.name === 'orders');
-  if (!app) app = initializeApp({ credential: cert(credentials), projectId: credentials.project_id }, 'orders');
-  return getFirestore(app);
-}
 
 export function verifyStripeSignature(payload: string, header: string, secret: string, now = Date.now()): boolean {
   try {
@@ -70,23 +60,30 @@ export default async function handler(request: Request) {
         return Response.json({ received: true, missing_order: true });
       }
 
-      const db = database();
+      const { db } = adminDatabase();
       await markStripeOrderPaid(db, targetOrderId, session, 'stripe_webhook');
 
       await notifyOrder(db, targetOrderId).catch((err) => {
         console.error('Failed to notify owner via webhook:', err);
       });
     } else if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed') {
-      const session = event.data.object;
-      const targetOrderId = session.client_reference_id || session.metadata?.orderId;
+      const deliveredSession = event.data.object;
+      const targetOrderId = deliveredSession.client_reference_id || deliveredSession.metadata?.orderId;
       const reason = event.type === 'checkout.session.expired' ? 'stripe_checkout_expired' : 'stripe_async_payment_failed';
-      if (targetOrderId) await cancelOrder(database(), targetOrderId, reason, ['waiting_payment', 'pending']);
+      if (targetOrderId && typeof deliveredSession.id === 'string' && deliveredSession.id) {
+        const session = await retrieveStripeCheckoutSession(deliveredSession.id);
+        if (session.payment_status === 'paid' || (event.type === 'checkout.session.expired' && session.status !== 'expired')) {
+          return Response.json({ received: true, ignored: true });
+        }
+        const { db } = adminDatabase();
+        await cancelOrder(db, targetOrderId, reason, ['waiting_payment', 'pending'], session.id);
+      }
     }
 
     return Response.json({ received: true });
   } catch (error: any) {
-    console.error('stripe-webhook processing failed:', error);
-    return new Response(`Webhook Error: ${error?.message || 'unknown'}`, { status: 500 });
+    console.error('Stripe webhook could not process event.', { name: error?.name, status: error?.status });
+    return new Response('Webhook processing failed', { status: 500 });
   }
 }
 
