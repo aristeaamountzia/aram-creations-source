@@ -15,6 +15,7 @@ function isAllowedOrigin(origin: string | null): boolean {
     process.env.URL,
     process.env.DEPLOY_PRIME_URL,
     'https://aramcreationsofficial.netlify.app',
+    'https://aram-creations-copy.intactforum8.chatgpt.site',
     'http://localhost:5173',
     'http://localhost:8888',
     'http://localhost:3000'
