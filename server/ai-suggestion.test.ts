@@ -2,6 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AiSuggestionValidationError, buildBackofficeAiPrompt, validateBackofficeAiSuggestion } from './ai-suggestion';
 
+test('bilingual product drafts validate Greek and English while title-only mode ignores unrelated fields', () => {
+  const input = { mode: 'backoffice_product', task: 'title', language: 'bilingual' };
+  assert.match(buildBackofficeAiPrompt(input), /titleEn/);
+  assert.deepEqual(validateBackofficeAiSuggestion({ title: 'Μπλε ορτανσία', titleEn: 'Blue hydrangea', descriptionEn: 42 }, input), {
+    title: 'Μπλε ορτανσία', titleEn: 'Blue hydrangea'
+  });
+  assert.throws(() => validateBackofficeAiSuggestion({ title: 'Μπλε ορτανσία' }, input), /αγγλικό κείμενο/);
+});
+
 const portfolioInput = {
   mode: 'portfolio_item',
   task: 'full',

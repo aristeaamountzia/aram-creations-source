@@ -1,6 +1,6 @@
 export const PUBLIC_JEWELRY_COLLECTION = 'shopCatalog';
 
-const textFields = ['name', 'title', 'subtitle', 'description', 'notes', 'category', 'collection', 'status', 'badge', 'weight', 'dimensions', 'edition', 'condition', 'vintedUrl'] as const;
+const textFields = ['name', 'title', 'titleEn', 'subtitle', 'description', 'descriptionEn', 'notes', 'category', 'collection', 'status', 'badge', 'weight', 'dimensions', 'edition', 'condition', 'vintedUrl'] as const;
 const numberFields = ['price', 'originalPrice', 'stock', 'stockCount', 'shopOrder', 'shopFavorites', 'shopViews', 'favorites', 'likes', 'views', 'viewCount', 'vintedFavorites', 'vintedViews'] as const;
 const booleanFields = ['inStock', 'showInNewCollection', 'showAsHeroVideo', 'showInShop', 'isCustomOrder', 'vintedSynced'] as const;
 const publicUrl = (value: unknown) => {

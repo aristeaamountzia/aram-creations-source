@@ -84,7 +84,8 @@
 .header-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; padding: 12px 0; }
 .header-brand { justify-self: start; max-width: 100%; }
 .brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.header-row > .header-action { justify-self: end; position: relative; }
+.header-actions { justify-self: end; }
+.header-actions > button { position: relative; }
 .section-entrances { display: flex; gap: 6px; align-items: center; }
 .header-action { background: #ffffff; border-color: #e4e4e4; color: #181818; }
 .header-action:hover { background: #f4f4f4; }
@@ -123,7 +124,7 @@
   .section-entrances { gap: 4px; }
   .section-entrance { padding: 8px 9px; gap: 5px; min-height: 44px; font-size: 13px; }
   .section-entrance svg { width: 14px; height: 14px; }
-  .header-row > .header-action { width: 40px; min-height: 44px; justify-content: center; padding: 8px; }
+  .header-actions > button { width: 40px; min-height: 44px; justify-content: center; padding: 8px; }
   .header-action > span:not(.rounded-full) { display: none; }
   .header-action > .rounded-full { position: absolute; right: -5px; top: -5px; }
 }
@@ -532,11 +533,6 @@
 .aram-site:not(.studio-shell) .portfolio-view .fixed .max-w-4xl { background: var(--ds-modal-background, #ffffff) !important; color: var(--ds-modal-ink, #181818) !important; border-color: var(--ds-modal-border, #e4e4e4) !important; border-radius: var(--ds-modal-radius, 16px) !important; }
 .aram-site:not(.studio-shell) .portfolio-view .fixed .max-w-4xl :is(p, .text-\[\#636363\]) { color: var(--ds-modal-muted, #727272) !important; }
 
-.studio-information { line-height: 1.85; }
-.studio-information h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; }
-.studio-information h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1.5rem; }
-.studio-information p { margin-top: .65rem; }
-.studio-information a { text-decoration: underline; text-underline-offset: .2em; }
 
 /* All text utilities follow the selected family; technical code retains monospace. */
 :root { --font-sans: var(--ds-font-family, Jura, sans-serif); --font-serif: var(--ds-font-family, Jura, sans-serif); }

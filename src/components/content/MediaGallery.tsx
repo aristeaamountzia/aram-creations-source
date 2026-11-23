@@ -1,3 +1,4 @@
+import { usePublicLanguage } from "../../lib/use-public-language";
 import React from 'react';
 import { ChevronLeft, ChevronRight, Maximize2, Play } from 'lucide-react';
 import { VideoPlayer } from '../VideoPlayer';
@@ -18,6 +19,7 @@ interface MediaGalleryProps {
 }
 
 export function MediaGallery({ media, activeIndex, onActiveIndex, title, onOpen, autoPlayVideo = true }: MediaGalleryProps) {
+  const { t } = usePublicLanguage();
   const current = media[activeIndex] || media[0];
   const currentIndex = Math.max(0, media.indexOf(current));
   const isVideo = current?.type === 'video';
@@ -45,15 +47,15 @@ export function MediaGallery({ media, activeIndex, onActiveIndex, title, onOpen,
         ))}
 
         {current && onOpen && (
-          <button type="button" onClick={() => onOpen(currentIndex)} aria-label={isVideo ? 'Πλήρης προβολή βίντεο' : 'Πλήρης μεγέθυνση εικόνας'} className="media-gallery-zoom">
+          <button type="button" onClick={() => onOpen(currentIndex)} aria-label={isVideo ? t("Πλήρης προβολή βίντεο", "Full-screen video") : t("Πλήρης μεγέθυνση εικόνας", "Enlarge image")} className="media-gallery-zoom">
             <Maximize2 aria-hidden="true" />
           </button>
         )}
 
         {media.length > 1 && (
           <>
-            <button type="button" onClick={() => move(-1)} aria-label="Προηγούμενο media" className="media-gallery-arrow media-gallery-arrow--previous"><ChevronLeft aria-hidden="true" /></button>
-            <button type="button" onClick={() => move(1)} aria-label="Επόμενο media" className="media-gallery-arrow media-gallery-arrow--next"><ChevronRight aria-hidden="true" /></button>
+            <button type="button" onClick={() => move(-1)} aria-label={t("Προηγούμενο media", "Previous media")} className="media-gallery-arrow media-gallery-arrow--previous"><ChevronLeft aria-hidden="true" /></button>
+            <button type="button" onClick={() => move(1)} aria-label={t("Επόμενο media", "Next media")} className="media-gallery-arrow media-gallery-arrow--next"><ChevronRight aria-hidden="true" /></button>
             <span className="media-gallery-count" aria-live="polite">{currentIndex + 1} / {media.length}</span>
           </>
         )}
@@ -62,13 +64,13 @@ export function MediaGallery({ media, activeIndex, onActiveIndex, title, onOpen,
       {current?.title && <p className="media-gallery-caption">{current.title}</p>}
 
       {media.length > 1 && (
-        <div className="media-gallery-thumbnails horizontal-scrollbar" aria-label="Επιλογή media">
+        <div className="media-gallery-thumbnails horizontal-scrollbar" aria-label={t("Επιλογή media", "Choose media")}>
           {media.map((item, index) => (
             <button
               key={`${item.url}-${index}`}
               type="button"
               onClick={() => onActiveIndex(index)}
-              aria-label={`Εμφάνιση ${item.type === 'video' ? 'βίντεο' : 'εικόνας'} ${index + 1}`}
+              aria-label={t(`Εμφάνιση ${item.type === 'video' ? 'βίντεο' : 'εικόνας'} ${index + 1}`, `Show ${item.type === 'video' ? 'video' : 'image'} ${index + 1}`)}
               aria-pressed={currentIndex === index}
               className="media-gallery-thumbnail"
             >

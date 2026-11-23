@@ -29,12 +29,15 @@ export function validateVideoInput(file: { size?: number; type?: string; name?: 
   if (file.size > VIDEO_INPUT_LIMIT) throw new Error('Το αρχικό βίντεο ξεπερνά το όριο 1 GB. Δεν θα ανέβει.');
 }
 
-export function videoEncodingPlan(width: number, height: number, duration: number, hasAudio: boolean, retry = false) {
+export function videoEncodingPlan(width: number, height: number, duration: number, hasAudio: boolean, retry = false, compatibleSourceBytes?: number) {
   if (![width, height, duration].every(value => Number.isFinite(value) && value > 0)) throw new Error('Δεν διαβάστηκαν οι διαστάσεις ή η διάρκεια του βίντεο.');
   if (duration > VIDEO_MAX_SECONDS) throw new Error('Το βίντεο ξεπερνά τα 10 λεπτά. Επίλεξε μικρότερο απόσπασμα.');
   const audioBitrate = hasAudio ? 96000 : 0;
   // Reserve space for container overhead and variable bitrate spikes.
-  const bitrate = Math.floor(Math.min(2000000, (24 * 1024 * 1024 * 8 / duration) - audioBitrate) * (retry ? 0.65 : 1));
+  const sourceBudget = compatibleSourceBytes
+    ? Math.max(96_000, compatibleSourceBytes * 8 / duration * .8 - audioBitrate)
+    : Infinity;
+  const bitrate = Math.floor(Math.min(2000000, 24 * 1024 * 1024 * 8 / duration - audioBitrate, sourceBudget) * (retry ? 0.65 : 1));
   const longEdge = bitrate < 500000 ? 640 : bitrate < 1000000 ? 960 : 1280;
   const shortEdge = longEdge * 9 / 16;
   const scale = Math.min(1, longEdge / Math.max(width, height), shortEdge / Math.min(width, height));

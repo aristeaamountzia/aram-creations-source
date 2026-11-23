@@ -42,6 +42,8 @@ const shopColumns: Column[] = [
   { header: 'Αρχείο καταχώρησης', width: 22, value: archived },
   { header: 'ID', width: 30, value: i => i.id },
   { header: 'Πλήρη στοιχεία (JSON)', width: 65, value: i => JSON.stringify(i) },
+  { header: 'Αγγλικός τίτλος', width: 40, value: i => i.titleEn },
+  { header: 'Αγγλική περιγραφή', width: 65, value: i => i.descriptionEn },
 ];
 const portfolioColumns: Column[] = [
   { header: 'Τίτλος', width: 40, value: i => i.title || i.name },

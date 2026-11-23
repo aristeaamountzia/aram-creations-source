@@ -32,7 +32,7 @@ function providerFailure(error: unknown): ProviderFailure {
   const value = error as { status?: unknown; code?: unknown; name?: string; message?: string };
   const httpCode = Number(value?.status || value?.code);
   const status = httpCode >= 100 && httpCode <= 599 ? httpCode : undefined;
-  if (value?.name === 'TimeoutError' || value?.name === 'AbortError' || /timed? ?out|timeout/i.test(value?.message || '')) return new ProviderFailure('timeout', status);
+  if (status === 504 || value?.name === 'TimeoutError' || value?.name === 'AbortError' || /timed? ?out|timeout/i.test(value?.message || '')) return new ProviderFailure('timeout', status);
   if (status === 401 || status === 403 || /API_KEY_INVALID|API key not valid/i.test(value?.message || '')) return new ProviderFailure('authentication', status);
   if (status === 429) return new ProviderFailure('quota', status);
   if (status === 404) return new ProviderFailure('model', status);
@@ -182,6 +182,7 @@ export async function generateBackofficeAiJson(
     // Reserve time for the next provider instead of exhausting the Function's
     // execution limit in SDK retries or an unbounded model loop.
     const providerDeadline = Date.now() + Math.floor((deadline - Date.now()) / (providers.length - index));
+    let triedGeminiFallback = false;
     for (const model of getAiModelOrder(provider, environment)) {
       const timeoutMs = Math.min(20_000, providerDeadline - Date.now());
       if (timeoutMs <= 0) { failures.set(provider, new ProviderFailure('timeout')); break; }
@@ -194,7 +195,11 @@ export async function generateBackofficeAiJson(
         const failure = providerFailure(error);
         failures.set(provider, failure);
         console.warn('Back Office AI provider failed', { provider, status: failure.status, reason: failure.reason });
-        // Retrying another model cannot repair credentials, quota or an outage.
+        if (provider === 'gemini' && !triedGeminiFallback && (failure.reason === 'timeout' || failure.reason === 'unavailable')) {
+          triedGeminiFallback = true;
+          continue;
+        }
+        // Credentials and quota failures move directly to the next provider.
         if (failure.reason !== 'model' && failure.reason !== 'invalid_response') break;
       }
     }

@@ -78,6 +78,23 @@ test('model-not-found errors try the next configured model', async t => {
   assert.deepEqual(models, ['retired', 'available']);
 });
 
+test('Gemini tries one alternate model after a timeout before falling back to OpenAI', async t => {
+  t.mock.method(console, 'warn', () => {});
+  const calls: string[] = [];
+  const result = await generateBackofficeAiJson('prompt', ['data:image/png;base64,abc'], {
+    GEMINI_API_KEY: 'test', GEMINI_MODEL_ORDER: 'primary,alternate,unused', OPENAI_API_KEY: 'test',
+  }, async input => {
+    const url = new URL(String(input));
+    calls.push(url.pathname.split('/').at(-1) || '');
+    if (url.hostname.includes('googleapis.com')) {
+      return Response.json({ error: { code: 504, message: 'Deadline exceeded', status: 'DEADLINE_EXCEEDED' } }, { status: 504 });
+    }
+    return Response.json({ choices: [{ message: { content: '{"title":"Έργο"}' } }] });
+  });
+  assert.deepEqual(calls, ['primary:generateContent', 'alternate:generateContent', 'completions']);
+  assert.deepEqual(result, { title: 'Έργο' });
+});
+
 test('accepts the environment sample access-code name as a fallback', () => {
   assert.equal(getBackofficeAiAccessCode({ AI_BACKOFFICE_SECRET: 'secret' }), 'secret');
   assert.equal(getBackofficeAiAccessCode({ AI_ACCESS_CODE: 'legacy', AI_BACKOFFICE_SECRET: 'secret' }), 'legacy');

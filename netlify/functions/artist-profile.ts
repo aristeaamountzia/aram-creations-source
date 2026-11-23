@@ -28,18 +28,20 @@ export default async function handler(request: Request) {
     }
 
     const services = await requireAdmin(request);
-    if (Number(request.headers.get('content-length')) > MAX_CV_BYTES + 50000) return reply({ error: 'Το αρχείο είναι πολύ μεγάλο.' }, 413);
+    if (Number(request.headers.get('content-length')) > MAX_CV_BYTES + 100000) return reply({ error: 'Το αρχείο είναι πολύ μεγάλο.' }, 413);
     const form = await request.formData();
     const upload = form.get('cv');
     let biography: string;
+    let biographyEn: string | undefined;
     let cv: { name: string; bytes: Uint8Array } | undefined;
     try {
       biography = validateBiography(form.get('biography'));
+      if (form.has('biographyEn')) biographyEn = validateBiography(form.get('biographyEn'));
       if (upload instanceof File && upload.size) cv = { name: upload.name, bytes: await validateCv(upload) };
     } catch (error: any) {
       return reply({ error: error.message }, 400);
     }
-    const profile = await saveArtistProfile(services, { biography, cv, removeCv: form.get('removeCv') === 'true' });
+    const profile = await saveArtistProfile(services, { biography, biographyEn, cv, removeCv: form.get('removeCv') === 'true' });
     if (!profile) throw new Error('Artist profile was not saved.');
     return reply(artistProfileResponse(profile));
   } catch (error: any) {

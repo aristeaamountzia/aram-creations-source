@@ -5,7 +5,14 @@ import { chooseRefreshPatch, RefreshChoice, refreshBaseline } from '../src/lib/v
 import { restorationFields, historyRecords } from '../src/lib/catalog-history';
 import { sortPortfolio, movePortfolio } from '../src/lib/portfolio-order';
 import { sendOrderEmail, resolveAdminUrl } from './order-notifications';
-import { assertUnchangedInventory, compareSoldLast, inventoryLabel, stockForSelectedStatus } from '../src/lib/stock-edit';
+import { assertInventoryChangeAllowed, assertUnchangedInventory, compareSoldLast, isArchivedJewelry, inventoryLabel, stockForSelectedStatus } from '../src/lib/stock-edit';
+
+test('product archiving preserves legacy archive flags and refuses active checkout reservations', () => {
+  assert.equal(isArchivedJewelry({ deletedAt: 'legacy-marker' }), true);
+  assert.equal(isArchivedJewelry({ isDeleted: false, deletedAt: null }), false);
+  assert.doesNotThrow(() => assertInventoryChangeAllowed({ stock: 1 }, { isDeleted: true }));
+  assert.throws(() => assertInventoryChangeAllowed({ checkoutReservations: { pending: 1 } }, { isDeleted: true }), /ενεργή παραγγελία/);
+});
 
 test('sold cards follow available and reserved cards, with the selected sort preserved in each group', () => {
   const cards = [

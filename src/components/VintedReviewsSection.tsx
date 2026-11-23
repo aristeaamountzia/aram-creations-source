@@ -1,3 +1,5 @@
+import { publicTextLanguage } from '../lib/public-copy';
+import { usePublicLanguage } from "../lib/use-public-language";
 import { isAuthenticVintedReview, sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
@@ -12,7 +14,7 @@ import { VintedReview, VintedReviewsStats, VintedReviewsPayload } from '../types
 
 interface VintedReviewsSectionProps {
   className?: string;
-  theme?: 'atelier' | 'classic';
+  theme?: import('../lib/design-studio').VisualTheme;
 }
 
 // Fallback dataset guarantees zero layout shift while Firestore/API connects
@@ -123,6 +125,7 @@ const INITIAL_REVIEWS: VintedReview[] = [
 export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
   className = '',
 }) => {
+  const { locale, t } = usePublicLanguage();
   const [stats, setStats] = useState<VintedReviewsStats>(INITIAL_STATS);
   const [reviews, setReviews] = useState<VintedReview[]>(INITIAL_REVIEWS);
   const [visibleCount, setVisibleCount] = useState<number>(6);
@@ -187,7 +190,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
     <section
       id="customer-reviews"
       tabIndex={-1}
-      aria-label="Αξιολογήσεις"
+      aria-label={t("Αξιολογήσεις", "Reviews")}
       className={`scroll-mt-20 py-14 sm:py-20 border-t border-stone-200/80 transition-colors ${className}`}
     >
       <div id="reviews" className="sr-only" aria-hidden="true" />
@@ -195,7 +198,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Sleek Luxury Header & Trust Summary */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10 pb-6 border-b border-stone-200/70">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-stone-900">Αξιολογήσεις</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-stone-900">{t("Αξιολογήσεις", "Reviews")}</h2>
 
           {/* Inline Rating & Boutique Link */}
           <div className="flex flex-wrap items-center gap-4 sm:gap-6 bg-stone-50 border border-stone-200/80 rounded-2xl px-5 py-3.5 shrink-0 shadow-2xs">
@@ -213,9 +216,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
                     />
                   ))}
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
-                  100% Θετικές ({totalReviewCount} Κριτικές)
-                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">{t("100% Θετικές (", "100% positive (")}{totalReviewCount}{t(" Κριτικές)", " reviews)")}</span>
               </div>
             </div>
 
@@ -256,7 +257,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
                           <span className="font-bold text-xs text-stone-900">
                             {review.userLogin}
                           </span>
-                          <span title="Επαληθευμένη Αγορά">
+                          <span title={t("Επαληθευμένη Αγορά", "Verified purchase")}>
                             <BadgeCheck
                               className="w-3.5 h-3.5 text-emerald-600 shrink-0"
                               strokeWidth={1.5}
@@ -264,7 +265,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
                           </span>
                         </div>
                         <span className="text-[11px] text-stone-600 font-sans">
-                          {review.formattedDate}
+                          {locale === 'en' && Number.isFinite(Date.parse(review.date)) ? new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'Europe/Athens' }).format(new Date(review.date)) : review.formattedDate}
                         </span>
                       </div>
                     </div>
@@ -284,7 +285,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
                   </div>
 
                   {/* Review Text */}
-                  <p className="text-xs sm:text-[13px] text-stone-700 leading-relaxed font-sans font-normal italic">
+                  <p lang={publicTextLanguage(review.feedback || '', locale)} className="text-xs sm:text-[13px] text-stone-700 leading-relaxed font-sans font-normal italic">
                     "{sanitizeVintedDescription(review.feedback)}"
                   </p>
                 </div>
@@ -301,9 +302,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
               type="button"
               onClick={() => setVisibleCount((prev) => prev + 6)}
               className="px-5 py-2.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 text-xs font-bold transition shadow-2xs"
-            >
-              Προβολή περισσότερων κριτικών ({authenticReviews.length - visibleCount} απομένουν)
-            </button>
+            >{t("Προβολή περισσότερων κριτικών (", "Show more reviews (")}{authenticReviews.length - visibleCount}{t(" απομένουν)", " remaining)")}</button>
           </div>
         )}
       </div>

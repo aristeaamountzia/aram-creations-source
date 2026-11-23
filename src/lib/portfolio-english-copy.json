@@ -1,0 +1,104 @@
+{
+  "3d-01": {
+    "description": {
+      "source": "nnevl5",
+      "text": "Demon is a 3D design and print from 2024. It was modeled as a sculptural form and is available as a digital file."
+    }
+  },
+  "3d-02": {
+    "medium": {
+      "source": "b4w7vy",
+      "text": "3D design and printing"
+    },
+    "description": {
+      "source": "98b24k",
+      "text": "A skull modeled from scratch in Blender, 3D printed in PLA and hand-painted in nickel-toned acrylics. A digital file is available."
+    },
+    "details": {
+      "source": "1szqp5v",
+      "text": [
+        "Parametric 3D print",
+        "With wood_laser_cut_gr"
+      ]
+    }
+  },
+  "artp-03": {
+    "description": {
+      "source": "1eu7s5",
+      "text": "A collaborative installation and video about electronic waste. Discarded technology from illegal dumps sits alongside natural materials in a forest by a river. At the center is a CD case marked “Save me” and a disc titled “Strange Nature.”"
+    }
+  },
+  "drw-01": {
+    "title": {
+      "source": "twuzol",
+      "text": "Freehand Drawings and Studies"
+    },
+    "description": {
+      "source": "1td35vq",
+      "text": "Freehand pencil drawings on 50 × 70 cm Schoeller paper."
+    }
+  },
+  "drw-04": {
+    "description": {
+      "source": "ko860p",
+      "text": "A portrait of Poseidon in bold colors with gold details. Painted on cardboard in acrylic, gouache and watercolor, with gold leaf and varnish."
+    }
+  },
+  "grp-01": {
+    "description": {
+      "source": "x0sdrp",
+      "text": "A group project from the five-day i-Thea workshop. It developed graphic materials for the route linking the ancient theaters of Epirus in Dodona, Nicopolis, Kassope and Gitana."
+    },
+    "details": {
+      "source": "1j70akt",
+      "text": [
+        "i-Thea workshop",
+        "Ancient theaters of Epirus"
+      ]
+    }
+  },
+  "grp-02": {
+    "description": {
+      "source": "1pcu17b",
+      "text": "A group university project for a fictional exhibition. The catalog explores the idea of human traces through modern, abstract design."
+    }
+  },
+  "grp-03": {
+    "description": {
+      "source": "fp502l",
+      "text": "A catalog and teaser for a fictional exhibition, produced as a group university project using experimental graphics and contemporary visual storytelling."
+    }
+  },
+  "grp-04": {
+    "description": {
+      "source": "14s7uk7",
+      "text": "A group project that created a visual identity for the Department of Culture, Creative Media and Industries, including its logo, color palette and brand applications."
+    }
+  },
+  "mem-01": {
+    "title": {
+      "source": "1be2dif",
+      "text": "Handcrafted Keychains"
+    },
+    "details": {
+      "source": "u9b4m9",
+      "text": [
+        "With wood_laser_cut_gr",
+        "Raised Mod Podge details",
+        "Handmade original"
+      ]
+    }
+  },
+  "obj-02": {
+    "description": {
+      "source": "9r3k5t",
+      "text": "Custom-fit phone cases painted by hand in acrylics. A durable protective varnish helps preserve the finish and colors."
+    }
+  },
+  "pht-01": {
+    "description": {
+      "source": "z0ydo",
+      "text": "A collaborative photographic series exploring gender and sexual fluidity through performance. A man in drag makeup is the central figure in four parts covering childhood, adulthood, military service and the afterlife."
+    }
+  }
+}

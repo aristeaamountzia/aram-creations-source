@@ -1,3 +1,4 @@
+import { usePublicLanguage } from "../lib/use-public-language";
 import React from 'react';
 import { Search, X } from 'lucide-react';
 
@@ -17,15 +18,16 @@ export interface CatalogControlsProps {
 
 /** The same layout and controls serve both public catalogs and their editors. */
 export function CatalogControls({ label, search, onSearch, placeholder, categories, selectedCategory, onCategory, actions, children, accent, compactCategories }: CatalogControlsProps) {
+  const { t } = usePublicLanguage();
   return <section aria-label={label} className="catalog-controls" style={accent ? { '--ui-accent': accent } as React.CSSProperties : undefined}>
     {categories.length > 0 && (
       <div className="relative min-w-0">
         {compactCategories && (
-          <select className="catalog-category-select sm:hidden" aria-label="Κατηγορία" value={selectedCategory} onChange={event => onCategory(event.target.value)}>
+          <select className="catalog-category-select sm:hidden" aria-label={t("Κατηγορία", "Category")} value={selectedCategory} onChange={event => onCategory(event.target.value)}>
             {categories.map(category => <option key={category.id} value={category.id}>{category.label}{category.count !== undefined ? ` (${category.count})` : ''}</option>)}
           </select>
         )}
-        <nav aria-label={`${label} — κατηγορίες`} className={`catalog-categories horizontal-scrollbar${compactCategories ? ' catalog-categories--compact' : ''}`}>
+        <nav aria-label={t(`${label} — κατηγορίες`, `${label} categories`)} className={`catalog-categories horizontal-scrollbar${compactCategories ? ' catalog-categories--compact' : ''}`}>
           {categories.map(category => (
             <button
               key={category.id}
@@ -46,7 +48,7 @@ export function CatalogControls({ label, search, onSearch, placeholder, categori
       <div className="catalog-search">
         <Search aria-hidden="true" />
         <input role="searchbox" aria-label={placeholder} type="text" value={search} onChange={event => onSearch(event.target.value)} placeholder={placeholder} />
-        {search && <button type="button" aria-label="Καθαρισμός αναζήτησης" onClick={() => onSearch('')}><X aria-hidden="true" /></button>}
+        {search && <button type="button" aria-label={t("Καθαρισμός αναζήτησης", "Clear search")} onClick={() => onSearch('')}><X aria-hidden="true" /></button>}
       </div>
       <div className="catalog-filter-actions">{actions}</div>
     </div>

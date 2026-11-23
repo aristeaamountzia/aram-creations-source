@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import type { adminDatabase } from './admin-database';
 
 type Services = Pick<ReturnType<typeof adminDatabase>, 'db' | 'bucket'>;
-type Profile = { biography: string; cvName: string; cvKey: string | null };
-type ProfileUpdate = { biography: string; removeCv?: boolean; cv?: { name: string; bytes: Uint8Array } };
+type Profile = { biography: string; biographyEn?: string; cvName: string; cvKey: string | null };
+type ProfileUpdate = { biography: string; biographyEn?: string; removeCv?: boolean; cv?: { name: string; bytes: Uint8Array } };
 
 const documentPath = 'artistProfiles/public';
 
@@ -11,6 +11,7 @@ function readProfile(data?: FirebaseFirestore.DocumentData): Profile {
   const cvKey = typeof data?.cvKey === 'string' && /^artist-profile\/cv\/[\da-f-]{36}\.pdf$/.test(data.cvKey) ? data.cvKey : null;
   return {
     biography: typeof data?.biography === 'string' ? data.biography : '',
+    ...(typeof data?.biographyEn === 'string' ? { biographyEn: data.biographyEn } : {}),
     cvName: cvKey && typeof data?.cvName === 'string' ? data.cvName : '',
     cvKey,
   };
@@ -20,8 +21,8 @@ export async function loadArtistProfile({ db }: Services) {
   return readProfile((await db.doc(documentPath).get()).data());
 }
 
-export function artistProfileResponse({ biography, cvName, cvKey }: Profile) {
-  return { biography, cvName, hasCv: Boolean(cvKey) };
+export function artistProfileResponse({ biography, biographyEn, cvName, cvKey }: Profile) {
+  return { biography, ...(biographyEn ? { biographyEn } : {}), cvName, hasCv: Boolean(cvKey) };
 }
 
 export async function saveArtistProfile({ db, bucket }: Services, update: ProfileUpdate, initializeOnly = false) {
@@ -44,7 +45,8 @@ export async function saveArtistProfile({ db, bucket }: Services, update: Profil
     const cvName = update.cv
       ? (update.cv.name.replace(/[\x00-\x1f\x7f/\\]/g, '-').slice(0, 240) || 'artist-cv.pdf')
       : cvKey ? previous.cvName : '';
-    const profile: Profile = { biography: update.biography, cvName, cvKey };
+    const biographyEn = update.biographyEn ?? previous.biographyEn;
+    const profile: Profile = { biography: update.biography, ...(biographyEn ? { biographyEn } : {}), cvName, cvKey };
     transaction.set(ref, profile);
     return { profile, replacedKey: previous.cvKey === cvKey ? null : previous.cvKey };
   });

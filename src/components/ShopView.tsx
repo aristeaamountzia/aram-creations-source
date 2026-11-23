@@ -1,3 +1,6 @@
+import { localizedName, localizedDescription, localizedTerm, publicTextLanguage } from '../lib/public-copy';
+import { storefrontLink } from '../lib/public-locale';
+import { usePublicLanguage } from "../lib/use-public-language";
 import { CollectionHero } from './content/CollectionHero';
 import { ImageLightbox } from './ImageLightbox';
 import { compareSoldLast, inventoryLabel, isSoldItem } from '../lib/stock-edit';
@@ -14,7 +17,7 @@ import { JEWELRY_CATALOG } from '../data';
 import { db } from '../firebase';
 import { DEFAULT_SHOP_SETTINGS, normalizeShopSettings, ShopSettings } from '../shopSettings';
 import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
-import { portfolioHeroVideoUrl, initialHeroSnapshot, cacheHeroSnapshot } from '../lib/hero-media';
+import { portfolioHeroVideoUrl, initialHeroSnapshot, cacheHeroSnapshot, pickHeroSnapshot } from '../lib/hero-media';
 import { isUnconfirmedEmptyCatalog } from '../lib/catalog-snapshot';
 import { trackShopMetric } from '../lib/shop-metrics';
 import {
@@ -45,6 +48,8 @@ const FALLBACK_JEWELRY: JewelryItem[] = [
   {
     id: 'jewel-01',
     name: 'Κολιέ Υγρού Γυαλιού με Αληθινά Άνθη Μπουκαμβίλιας',
+    titleEn: 'Real Bougainvillea Resin Necklace',
+    descriptionEn: 'A handmade necklace with natural bougainvillea petals preserved in clear resin.',
     title: 'Κολιέ Υγρού Γυαλιού με Αληθινά Άνθη Μπουκαμβίλιας',
     category: 'Κολιέ',
     collection: 'Flora & Resin',
@@ -67,6 +72,8 @@ const FALLBACK_JEWELRY: JewelryItem[] = [
   {
     id: 'jewel-02',
     name: 'Σκουλαρίκια Σταγόνας με Φύλλα Χρυσού 24Κ',
+    titleEn: '24K Gold Leaf Drop Earrings',
+    descriptionEn: 'Lightweight drop earrings with 24K gold leaf, made for daily wear and special occasions.',
     title: 'Σκουλαρίκια Σταγόνας με Φύλλα Χρυσού 24Κ',
     category: 'Σκουλαρίκια',
     collection: 'Golden Aura',
@@ -88,16 +95,18 @@ const FALLBACK_JEWELRY: JewelryItem[] = [
   },
   {
     id: 'jewel-03',
-    name: 'Βραχιόλι με Φυσικά Βότσαλα & Σύρμα Χαλκού',
-    title: 'Βραχιόλι με Φυσικά Βότσαλα & Σύρμα Χαλκού',
+    name: 'Βραχιόλι με Φυσικά Βότσαλα',
+    titleEn: 'Natural Pebble Bracelet',
+    descriptionEn: 'A handmade cuff with smooth pebbles from the Cyclades.',
+    title: 'Βραχιόλι με Φυσικά Βότσαλα',
     category: 'Βραχιόλια',
     collection: 'Cyclades Shore',
     status: 'Διαθέσιμο',
     price: 32,
     stock: 1,
-    materials: ['Βότσαλα Πάρου', 'Σύρμα Χαλκού', 'Ημιπολύτιμοι Λίθοι'],
+    materials: ['Βότσαλα Πάρου', 'Ημιπολύτιμοι Λίθοι'],
     colors: ['Γκρι', 'Χαλκός', 'Τυρκουάζ'],
-    description: 'Χειροποίητο cuff βραχιόλι διαμορφωμένο στο χέρι με σύρμα χαλκού και λειασμένα θαλασσινά βότσαλα από τις Κυκλάδες.',
+    description: 'Χειροποίητο βραχιόλι με λειασμένα θαλασσινά βότσαλα από τις Κυκλάδες.',
     imageUrl: 'https://images.unsplash.com/photo-1611591475152-473549646b9a?w=800&auto=format&fit=crop&q=80',
     favorites: 9,
     likes: 9,
@@ -106,6 +115,8 @@ const FALLBACK_JEWELRY: JewelryItem[] = [
   {
     id: 'jewel-04',
     name: 'Δαχτυλίδι Ακανόνιστου Σχεδιασμού με Μαύρη Τουρμαλίνη',
+    titleEn: 'Raw Black Tourmaline Ring',
+    descriptionEn: 'An organically shaped ring with a raw black tourmaline crystal.',
     title: 'Δαχτυλίδι Ακανόνιστου Σχεδιασμού με Μαύρη Τουρμαλίνη',
     category: 'Δαχτυλίδια',
     collection: 'Raw Earth',
@@ -123,6 +134,8 @@ const FALLBACK_JEWELRY: JewelryItem[] = [
   {
     id: 'jewel-05',
     name: 'Σετ Κολιέ & Σκουλαρίκια Blue Ocean Waves',
+    titleEn: 'Blue Ocean Waves Necklace and Earring Set',
+    descriptionEn: 'A pendant necklace and matching drop earrings inspired by the waves of the Aegean.',
     title: 'Σετ Κολιέ & Σκουλαρίκια Blue Ocean Waves',
     category: 'Σετ',
     collection: 'Aegean Waves',
@@ -140,6 +153,8 @@ const FALLBACK_JEWELRY: JewelryItem[] = [
   {
     id: 'jewel-06',
     name: 'Custom Θήκη Κινητού με Ακρυλικά & Υγρό Γυαλί',
+    titleEn: 'Custom Painted Phone Case',
+    descriptionEn: 'A phone case painted by hand in acrylics and finished with protective clear resin.',
     title: 'Custom Θήκη Κινητού με Ακρυλικά & Υγρό Γυαλί',
     category: 'Θήκες Κινητών',
     collection: 'Wearable Art',
@@ -167,7 +182,7 @@ export function getItemMediaList(item: JewelryItem): MediaItemResolved[] {
 
   const isVideo = (url: string, typeHint?: string) => {
     if (typeHint === 'video') return true;
-    if (item.fileType === 'video') return true;
+    if (typeHint === 'image') return false;
     return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
   };
 
@@ -239,14 +254,16 @@ export function isAvailableForSale(item: JewelryItem): boolean {
 }
 
 export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
+  const { locale, t } = usePublicLanguage();
   // Start with the last-known (or build-time) hero content so the hero and its
   // video render immediately instead of waiting for the Firestore round trip.
   const [shopSettings, setShopSettings] = useState<ShopSettings>(() => normalizeShopSettings(initialHeroSnapshot()));
   const [jewelryList, setJewelryList] = useState<JewelryItem[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
-  const reviewsJumpDuringLoad = useRef(false);
+  const reviewsJumpDuringLoad = useRef(window.location.hash === '#customer-reviews');
   const [catalogOffline, setCatalogOffline] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Όλα');
+  const [selectedCollection, setSelectedCollection] = useState('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('featured');
   const [availableOnly, setAvailableOnly] = useState<boolean>(false);
@@ -255,7 +272,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   useEffect(() => {
     return onSnapshot(doc(db, 'settings', 'shop'), (snapshot) => {
       const data = snapshot.exists() ? snapshot.data() : undefined;
-      setShopSettings(normalizeShopSettings(data));
+      setShopSettings(normalizeShopSettings({ ...data, ...pickHeroSnapshot(data) }));
       if (data) cacheHeroSnapshot(data);
     }, (error) => {
       console.warn('Shop settings could not be loaded:', error);
@@ -267,6 +284,8 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
     const ordered = shopSettings.categoryOrder.filter(category => actual.has(category));
     return ['Όλα', ...ordered, ...Array.from(actual).filter(category => !ordered.includes(category)).sort((a, b) => a.localeCompare(b, 'el'))];
   }, [jewelryList, shopSettings.categoryOrder]);
+  const collections = useMemo(() => [...new Set(jewelryList.map(item => item.collection?.trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'el')), [jewelryList]);
 
   // Favorite IDs state
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
@@ -429,6 +448,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
       const name = item.name || item.title || '';
       const cat = item.category || '';
+      const collection = item.collection?.trim() || '';
       const desc = item.description || '';
       const materials = (item.materials || []).join(' ');
       const colors = (item.colors || []).join(' ');
@@ -436,10 +456,10 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       const matchesCat = selectedCategory === 'Όλα' || cat === selectedCategory;
       const matchesSearch =
         !searchQuery ||
-        [name, cat, desc, materials, colors].join(' ').toLowerCase().includes(searchQuery.toLowerCase().trim());
+        [name, cat, collection, desc, materials, colors, localizedName(item, locale), localizedDescription(item, locale), ...[cat, collection, ...(item.materials || []), ...(item.colors || [])].map(term => localizedTerm(term, locale))].join(' ').toLowerCase().includes(searchQuery.toLowerCase().trim());
       const matchesFav = !showFavoritesOnly || favoriteIds.includes(item.id);
 
-      return matchesCat && matchesSearch && matchesFav;
+      return matchesCat && (!selectedCollection || collection === selectedCollection) && matchesSearch && matchesFav;
     }).sort((a, b) => {
       const availabilityOrder = compareSoldLast(a, b);
       if (availabilityOrder) return availabilityOrder;
@@ -449,7 +469,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       if (sortBy === 'views') return getItemViews(b) - getItemViews(a);
       return (Number(b.shopOrder) || 0) - (Number(a.shopOrder) || 0);
     });
-  }, [jewelryList, selectedCategory, searchQuery, showFavoritesOnly, favoriteIds, availableOnly, sortBy]);
+  }, [jewelryList, selectedCategory, selectedCollection, searchQuery, showFavoritesOnly, favoriteIds, availableOnly, sortBy, locale]);
 
   // Catalog Stats
   const totalAvailable = useMemo(() => {
@@ -486,16 +506,19 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
     if (isCatalogLoading || !reviewsJumpDuringLoad.current) return;
     reviewsJumpDuringLoad.current = false;
     const target = document.getElementById('customer-reviews');
-    if (target && document.activeElement === target) {
+    if (target && (document.activeElement === target || window.location.hash === '#customer-reviews')) {
+      document.getElementById('shop-catalog')?.classList.add('catalog-reviews-jump');
       target.scrollIntoView({ behavior: 'instant', block: 'start' });
     }
   }, [isCatalogLoading]);
 
   const handleScrollToReviews = (e: React.MouseEvent) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     e.preventDefault();
     const target = document.getElementById('customer-reviews') || document.getElementById('vinted-reviews');
     if (!target) return;
     reviewsJumpDuringLoad.current = isCatalogLoading;
+    if (window.location.hash !== '#customer-reviews') window.location.hash = 'customer-reviews';
     // Offscreen cards use content-visibility with estimated heights. Materialize
     // them before calculating the destination so the jump reaches the reviews.
     document.getElementById('shop-catalog')?.classList.add('catalog-reviews-jump');
@@ -503,30 +526,42 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
     target.focus({ preventScroll: true });
   };
 
+  const announcementHref = storefrontLink(shopSettings.announcementLink, locale, window.location.origin);
+
   return (
     <SectionShell section="shop" className="catalog-view">
       <CollectionHero key={resolvedHeroVideoUrl} collection="shop" videoUrl={resolvedHeroVideoUrl}
-        title={shopSettings.heroTitle.trim() || 'Χειροποίητα κοσμήματα'}
-        description={shopSettings.heroSubtitle.trim()} appearance={shopSettings.heroAppearance} />
+        title={t(shopSettings.heroTitle.trim() || "Χειροποίητα κοσμήματα", "Handmade jewelry")}
+        description={t(shopSettings.heroSubtitle.trim(), "Handmade pieces with real flowers and resin.")} appearance={shopSettings.heroAppearance} />
 
       {shopSettings.announcementEnabled && shopSettings.announcementText && (
         <div className="bg-stone-900 px-4 py-3 text-center text-sm font-semibold text-white">
-          {shopSettings.announcementLink ? <a href={shopSettings.announcementLink} className="underline underline-offset-2">{shopSettings.announcementText}</a> : shopSettings.announcementText}
+          <span lang={publicTextLanguage(shopSettings.announcementText, locale)}>{announcementHref ? <a href={announcementHref} className="underline underline-offset-2">{shopSettings.announcementText}</a> : shopSettings.announcementText}</span>
         </div>
       )}
 
       {/* Main Content Area */}
       <div id="shop-catalog" tabIndex={-1} className="public-catalog gallery-catalog max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="gallery-catalog-heading">
-          <h2 className="catalog-heading">Η συλλογή</h2>
-          <a href="#customer-reviews" onClick={handleScrollToReviews} className="inline-flex items-center gap-1 text-sm underline underline-offset-4"><Star size={14} aria-hidden="true" /> Αξιολογήσεις</a>
+          <h2 className="catalog-heading">{t("Η συλλογή", "The collection")}</h2>
+          <a href="#customer-reviews" onClick={handleScrollToReviews} className="inline-flex items-center gap-1 text-sm underline underline-offset-4"><Star size={14} aria-hidden="true" />{t(" Αξιολογήσεις", " Reviews")}</a>
         </div>
 
+        {collections.length > 0 && (
+          <label className="gallery-collection catalog-sort">
+            <span>{t("Συλλογή", "Collection")}</span>
+            <select value={selectedCollection} onChange={event => setSelectedCollection(event.target.value)}>
+              <option value="">{t("Όλες οι συλλογές", "All collections")}</option>
+              {selectedCollection && !collections.includes(selectedCollection) && <option value={selectedCollection}>{localizedTerm(selectedCollection, locale)}</option>}
+              {collections.map(collection => <option key={collection} value={collection}>{localizedTerm(collection, locale)}</option>)}
+            </select>
+          </label>
+        )}
         <details className="gallery-filters">
-          <summary>Φίλτρα και αναζήτηση</summary>
-          <FilterBar label="Φίλτρα Shop" search={searchQuery} onSearch={setSearchQuery}
-          placeholder="Αναζήτηση με όνομα, υλικό, χρώμα..."
-          categories={visibleCategories.map(category => ({ id: category, label: category }))}
+          <summary>{t("Φίλτρα και αναζήτηση", "Filters and search")}</summary>
+          <FilterBar label={t("Φίλτρα Shop", "Shop filters")} search={searchQuery} onSearch={setSearchQuery}
+          placeholder={t("Όνομα, συλλογή, υλικό ή χρώμα", "Name, collection, material or color")}
+          categories={visibleCategories.map(category => ({ id: category, label: localizedTerm(category, locale) }))}
           selectedCategory={selectedCategory} onCategory={setSelectedCategory}
           actions={<>
             <button
@@ -537,9 +572,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                   : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300'
               }`}
-            >
-              Μόνο Διαθέσιμα
-            </button>
+            >{t("Μόνο Διαθέσιμα", "In stock only")}</button>
 
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
@@ -551,26 +584,24 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
               }`}
             >
               <Heart className={`w-3.5 h-3.5 ${showFavoritesOnly ? 'fill-rose-500 text-rose-500' : 'text-stone-500'}`} />
-              <span>Αγαπημένα ({favoriteIds.length})</span>
+              <span>{t("Αγαπημένα (", "Favorites (")}{favoriteIds.length})</span>
             </button>
 
             {/* Sort Select */}
             <div className="catalog-sort flex max-w-full min-w-0 items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-700">
-              <label htmlFor="catalog-sort-select" className="text-[11px] text-stone-500 uppercase font-bold cursor-pointer">
-                Ταξινόμηση:
-              </label>
+              <label htmlFor="catalog-sort-select" className="text-[11px] text-stone-500 uppercase font-bold cursor-pointer">{t("Ταξινόμηση:", "Sort:")}</label>
               <select
                 id="catalog-sort-select"
-                aria-label="Ταξινόμηση δημιουργιών"
+                aria-label={t("Ταξινόμηση δημιουργιών", "Sort products")}
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="min-w-0 max-w-full bg-transparent font-bold text-stone-800 focus:outline-none cursor-pointer text-xs"
               >
-                <option value="featured">Προτεινόμενα</option>
-                <option value="popular">Πιο Δημοφιλή (Likes)</option>
-                <option value="views">Περισσότερες Προβολές</option>
-                <option value="price-asc">Τιμή (Χαμηλή → Υψηλή)</option>
-                <option value="price-desc">Τιμή (Υψηλή → Χαμηλή)</option>
+                <option value="featured">{t("Προτεινόμενα", "Featured")}</option>
+                <option value="popular">{t("Πιο Δημοφιλή (Likes)", "Most liked")}</option>
+                <option value="views">{t("Περισσότερες Προβολές", "Most viewed")}</option>
+                <option value="price-asc">{t("Τιμή (Χαμηλή → Υψηλή)", "Price (low to high)")}</option>
+                <option value="price-desc">{t("Τιμή (Υψηλή → Χαμηλή)", "Price (high to low)")}</option>
               </select>
             </div>
           </>} />
@@ -579,41 +610,34 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
         {/* Catalog Results Header */}
         <div className="gallery-results flex items-center justify-between text-xs font-bold text-stone-500 px-1">
-          <span aria-live="polite">{isCatalogLoading ? 'Φόρτωση καταλόγου…' : `${filteredItems.length} δημιουργίες βρέθηκαν`}</span>
-          {(selectedCategory !== 'Όλα' || searchQuery || availableOnly || showFavoritesOnly) && (
+          <span aria-live="polite">{isCatalogLoading ? t("Φόρτωση καταλόγου…", "Loading catalog…") : t(`${filteredItems.length} δημιουργίες βρέθηκαν`, `${filteredItems.length} ${filteredItems.length === 1 ? 'product' : 'products'} found`)}</span>
+          {(selectedCategory !== 'Όλα' || selectedCollection || searchQuery || availableOnly || showFavoritesOnly) && (
             <button
               onClick={() => {
                 setSelectedCategory('Όλα');
+                setSelectedCollection('');
                 setSearchQuery('');
                 setAvailableOnly(false);
                 setShowFavoritesOnly(false);
               }}
               className="text-stone-800 hover:underline font-bold"
-            >
-              Καθαρισμός φίλτρων
-            </button>
+            >{t("Καθαρισμός φίλτρων", "Clear filters")}</button>
           )}
         </div>
 
         {catalogOffline && (
-          <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-            Δεν ήταν δυνατή η σύνδεση με τον ζωντανό κατάλογο. Εμφανίζονται ενδεικτικά τοπικά προϊόντα και η διαθεσιμότητά τους μπορεί να μην είναι ενημερωμένη.
-          </div>
+          <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900">{t("Δεν ήταν δυνατή η σύνδεση με τον ζωντανό κατάλογο. Εμφανίζονται ενδεικτικά τοπικά προϊόντα και η διαθεσιμότητά τους μπορεί να μην είναι ενημερωμένη.", "The live catalog could not be loaded. These are sample products and their availability may have changed.")}</div>
         )}
 
         {/* Products Grid */}
         {isCatalogLoading ? (
-          <div role="status" className="py-24 text-center bg-white border border-stone-200/90 rounded-2xl p-8 text-sm text-stone-500">
-            Φόρτωση καταλόγου…
-          </div>
+          <div role="status" className="py-24 text-center bg-white border border-stone-200/90 rounded-2xl p-8 text-sm text-stone-500">{t("Φόρτωση καταλόγου…", "Loading catalog…")}</div>
         ) : filteredItems.length === 0 ? (
           <div className="py-24 text-center bg-white border border-stone-200/90 rounded-2xl p-8 space-y-3">
             <p className="text-base font-bold text-stone-800">
-              {showFavoritesOnly ? 'Δεν έχεις προσθέσει ακόμα αγαπημένα κοσμήματα.' : 'Δεν βρέθηκαν δημιουργίες που να ταιριάζουν στα κριτήριά σου.'}
+              {showFavoritesOnly ? t("Δεν έχεις προσθέσει ακόμα αγαπημένα κοσμήματα.", "You haven’t added any favorites yet.") : t("Δεν βρέθηκαν δημιουργίες που να ταιριάζουν στα κριτήριά σου.", "No products match your filters.")}
             </p>
-            <p className="text-xs text-stone-500">
-              Δοκίμασε να αλλάξεις κατηγορία ή να καθαρίσεις τα ενεργά φίλτρα αναζήτησης.
-            </p>
+            <p className="text-xs text-stone-500">{t("Δοκίμασε να αλλάξεις κατηγορία ή να καθαρίσεις τα ενεργά φίλτρα αναζήτησης.", "Try another category or clear the filters.")}</p>
             <button
               onClick={() => {
                 setSelectedCategory('Όλα');
@@ -622,9 +646,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 setShowFavoritesOnly(false);
               }}
               className="mt-3 px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold hover:bg-stone-800 transition"
-            >
-              Επιστροφή σε όλη τη συλλογή
-            </button>
+            >{t("Επιστροφή σε όλη τη συλλογή", "Back to the full collection")}</button>
           </div>
         ) : (
           <div className="studio-product-grid grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4" data-density={shopSettings.catalogDensity}>
@@ -657,7 +679,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   }}
                   role="group"
                   tabIndex={0}
-                  aria-label={`${item.name || item.title || 'Κόσμημα'}. Πατήστε Enter για λεπτομέρειες.`}
+                  aria-label={t(`${localizedName(item, locale) || 'Κόσμημα'}. Πατήστε Enter για λεπτομέρειες.`, `${localizedName(item, locale) || 'Jewelry'}. Press Enter for details.`)}
                   muted={!isAvailable}
                   className="border-stone-200/80 hover:border-stone-400/80"
                 >
@@ -679,7 +701,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     ) : (
                       <img
                         src={activeCardMedia.url}
-                        alt={item.name || item.title || 'Κόσμημα Aram Creations'}
+                        alt={localizedName(item, locale) || t("Κόσμημα Aram Creations", "Aram Creations jewelry")}
                         referrerPolicy="no-referrer"
                         className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
                           isSold ? 'grayscale-[15%] opacity-90' : ''
@@ -692,7 +714,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     {/* Discreet Luxury Sold Overlay */}
                     {isSold && (
                       <div className="absolute inset-0 bg-stone-950/30 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none transition-all duration-300 group-hover:bg-stone-950/20">
-                        <StatusBadge className="px-3.5 py-1.5 tracking-[0.2em]">Πουλήθηκε</StatusBadge>
+                        <StatusBadge className="px-3.5 py-1.5 tracking-[0.2em]">{t("Πουλήθηκε", "Sold")}</StatusBadge>
                       </div>
                     )}
 
@@ -708,7 +730,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     {/* Discreet status badge if not available and NOT sold */}
                     {!isAvailable && !isSold && (
                       <div className="absolute top-2.5 left-2.5 z-10">
-                        <StatusBadge>{inventoryLabel(item)}</StatusBadge>
+                        <StatusBadge>{localizedTerm(inventoryLabel(item), locale)}</StatusBadge>
                       </div>
                     )}
 
@@ -716,14 +738,14 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     <button
                       type="button"
                       onClick={(e) => toggleFavorite(item.id, e)}
-                      aria-label={isFav ? `Αφαίρεση ${item.name || item.title} από τα αγαπημένα` : `Προσθήκη ${item.name || item.title} στα αγαπημένα`}
+                      aria-label={isFav ? t(`Αφαίρεση ${localizedName(item, locale)} από τα αγαπημένα`, `Remove ${localizedName(item, locale)} from favorites`) : t(`Προσθήκη ${localizedName(item, locale)} στα αγαπημένα`, `Save ${localizedName(item, locale)} to favorites`)}
                       aria-pressed={isFav}
-                      className={`absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full backdrop-blur-xs transition-transform active:scale-90 flex items-center justify-center border shadow-xs ${
+                      className={`catalog-card-favorite absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full backdrop-blur-xs transition-transform active:scale-90 flex items-center justify-center border shadow-xs ${
                         isFav
                           ? 'bg-rose-50/95 border-rose-200 text-rose-600'
                           : 'bg-white/80 hover:bg-white border-stone-200/80 text-stone-600 hover:text-stone-900'
                       }`}
-                      title={isFav ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
+                      title={isFav ? t("Αφαίρεση από τα αγαπημένα", "Remove from favorites") : t("Προσθήκη στα αγαπημένα", "Add to favorites")}
                     >
                       <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
                     </button>
@@ -747,7 +769,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                             className={`w-1.5 h-1.5 shrink-0 rounded-full transition-all ${
                               currentCardMediaIdx === dotIdx ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/80'
                             }`}
-                            aria-label={`Φωτογραφία ${dotIdx + 1}`}
+                            aria-label={t(`Φωτογραφία ${dotIdx + 1}`, `Photo ${dotIdx + 1}`)}
                           />
                         ))}
                       </div>
@@ -755,19 +777,19 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   </div>
 
                   {/* Card Content Info (Clean MONÉ-style Layout) */}
-                  <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between space-y-2.5">
+                  <div className="catalog-card-copy">
                     <div>
                       {/* Micro-header: Category + Refined Views & Likes */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.16em]">
-                          {item.category || item.collection || 'Κόσμημα'}
+                      <div className="catalog-card-meta">
+                        <span className="catalog-card-category">
+                          {localizedTerm(item.category || item.collection || '', locale) || t("Κόσμημα", "Jewelry")}
                         </span>
-                        <div className="flex items-center gap-2.5 text-[11px] text-stone-400 font-medium">
-                          <span className="flex items-center gap-1" title={`${viewsCount} προβολές`}>
+                        <div className="catalog-card-counts flex items-center gap-2.5 text-[11px] font-medium">
+                          <span className="flex items-center gap-1" title={t(`${viewsCount} προβολές`, `${viewsCount} views`)}>
                             <Eye className="w-3 h-3 text-stone-400" />
                             <span>{viewsCount}</span>
                           </span>
-                          <span className="flex items-center gap-1" title={`${likesCount} αγαπημένα`}>
+                          <span className="flex items-center gap-1" title={t(`${likesCount} αγαπημένα`, `${likesCount} favorites`)}>
                             <Heart className={`w-3 h-3 ${isFav ? 'fill-rose-500 text-rose-500' : 'text-stone-400'}`} />
                             <span>{likesCount}</span>
                           </span>
@@ -775,13 +797,13 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                       </div>
 
                       {/* Clean Product Title */}
-                      <h3 className="text-sm font-semibold text-stone-900 line-clamp-1 group-hover:text-stone-600 transition-colors tracking-tight mt-1">
-                        {item.name || item.title}
+                      <h3 className="catalog-card-title">
+                        <span lang={publicTextLanguage(localizedName(item, locale), locale)}>{localizedName(item, locale)}</span>
                       </h3>
                     </div>
 
                     {/* Footer: Price & Subtle Actions */}
-                    <div className="pt-2.5 border-t border-stone-100 flex items-center justify-between gap-2">
+                    <div className="catalog-card-footer">
                       <div className="flex items-baseline gap-1.5 flex-wrap">
                         {item.originalPrice && Number(item.originalPrice) > Number(item.price) ? (
                           <>
@@ -799,7 +821,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="catalog-card-actions">
                         {vintedLink && (
                           <a
                             href={vintedLink}
@@ -807,7 +829,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             className="px-2 py-1.5 rounded-lg bg-teal-50/80 border border-teal-200/80 text-teal-800 text-[11px] font-semibold hover:bg-teal-100 transition-colors flex items-center gap-1"
-                            title="Αγορά μέσω Vinted"
+                            title={t("Αγορά μέσω Vinted", "Buy on Vinted")}
                           >
                             <span>Vinted</span>
                             <ExternalLink className="w-2.5 h-2.5" />
@@ -828,12 +850,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                           {isAdded ? (
                             <>
                               <Check className="w-3.5 h-3.5" />
-                              <span>Μπήκε!</span>
+                              <span>{t("Μπήκε!", "Added!")}</span>
                             </>
                           ) : (
                             <>
                               <ShoppingBag className="w-3.5 h-3.5" />
-                              <span>{!isAvailable ? (isSold ? 'Πουλήθηκε' : 'Μη διαθέσιμο') : 'Καλάθι'}</span>
+                              <span>{!isAvailable ? (isSold ? t("Πουλήθηκε", "Sold") : t("Μη διαθέσιμο", "Unavailable")) : t("Καλάθι", "Bag")}</span>
                             </>
                           )}
                         </button>
@@ -850,20 +872,20 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       {/* Comprehensive Product Detail Modal with Full Media & Metrics Support */}
       {selectedItem && (
         <DetailView
-          title={`Λεπτομέρειες: ${selectedItem.name || selectedItem.title || 'Κόσμημα'}`}
+          title={t('Λεπτομέρειες', 'Details') + ': ' + (localizedName(selectedItem, locale) || t('Κόσμημα', 'Jewelry'))}
           onClose={() => setSelectedItem(null)}
           onPrevious={hasPrevModalItem ? handlePrevModalItem : undefined}
           onNext={hasNextModalItem ? handleNextModalItem : undefined}
-          previousLabel="Προηγούμενο κόσμημα"
-          nextLabel="Επόμενο κόσμημα"
+          previousLabel={t("Προηγούμενο κόσμημα", "Previous product")}
+          nextLabel={t("Επόμενο κόσμημα", "Next product")}
         >
             {/* LEFT COLUMN: Rich Media Stage (Images & Videos) */}
-            <div className="w-full shrink-0 border-b border-stone-200 bg-stone-100 p-4 sm:p-6 md:w-1/2 md:border-b-0 md:border-r">
+            <div className="shop-detail-media w-full shrink-0 border-b border-stone-200 bg-stone-100 p-4 sm:p-6 md:w-1/2 md:border-b-0 md:border-r">
               <MediaGallery
                 media={selectedMediaList}
                 activeIndex={activeMediaIndex}
                 onActiveIndex={setActiveMediaIndex}
-                title={selectedItem.name || selectedItem.title || 'Κόσμημα'}
+                title={localizedName(selectedItem, locale) || t("Κόσμημα", "Jewelry")}
                 onOpen={activeMedia?.type === 'video' ? undefined : () => setIsLightboxOpen(true)}
               />
             </div>
@@ -874,27 +896,27 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 {/* Category & Collection */}
                 <div className="flex items-center justify-between gap-3 border-b border-stone-100 pb-3 pr-14 sm:pr-16">
                   <span className="text-xs font-bold uppercase tracking-wider text-stone-500 min-w-0 flex-1 truncate">
-                    {selectedItem.category} {selectedItem.collection && `• ${selectedItem.collection}`}
+                    {localizedTerm(selectedItem.category || '', locale)} {selectedItem.collection && `• ${localizedTerm(selectedItem.collection, locale)}`}
                   </span>
 
                   {/* Likes & Views Metrics Display - Clean Non-breaking Pill */}
                   <div className="flex items-center gap-2.5 text-xs font-semibold text-stone-600 bg-stone-100/90 border border-stone-200/90 px-3 py-1 rounded-full shrink-0 whitespace-nowrap shadow-xs">
-                    <span className="flex items-center gap-1 text-stone-600" title={`${getItemViews(selectedItem)} προβολές`}>
+                    <span className="flex items-center gap-1 text-stone-600" title={t(`${getItemViews(selectedItem)} προβολές`, `${getItemViews(selectedItem)} views`)}>
                       <Eye className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                       <span>{getItemViews(selectedItem)}</span>
                       <span className="text-[11px] font-normal text-stone-500 hidden sm:inline">
-                        {getItemViews(selectedItem) === 1 ? 'προβολή' : 'προβολές'}
+                        {getItemViews(selectedItem) === 1 ? t("προβολή", "view") : t("προβολές", "views")}
                       </span>
                     </span>
                     <span className="text-stone-300">·</span>
                     <button
                       onClick={(e) => toggleFavorite(selectedItem.id, e)}
-                      aria-label={favoriteIds.includes(selectedItem.id) ? 'Αφαίρεση από τα αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
+                      aria-label={favoriteIds.includes(selectedItem.id) ? t("Αφαίρεση από τα αγαπημένα", "Remove from favorites") : t("Προσθήκη στα αγαπημένα", "Add to favorites")}
                       aria-pressed={favoriteIds.includes(selectedItem.id)}
                       className={`flex items-center gap-1 transition ${
                         favoriteIds.includes(selectedItem.id) ? 'text-rose-600 font-bold' : 'hover:text-stone-800'
                       }`}
-                      title="Αγαπημένο"
+                      title={t("Αγαπημένο", "Favorite")}
                     >
                       <Heart
                         className={`w-3.5 h-3.5 shrink-0 ${
@@ -908,11 +930,11 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
 
                 {/* Title & Price */}
                 <div>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-stone-900 leading-snug" style={{ fontFamily: 'inherit' }}>
-                    {selectedItem.name || selectedItem.title}
+                  <h2 className="catalog-detail-title">
+                    <span lang={publicTextLanguage(localizedName(selectedItem, locale), locale)}>{localizedName(selectedItem, locale)}</span>
                   </h2>
                   <div className="mt-2 flex items-baseline gap-3 flex-wrap">
-                    <span className="text-2xl sm:text-3xl font-bold text-stone-900">
+                    <span className="text-lg sm:text-2xl font-semibold text-stone-900">
                       {selectedItem.price ? `${selectedItem.price}€` : '-'}
                     </span>
                     {selectedItem.originalPrice && Number(selectedItem.originalPrice) > Number(selectedItem.price) && (
@@ -932,40 +954,35 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                           : 'bg-amber-100 text-amber-900'
                         : 'bg-emerald-100 text-emerald-800'
                     }`}>
-                      {inventoryLabel(selectedItem)}
+                      {localizedTerm(inventoryLabel(selectedItem), locale)}
                     </span>
                   </div>
                   {isSoldItem(selectedItem) ? (
-                    <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-rose-900">
-                      Αυτό το κομμάτι είναι μοναδικό και έχει ήδη πουληθεί. Αν θέλεις κάτι παρόμοιο, επικοινώνησε μαζί μας μέσω{' '}
-                      {/^https:\/\//i.test(shopSettings.fallbackLinks?.Instagram || '') ? <a href={shopSettings.fallbackLinks.Instagram} target="_blank" rel="noopener noreferrer" className="font-bold underline">Instagram</a> : 'Instagram'} ή{' '}
+                    <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-rose-900">{t("Αυτό το κομμάτι είναι μοναδικό και έχει ήδη πουληθεί. Αν θέλεις κάτι παρόμοιο, επικοινώνησε μαζί μας μέσω", "This one-of-a-kind piece has sold. If you’d like something similar, contact us on")}{' '}
+                      {/^https:\/\//i.test(shopSettings.fallbackLinks?.Instagram || '') ? <a href={shopSettings.fallbackLinks.Instagram} target="_blank" rel="noopener noreferrer" className="font-bold underline">Instagram</a> : 'Instagram'}{t(" ή", " or")}{' '}
                       <a href="mailto:aristeaamnta@gmail.com" className="font-bold underline">email</a>.
                     </div>
-                  ) : (
-                    <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-amber-900">Η τιμή περιλαμβάνει υπολογισμένα μεταφορικά. Στο Vinted το τελικό ποσό μπορεί να διαφέρει ανάλογα με την αποστολή και τις χρεώσεις της πλατφόρμας.</p>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Description */}
-                {selectedItem.description && (
+                {localizedDescription(selectedItem, locale) && (
                   <p className="text-xs sm:text-sm text-stone-600 leading-relaxed font-sans whitespace-pre-wrap pt-2">
-                    {sanitizeVintedDescription(selectedItem.description)}
+                    <span lang={publicTextLanguage(localizedDescription(selectedItem, locale), locale)}>{sanitizeVintedDescription(localizedDescription(selectedItem, locale))}</span>
                   </p>
                 )}
 
                 {/* Materials list */}
                 {selectedItem.materials && selectedItem.materials.length > 0 && (
                   <div className="pt-3 border-t border-stone-100">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block mb-1.5">
-                      Υλικά Κατασκευής
-                    </span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block mb-1.5">{t("Υλικά Κατασκευής", "Materials")}</span>
                     <div className="flex flex-wrap gap-1.5">
                       {selectedItem.materials.map((mat, i) => (
                         <span
                           key={i}
                           className="bg-stone-100 text-stone-800 text-xs px-2.5 py-1 rounded-lg font-medium border border-stone-200"
                         >
-                          {mat}
+                          {localizedTerm(mat, locale)}
                         </span>
                       ))}
                     </div>
@@ -975,9 +992,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 {/* Colors */}
                 {selectedItem.colors && selectedItem.colors.length > 0 && (
                   <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block mb-1.5">
-                      Χρώματα
-                    </span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block mb-1.5">{t("Χρώματα", "Colors")}</span>
                     <div className="flex flex-wrap gap-1.5">
                       {selectedItem.colors.map((col, i) => (
                         <span
@@ -985,7 +1000,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                           className="bg-white border border-stone-200 text-stone-800 text-xs px-2.5 py-1 rounded-lg font-medium"
                         >
                           <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5 border border-stone-200 align-middle" style={{ backgroundColor: shopSettings.colorPalette[col] || '#e7e5e4' }} aria-hidden="true" />
-                          {col}
+                          {localizedTerm(col, locale)}
                         </span>
                       ))}
                     </div>
@@ -997,13 +1012,13 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   <div className="flex gap-6 text-xs text-stone-600 pt-2">
                     {selectedItem.dimensions && (
                       <div>
-                        <span className="block text-[10px] uppercase font-bold text-stone-400">Διαστάσεις</span>
+                        <span className="block text-[10px] uppercase font-bold text-stone-400">{t("Διαστάσεις", "Dimensions")}</span>
                         <span className="font-medium">{selectedItem.dimensions}</span>
                       </div>
                     )}
                     {selectedItem.weight && (
                       <div>
-                        <span className="block text-[10px] uppercase font-bold text-stone-400">Βάρος</span>
+                        <span className="block text-[10px] uppercase font-bold text-stone-400">{t("Βάρος", "Weight")}</span>
                         <span className="font-medium">{selectedItem.weight}</span>
                       </div>
                     )}
@@ -1028,31 +1043,34 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   <ShoppingBag className="w-4 h-4" />
                   <span>
                     {!isAvailableForSale(selectedItem)
-                      ? isSoldItem(selectedItem) ? 'Πουλήθηκε' : selectedItem.status || 'Μη διαθέσιμο'
-                      : 'Προσθήκη στην Τσάντα Αγορών'}
+                      ? isSoldItem(selectedItem) ? t("Πουλήθηκε", "Sold") : localizedTerm(selectedItem.status || '', locale) || t("Μη διαθέσιμο", "Unavailable")
+                      : t("Προσθήκη στην Τσάντα Αγορών", "Add to bag")}
                   </span>
                 </button>
 
                 {/* Vinted and External Purchase Links */}
-                {(selectedItem.purchaseLinks || []).map((link, idx) => (
+                {(selectedItem.purchaseLinks || []).map((link, idx) => {
+                  const href = storefrontLink(link.url || '', locale, window.location.origin);
+                  return href && (
                   <a
                     key={idx}
-                    href={link.url}
+                    href={href}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full py-3 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-900 font-bold text-xs flex items-center justify-center gap-2 transition"
                   >
-                    <span>Αγορά μέσω {link.site || 'Vinted'}</span>
+                    <span>{t("Αγορά μέσω ", "Buy on ")}{link.site || 'Vinted'}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
-                ))}
+                  );
+                })}
               </div>
             </div>
         </DetailView>
       )}
 
       {isLightboxOpen && selectedItem && zoomImages.length > 0 && (
-        <ImageLightbox images={zoomImages} title={selectedItem.name || selectedItem.title || 'Κόσμημα'}
+        <ImageLightbox images={zoomImages} title={localizedName(selectedItem, locale) || t("Κόσμημα", "Jewelry")}
           index={zoomImages.findIndex(media => media.mediaIndex === activeMediaIndex)}
           onIndexChange={index => setActiveMediaIndex(zoomImages[index].mediaIndex)}
           onClose={() => setIsLightboxOpen(false)} />

@@ -1,13 +1,13 @@
 import { shopHeroCopy } from './lib/hero-media';
 import type { HeroAppearance } from './lib/hero-appearance';
-import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from './lib/design-studio';
+import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio, normalizeVisualTheme, type VisualTheme } from './lib/design-studio';
 import { DEFAULT_SHIPPING_SETTINGS, normalizeShippingSettings, type ShippingSettings } from './lib/shipping';
 import { DEFAULT_PORTFOLIO_DESIGN, normalizePortfolioDesign, type PortfolioDesign } from './lib/portfolio-settings';
 export { DEFAULT_SHIPPING_SETTINGS, type ShippingSettings } from './lib/shipping';
 
 export interface ShopSettings {
   /** Presentation-only switch. It never changes catalog, orders or integrations. */
-  visualTheme: 'atelier' | 'classic';
+  visualTheme: VisualTheme;
   fontFamily: string;
   primaryColor: string;
   bgColor: string;
@@ -83,7 +83,7 @@ export function normalizeShopSettings(value?: ShopSettingsInput): ShopSettings {
     ...DEFAULT_SHOP_SETTINGS,
     ...data,
     ...shopHeroCopy(data.heroTitle, data.heroSubtitle),
-    visualTheme: data.visualTheme === 'classic' ? 'classic' : 'atelier',
+    visualTheme: normalizeVisualTheme(data.visualTheme),
     categoryOrder: Array.isArray(data.categoryOrder) ? data.categoryOrder : DEFAULT_SHOP_SETTINGS.categoryOrder,
     fallbackLinks: { ...DEFAULT_SHOP_SETTINGS.fallbackLinks, ...(data.fallbackLinks || {}) },
     colorPalette: { ...DEFAULT_SHOP_SETTINGS.colorPalette, ...(data.colorPalette || {}) },

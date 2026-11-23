@@ -1,4 +1,4 @@
-import type { DesignStudio } from './design-studio';
+import { isVisualTheme, type DesignStudio, type VisualTheme } from './design-studio';
 // Hero media helpers shared by the browser bundle and the Vite build.
 // Keep this file free of React/Firebase imports so vite.config.ts can use it.
 
@@ -43,7 +43,7 @@ export function heroPosterFor(resolvedVideoUrl: string): string | undefined {
 
 export interface HeroSnapshot {
   designStudio?: Partial<DesignStudio>;
-  visualTheme?: 'classic' | 'atelier';
+  visualTheme?: VisualTheme;
   heroTitle: string;
   heroSubtitle: string;
   heroTitleSize: string;
@@ -53,7 +53,7 @@ export interface HeroSnapshot {
 
 export const FALLBACK_HERO_SNAPSHOT: HeroSnapshot = {
   heroTitle: 'Χειροποίητα κοσμήματα',
-  heroSubtitle: 'Κοσμήματα με άνθη, ρητίνη και χάλκινο σύρμα.',
+  heroSubtitle: 'Χειροποίητες δημιουργίες με αληθινά άνθη και ρητίνη.',
   heroTitleSize: 'text-3xl md:text-4xl',
   heroVideoUrl: SHOP_HERO_VIDEO_PATH,
   portfolioHeroVideoUrl: TRANSCODED_HERO_H264_PATH,
@@ -62,7 +62,7 @@ export const FALLBACK_HERO_SNAPSHOT: HeroSnapshot = {
 export function shopHeroCopy(title?: string, subtitle?: string) {
   return {
     heroTitle: !title?.trim() || ['Χειροποίητες Δημιουργίες', 'Χειροποίητα κοσμήματα & μοναδικές δημιουργίες'].includes(title.trim()) ? FALLBACK_HERO_SNAPSHOT.heroTitle : title,
-    heroSubtitle: subtitle === undefined || subtitle.trim() === 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.' ? FALLBACK_HERO_SNAPSHOT.heroSubtitle : subtitle,
+    heroSubtitle: subtitle === undefined || /χάλκιν[οό] σύρμα|σύρμα χαλκού|copper[ -]+wire/i.test(subtitle) || subtitle.trim() === 'Μοναδικές δημιουργίες από μια μεγάλη γκάμα υλικών και τεχνικών. Κάθε κομμάτι είναι φτιαγμένο στο χέρι με αγάπη.' ? FALLBACK_HERO_SNAPSHOT.heroSubtitle : subtitle,
   };
 }
 
@@ -76,7 +76,7 @@ export function pickHeroSnapshot(data: unknown, base: HeroSnapshot = FALLBACK_HE
     if (typeof source[key] === 'string') (result as any)[key] = source[key];
   }
   if (source.designStudio && typeof source.designStudio === 'object' && !Array.isArray(source.designStudio)) result.designStudio = source.designStudio as Partial<DesignStudio>;
-  if (source.visualTheme === 'classic' || source.visualTheme === 'atelier') result.visualTheme = source.visualTheme;
+  if (isVisualTheme(source.visualTheme)) result.visualTheme = source.visualTheme;
   // Store resolved (optimised/local) video URLs so the shell and first render agree.
   result.heroVideoUrl = portfolioHeroVideoUrl(result.heroVideoUrl);
   result.portfolioHeroVideoUrl = portfolioHeroVideoUrl(result.portfolioHeroVideoUrl);

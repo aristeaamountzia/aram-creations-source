@@ -1,5 +1,5 @@
 import { BASE_CATEGORIES, BASE_MATERIALS, BASE_COLORS, splitTags } from './catalog-config';
-import { duplicateJewelryData } from '../../lib/stock-edit';
+import { duplicateJewelryData, isArchivedJewelry } from '../../lib/stock-edit';
 import { writeJewelryChanges } from '../../lib/jewelry-store';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { notifyOperationSuccess, notifyOperationError } from '../../lib/sound-notifications';
@@ -33,6 +33,7 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
     const lassoBaseSelectionRef = useRef([]);
     const productGridRef = useRef(null);
     const [isBulkOpen, setIsBulkOpen] = useState(false);
+    const [isArchiving, setIsArchiving] = useState(false);
     const [bulkTab, setBulkTab] = useState('fields');
     const [bulkDraft, setBulkDraft] = useState({
         category: '',
@@ -514,6 +515,31 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
         }
     };
 
+    const handleBulkArchive = async (archive: boolean) => {
+        if (isArchiving) return;
+        const items = selectedItems.filter(item => isArchivedJewelry(item) !== archive);
+        if (items.length === 0) return;
+        const patch = archive ? { isDeleted: true } : { isDeleted: false, deletedAt: null };
+        const message = archive ? `Αρχειοθετήθηκαν ${items.length} προϊόντα.` : `Επανήλθαν ${items.length} προϊόντα στο ενεργό κατάλογο.`;
+        setIsArchiving(true);
+        try {
+            const results = await writeJewelryChanges(db, items.map(item => ({ id: item.id, patch, baseline: item })));
+            pushUndoAction({
+                type: 'BULK_UPDATE',
+                items: results.map(({ id, before }) => ({
+                    id, oldData: { isDeleted: before?.isDeleted ?? false, deletedAt: before?.deletedAt ?? null }, newData: patch
+                })),
+                message
+            });
+            clearBulkSelection();
+            notifyOperationSuccess('Κατάλογος Shop', message);
+        } catch (error) {
+            notifyOperationError('Αποτυχία ενημέρωσης αρχείου', error instanceof Error ? error.message : String(error));
+        } finally {
+            setIsArchiving(false);
+        }
+    };
+
     const handleBulkDelete = async () => {
         if (selectedItems.length === 0) return;
         if (!window.confirm('Να διαγραφούν ' + selectedItems.length + ' επιλεγμένα προϊόντα;')) return;
@@ -693,7 +719,7 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
         setBulkTagMode, draggedProductId, dragOverProductId, selectedItems, visibleItemIds, selectItem,
         handleProductSelectionClick, handleLassoStart, selectVisibleItems, clearBulkSelection, bulkMaterials,
         bulkColors, toggleBulkTag, clearBulkTags, isShopOrderMoveDisabled, handleBulkFindAndReplace,
-        handleBulkUpdate, handleBulkDelete, handleBulkDuplicate, handleMoveShopOrder, handleProductDragStart,
+        handleBulkUpdate, handleBulkArchive, isArchiving, handleBulkDelete, handleBulkDuplicate, handleMoveShopOrder, handleProductDragStart,
         handleProductDragOver, handleProductDrop, handleProductDragEnd
     };
 }

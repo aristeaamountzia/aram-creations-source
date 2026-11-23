@@ -1,3 +1,14 @@
+export const visualThemes = ['atelier', 'classic', 'modern'] as const;
+export type VisualTheme = typeof visualThemes[number];
+
+export function isVisualTheme(value: unknown): value is VisualTheme {
+  return visualThemes.some(theme => theme === value);
+}
+
+export function normalizeVisualTheme(value: unknown): VisualTheme {
+  return isVisualTheme(value) ? value : 'atelier';
+}
+
 export type DesignStudio = {
   brandName: string; shopCaption: string; portfolioCaption: string; shopNavLabel: string; portfolioNavLabel: string; cartLabel: string; contactLabel: string;
   fontFamily: string; baseSize: string; pageBackground: string; surface: string; ink: string; muted: string; line: string; accent: string;

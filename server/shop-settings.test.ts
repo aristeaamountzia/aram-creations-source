@@ -2,12 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_SHOP_SETTINGS, normalizeShopSettings } from '../src/shopSettings';
 import { DEFAULT_SHOP_SETTINGS as editorDefaults, MINIMAL_SHOP_SETTINGS } from '../src/components/backoffice/catalog-config';
+import { FALLBACK_HERO_SNAPSHOT, pickHeroSnapshot } from '../src/lib/hero-media';
 
 test('editor and public settings share defaults while minimal remains an explicit preset', () => {
   assert.equal(editorDefaults, DEFAULT_SHOP_SETTINGS);
   assert.deepEqual(normalizeShopSettings(undefined), DEFAULT_SHOP_SETTINGS);
   assert.equal(MINIMAL_SHOP_SETTINGS.bgColor, '#ffffff');
   assert.equal(MINIMAL_SHOP_SETTINGS.portfolioDesign, DEFAULT_SHOP_SETTINGS.portfolioDesign);
+});
+
+test('modern theme survives normalization and cached hero settings while older themes remain valid', () => {
+  for (const visualTheme of ['modern', 'classic', 'atelier'] as const) {
+    assert.equal(normalizeShopSettings({ visualTheme }).visualTheme, visualTheme);
+    assert.equal(pickHeroSnapshot({ visualTheme }).visualTheme, visualTheme);
+  }
+  assert.equal(pickHeroSnapshot({}).heroVideoUrl, FALLBACK_HERO_SNAPSHOT.heroVideoUrl);
+  assert.equal(pickHeroSnapshot({ heroVideoUrl: '', portfolioHeroVideoUrl: '' }).heroVideoUrl, '');
+  assert.equal(pickHeroSnapshot({ heroVideoUrl: '', portfolioHeroVideoUrl: '' }).portfolioHeroVideoUrl, '');
 });
 
 test('partial legacy settings preserve saved appearance, false flags, empty links and free shipping', () => {

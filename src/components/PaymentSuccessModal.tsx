@@ -1,3 +1,4 @@
+import { usePublicLanguage } from "../lib/use-public-language";
 import { useDialogKeyboard } from '../lib/use-dialog-keyboard';
 import React, { useState } from 'react';
 import { CheckCircle2, ShieldCheck, Package, Copy, Check } from 'lucide-react';
@@ -13,6 +14,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
   total,
   onClose
 }) => {
+  const { t } = usePublicLanguage();
   const dialog = useDialogKeyboard(true, onClose);
   const [copied, setCopied] = useState(false);
 
@@ -34,24 +36,20 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
         </div>
 
         <div className="space-y-1.5">
-          <h3 id="payment-title" className="studio-dialog-title">
-            Η πληρωμή ολοκληρώθηκε!
-          </h3>
-          <p className="text-xs uppercase tracking-widest text-stone-500 font-bold">
-            Επιβεβαιωμένη συναλλαγή μέσω Stripe
-          </p>
+          <h3 id="payment-title" className="studio-dialog-title">{t("Η πληρωμή ολοκληρώθηκε!", "Payment complete!")}</h3>
+          <p className="text-xs uppercase tracking-widest text-stone-500 font-bold">{t("Επιβεβαιωμένη συναλλαγή μέσω Stripe", "Payment confirmed by Stripe")}</p>
         </div>
 
         <div className="bg-stone-50 rounded-2xl p-4 border border-stone-200 space-y-2">
           <div className="flex justify-between items-center text-xs text-stone-600">
-            <span>Αριθμός Παραγγελίας:</span>
+            <span>{t("Αριθμός Παραγγελίας:", "Order number:")}</span>
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-stone-900 font-mono">#{orderNumber}</span>
               <button
                 type="button"
                 onClick={handleCopy}
                 className="p-1 rounded-md hover:bg-stone-200 text-stone-600 transition"
-                title="Αντιγραφή κωδικού"
+                title={t("Αντιγραφή κωδικού", "Copy order number")}
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
@@ -59,7 +57,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
           </div>
           {typeof total === 'number' && (
             <div className="flex justify-between items-center text-xs text-stone-600 pt-2 border-t border-stone-200">
-              <span>Σύνολο Πληρωμής:</span>
+              <span>{t("Σύνολο Πληρωμής:", "Payment total:")}</span>
               <span className="font-bold text-stone-900 text-sm">€{total.toFixed(2)}</span>
             </div>
           )}
@@ -68,11 +66,11 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
         <div className="space-y-2 text-xs text-stone-600 leading-relaxed text-left bg-stone-50/50 p-3.5 rounded-xl border border-stone-100">
           <div className="flex items-start gap-2">
             <Package className="w-4 h-4 text-stone-700 shrink-0 mt-0.5" />
-            <span>Η παραγγελία σας καταχωρήθηκε και τα κοσμήματα δεσμεύτηκαν αποκλειστικά για εσάς.</span>
+            <span>{t("Η παραγγελία σας καταχωρήθηκε και τα κοσμήματα δεσμεύτηκαν αποκλειστικά για εσάς.", "Your order has been placed and the jewelry is reserved for you.")}</span>
           </div>
           <div className="flex items-start gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-            <span>Θα ετοιμαστούν σε χειροποίητη συσκευασία δώρου και θα παραδοθούν σύμφωνα με τον τρόπο αποστολής που επιλέξατε.</span>
+            <span>{t("Θα ετοιμαστούν σε χειροποίητη συσκευασία δώρου και θα παραδοθούν σύμφωνα με τον τρόπο αποστολής που επιλέξατε.", "Your items will be gift-wrapped and sent using your selected delivery method.")}</span>
           </div>
         </div>
 
@@ -80,7 +78,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
           onClick={onClose}
           className="w-full py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm"
         >
-          <span>Συνέχεια στο Κατάστημα</span>
+          <span>{t("Συνέχεια στο Κατάστημα", "Continue shopping")}</span>
         </button>
       </div>
     </div>

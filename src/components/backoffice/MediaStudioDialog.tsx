@@ -1,5 +1,6 @@
 import { IconX } from './icons';
 import type { MediaStudio } from './useMediaStudio';
+import { useDialogKeyboard } from '../../lib/use-dialog-keyboard';
 
 type MediaStudioDialogProps = Pick<
     MediaStudio,
@@ -18,28 +19,31 @@ export function MediaStudioDialog(props: MediaStudioDialogProps) {
         moveImageEditorDrag, setImageEditorImageInfo, setImageEditorSettings, startImageEditorDrag,
         stopImageEditorDrag
     } = props;
+    const dialog = useDialogKeyboard(Boolean(imageEditorTarget && imageEditorMedia), () => {
+        if (!isApplyingImageEdit) closeImageEditor();
+    });
     if (!(imageEditorTarget && imageEditorMedia)) return null;
 
     return (
-        <div className="fixed inset-0 bg-stone-950/75 backdrop-blur-sm flex items-center justify-center p-3 md:p-4 z-[80]">
-            <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[94vh] flex flex-col">
+        <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="shop-image-editor-title" tabIndex={-1}
+            className="fixed inset-0 bg-stone-950/75 backdrop-blur-sm flex items-center justify-center p-2 md:p-4 z-[80]">
+            <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden max-h-[calc(100dvh-1rem)] sm:max-h-[94dvh] flex flex-col">
                 <div className="p-4 border-b border-stone-100 flex items-center justify-between gap-3">
                     <div>
-                        <h2 className="text-lg font-black text-stone-900">Editor εικόνας</h2>{imageEditorError && <p role="alert" className="mt-2 text-sm text-rose-700">{imageEditorError}</p>}
-                        <p className="text-xs font-bold text-stone-500">Ρύθμισε τη φωτογραφία πριν αποθηκευτεί στο προϊόν.</p>
+                        <h2 id="shop-image-editor-title" className="text-lg font-bold text-stone-900">Επεξεργασία εικόνας</h2>{imageEditorError && <p role="alert" className="mt-2 text-sm text-stone-900">{imageEditorError}</p>}
                     </div>
-                    <button type="button" onClick={closeImageEditor} className="p-2 bg-stone-100 hover:bg-stone-200 rounded-full text-stone-600 transition">
+                    <button type="button" onClick={closeImageEditor} disabled={isApplyingImageEdit} aria-label="Κλείσιμο επεξεργασίας εικόνας" className="p-2 bg-stone-100 hover:bg-stone-200 rounded-full text-stone-600 transition">
                         <IconX />
                     </button>
                 </div>
 
-                <div className="p-4 md:p-5 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 overflow-y-auto">
-                    <div className="min-h-[320px] md:min-h-[560px] bg-stone-100 rounded-xl border border-stone-200 overflow-hidden flex items-center justify-center p-4">
+                <div className="min-h-0 flex-1 p-3 md:p-5 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(240px,300px)] gap-4 overflow-y-auto">
+                    <div className="min-h-40 self-start bg-stone-100 rounded-xl border border-stone-200 overflow-hidden flex items-center justify-center p-3">
                         <div
                             className="relative w-full bg-white overflow-hidden rounded-xl border-2 border-stone-900/80 shadow-sm cursor-grab active:cursor-grabbing select-none touch-none"
                             style={{
                                 aspectRatio: `${getImageEditorAspect().width} / ${getImageEditorAspect().height}`,
-                                maxWidth: getImageEditorAspect().ratio < 1 ? '430px' : '640px'
+                                maxWidth: `calc(min(48dvh, 500px) * ${getImageEditorAspect().ratio})`
                             }}
                             onPointerDown={startImageEditorDrag}
                             onPointerMove={moveImageEditorDrag}
@@ -78,12 +82,13 @@ export function MediaStudioDialog(props: MediaStudioDialogProps) {
                         </div>
 
                         <div>
-                            <span className="block text-xs font-black uppercase tracking-wider text-stone-500 mb-2">Κάδρο crop</span>
+                            <span className="block text-xs font-bold text-stone-600 mb-2">Αναλογία κάδρου</span>
                             <div className="grid grid-cols-3 gap-2">
                                 {Object.entries(IMAGE_EDITOR_ASPECTS).map(([key, aspect]) => (
                                     <button
                                         key={key}
                                         type="button"
+                                        aria-pressed={imageEditorSettings.cropAspect === key}
                                         onClick={() => setImageEditorSettings(prev => clampImageEditorPan({ ...prev, cropAspect: key, panX: 0, panY: 0 }))}
                                         className={`px-3 py-2 rounded-lg text-xs font-black border transition ${imageEditorSettings.cropAspect === key ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'}`}
                                     >
@@ -95,7 +100,7 @@ export function MediaStudioDialog(props: MediaStudioDialogProps) {
 
                         <label className="block">
                             <span className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-stone-500 mb-2">
-                                <span>Zoom</span>
+                                <span>Ζουμ</span>
                                 <span>{imageEditorSettings.zoom.toFixed(1)}x</span>
                             </span>
                             <input type="range" min="1" max="4" step="0.05" value={imageEditorSettings.zoom} onChange={e => setImageEditorSettings(prev => clampImageEditorPan({ ...prev, zoom: Number(e.target.value) }))} className="w-full accent-stone-900" />
@@ -127,7 +132,7 @@ export function MediaStudioDialog(props: MediaStudioDialogProps) {
 
                         <label className="block">
                             <span className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-stone-500 mb-2">
-                                <span>Contrast</span>
+                                <span>Αντίθεση</span>
                                 <span>{imageEditorSettings.contrast}%</span>
                             </span>
                             <input type="range" min="60" max="160" step="1" value={imageEditorSettings.contrast} onChange={e => setImageEditorSettings(prev => ({ ...prev, contrast: Number(e.target.value) }))} className="w-full accent-stone-900" />
@@ -143,15 +148,12 @@ export function MediaStudioDialog(props: MediaStudioDialogProps) {
                             }} className="w-full px-4 py-2.5 border rounded-lg text-sm font-bold">Επαναφορά αρχικής εικόνας</button>
                         )}
 
-                        <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs font-bold text-amber-900 leading-relaxed">
-                            Η αλλαγή εφαρμόζεται στο αρχείο που θα ανέβει. Αν την εφαρμόσεις, θα εμφανιστεί κουμπί επαναφοράς στην εικόνα.
-                        </div>
                     </div>
                 </div>
 
-                <div className="p-4 border-t border-stone-100 bg-stone-50 flex flex-col sm:flex-row justify-end gap-3">
+                <div className="p-3 border-t border-stone-100 bg-stone-50 flex flex-wrap justify-end gap-2">
                     <button type="button" onClick={closeImageEditor} className="px-6 py-2.5 bg-white border border-stone-200 text-stone-700 rounded-lg text-sm font-bold hover:bg-stone-100 transition" disabled={isApplyingImageEdit}>
-                        Άκυρο
+                        Ακύρωση
                     </button>
                     <button type="button" onClick={applyImageEditor} className="px-6 py-2.5 bg-stone-900 text-white rounded-lg text-sm font-black hover:bg-stone-800 transition disabled:opacity-50" disabled={isApplyingImageEdit}>
                         {isApplyingImageEdit ? 'Εφαρμογή...' : 'Εφαρμογή στην εικόνα'}

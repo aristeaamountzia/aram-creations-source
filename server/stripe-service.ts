@@ -1,3 +1,4 @@
+import { publicPath, type PublicLocale } from '../src/lib/public-locale';
 import { OrderError } from './orders-core';
 
 interface StripeSessionItem {
@@ -16,6 +17,7 @@ interface CreateSessionParams {
   customerEmail: string;
   origin: string;
   cancelToken?: string;
+  locale?: PublicLocale;
 }
 
 const SHIPPING_LABELS: Record<string, string> = {
@@ -31,12 +33,14 @@ export async function createStripeCheckoutSession(params: CreateSessionParams): 
 
   const rawOrigin = (params.origin || process.env.PUBLIC_SITE_URL || process.env.URL || 'https://aramcreationsofficial.netlify.app').trim().replace(/\/$/, '');
   const baseOrigin = rawOrigin || 'https://aramcreationsofficial.netlify.app';
-  const successUrl = `${baseOrigin}/?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(params.orderId)}#order-success`;
-  const cancelUrl = `${baseOrigin}/?order_cancelled=${encodeURIComponent(params.orderId)}${params.cancelToken ? `&cancel_token=${encodeURIComponent(params.cancelToken)}` : ''}#cart`;
+  const locale = params.locale || 'el';
+  const returnPath = baseOrigin + publicPath(locale);
+  const successUrl = `${returnPath}?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(params.orderId)}#order-success`;
+  const cancelUrl = `${returnPath}?order_cancelled=${encodeURIComponent(params.orderId)}${params.cancelToken ? `&cancel_token=${encodeURIComponent(params.cancelToken)}` : ''}#cart`;
 
   const body = new URLSearchParams();
   body.append('mode', 'payment');
-  body.append('locale', 'el');
+  body.append('locale', locale);
   body.append('success_url', successUrl);
   body.append('cancel_url', cancelUrl);
   body.append('client_reference_id', params.orderId);
@@ -58,10 +62,10 @@ export async function createStripeCheckoutSession(params: CreateSessionParams): 
   // Shipping item if cost > 0
   if (params.shippingCost > 0) {
     const sIndex = params.items.length;
-    const shippingLabel = SHIPPING_LABELS[params.shippingMethod] || 'Μεταφορικά';
+    const shippingLabel = SHIPPING_LABELS[params.shippingMethod] || (locale === 'en' ? 'Delivery' : 'Μεταφορικά');
     body.append(`line_items[${sIndex}][price_data][currency]`, 'eur');
     body.append(`line_items[${sIndex}][price_data][unit_amount]`, String(Math.round(params.shippingCost * 100)));
-    body.append(`line_items[${sIndex}][price_data][product_data][name]`, `Έξοδα Αποστολής (${shippingLabel})`);
+    body.append(`line_items[${sIndex}][price_data][product_data][name]`, `${locale === 'en' ? 'Shipping' : 'Έξοδα Αποστολής'} (${shippingLabel})`);
     body.append(`line_items[${sIndex}][quantity]`, '1');
   }
 

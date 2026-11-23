@@ -31,6 +31,9 @@ export interface ArtMediaItem {
 }
 
 export interface ArtItem {
+  titleEn?: string;
+  descriptionEn?: string;
+  mediumEn?: string;
   portfolioOrder?: number;
   id: string;
   title: string;
@@ -63,6 +66,8 @@ export interface PurchaseLink {
 }
 
 export interface JewelryItem {
+  titleEn?: string;
+  descriptionEn?: string;
   id: string;
   name?: string;
   title?: string;

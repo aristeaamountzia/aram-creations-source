@@ -8,6 +8,7 @@ export interface BackofficeAiInput {
   task?: string;
   prompt?: string;
   mode?: string;
+  language?: string;
   imageDataUrl?: string;
   imageDataUrls?: string[];
 }
@@ -48,6 +49,13 @@ export function buildBackofficeAiPrompt(input: BackofficeAiInput): string {
   const product = input.product || {};
   const task = normalizeAiTask(input.task);
   const extra = text(input.prompt, 800);
+  const bilingual = input.language === 'bilingual' && normalizeAiMode(input.mode) === 'product' && task !== 'tags';
+  const translations = bilingual
+    ? `\nΓράψε τα ελληνικά πεδία κανονικά και πρόσθεσε φυσική αγγλική μετάφραση στα πεδία ${task === 'title' ? 'titleEn' : task === 'description' ? 'descriptionEn' : 'titleEn και descriptionEn'}. Χρησιμοποίησε τα ίδια πραγματικά στοιχεία και στις δύο γλώσσες.`
+    : '';
+  const existingEnglishCopy = bilingual && (product.titleEn || product.descriptionEn)
+    ? `- Υπάρχων αγγλικός τίτλος: ${productField(product, 'titleEn')}\n- Υπάρχουσα αγγλική περιγραφή: ${productField(product, 'descriptionEn')}\n`
+    : '';
   const requestedFields = task === 'title' ? 'title'
     : task === 'description' ? 'description'
       : task === 'tags' ? 'colors (array), materials (array), tags (array)' : '';
@@ -86,12 +94,12 @@ ${extra ? `- Ειδική απαίτηση: ${extra}` : ''}${qualityRules}
 - Κατηγορία: ${productField(product, 'category')}
 - Συλλογή: ${productField(product, 'collection')}
 - Περιγραφή: ${productField(product, 'description', 'notes')}
-- Τιμή: ${productField(product, 'price')}
+${existingEnglishCopy}- Τιμή: ${productField(product, 'price')}
 - Υλικά: ${listField(product, 'materials')}
 - Χρώματα: ${listField(product, 'colors')}
 - Εργασία: ${task}
 ${extra ? `- Ειδική απαίτηση: ${extra}` : ''}${qualityRules}
-Απάντησε αποκλειστικά με έγκυρο JSON με πεδία ${requestedFields || 'title, description, category, colors (array), materials (array), tags (array), shortDescription, instagramCaption, altText'}.`;
+Απάντησε αποκλειστικά με έγκυρο JSON με πεδία ${requestedFields || 'title, description, category, colors (array), materials (array), tags (array), shortDescription, instagramCaption, altText'}.${translations}`;
 }
 
 function normalizedWords(value: string): string[] {
@@ -152,6 +160,8 @@ function validatedList(raw: Record<string, unknown>, key: string): string[] | un
 
 export function validateBackofficeAiSuggestion(raw: Record<string, unknown>, input: BackofficeAiInput): Record<string, unknown> {
   const task = normalizeAiTask(input.task);
+  const bilingual = input.language === 'bilingual' && normalizeAiMode(input.mode) === 'product' && task !== 'tags';
+  const englishCopy = { titleEn: raw.titleEn, descriptionEn: raw.descriptionEn };
   // Focused actions must neither fail on nor apply unrelated provider fields.
   if (task === 'title') raw = { title: raw.title };
   else if (task === 'description') raw = { description: raw.description };
@@ -185,6 +195,18 @@ export function validateBackofficeAiSuggestion(raw: Record<string, unknown>, inp
   for (const [key, max] of fields) {
     const value = key === 'title' ? title : key === 'description' ? description : validatedString(raw, key, max);
     if (value !== undefined) output[key] = value;
+  }
+  if (bilingual) {
+    const englishFields = [['titleEn', 160], ['descriptionEn', 2_000]] as const;
+    for (const [key, max] of englishFields) {
+      if ((task === 'title' && key !== 'titleEn') || (task === 'description' && key !== 'descriptionEn')) continue;
+      const value = validatedString(englishCopy, key, max);
+      if (!value || !/[a-z]/i.test(value) || hasNearbyRepetition(value) ||
+          (key === 'descriptionEn' && normalizedWords(value).length < 8)) {
+        throw new AiSuggestionValidationError('Το AI δεν επέστρεψε ολοκληρωμένο αγγλικό κείμενο.');
+      }
+      output[key] = value;
+    }
   }
   for (const key of ['colors', 'materials', 'tags']) {
     const value = validatedList(raw, key);

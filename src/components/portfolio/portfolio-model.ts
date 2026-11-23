@@ -19,6 +19,9 @@ export type SortOption = 'portfolio_order' | 'year_desc' | 'year_asc' | 'title_a
 export const emptyForm = () => ({
   id: '',
   title: '',
+  titleEn: '',
+  descriptionEn: '',
+  mediumEn: '',
   category: 'handcrafted-memories' as CategoryId,
   year: String(new Date().getFullYear()),
   medium: '',

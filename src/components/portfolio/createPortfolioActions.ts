@@ -78,6 +78,9 @@ export function createPortfolioActions(dependencies: Dependencies) {
     setForm({
       id: item.id,
       title: item.title || item.name || '',
+      titleEn: item.titleEn || '',
+      descriptionEn: item.descriptionEn || '',
+      mediumEn: item.mediumEn || '',
       category: item.category,
       year: item.year || '',
       medium: item.medium || '',

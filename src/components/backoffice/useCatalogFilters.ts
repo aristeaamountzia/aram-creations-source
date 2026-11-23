@@ -1,5 +1,5 @@
 import { isAvailableItem, isUnavailableItem, getEffectiveQty } from './catalog-config';
-import { compareSoldLast, isSoldItem } from '../../lib/stock-edit';
+import { compareSoldLast, isArchivedJewelry, isSoldItem } from '../../lib/stock-edit';
 import { useState, useMemo } from 'react';
 import { ART_ITEMS } from '../../data';
 import type { BackOfficeSharedState } from './backoffice-types';
@@ -15,6 +15,7 @@ export function useCatalogFilters(dependencies: CatalogFiltersDependencies) {
     const [selectedColor, setSelectedColor] = useState('Όλα');
     const [sortBy, setSortBy] = useState('shop_order');
     const [viewMode, setViewMode] = useState('grid');
+    const [archiveView, setArchiveView] = useState<'active' | 'archived'>('active');
 
     const getStatsSegment = (item) => {
         if (statsFilter === 'available') return isAvailableItem(item);
@@ -35,7 +36,7 @@ export function useCatalogFilters(dependencies: CatalogFiltersDependencies) {
         let profit = 0;
 
         jewelryList.forEach(item => {
-            if (!getStatsSegment(item)) return;
+            if (isArchivedJewelry(item) || !getStatsSegment(item)) return;
             const qty = getStatsQuantity(item);
             count += qty;
             value += (Number(item.price || 0)) * qty;
@@ -82,8 +83,9 @@ export function useCatalogFilters(dependencies: CatalogFiltersDependencies) {
         }
 
         let pool = sourceList.filter(item => {
+            if (isArchivedJewelry(item) !== (archiveView === 'archived')) return false;
             const term = searchQuery.toLowerCase();
-            const matchesStatsTab = getStatsSegment(item);
+            const matchesStatsTab = archiveView === 'archived' || getStatsSegment(item);
             const matchesSearch = (item.name || '').toLowerCase().includes(term) ||
                 (item.collection && item.collection.toLowerCase().includes(term)) ||
                 (item.storage && item.storage.toLowerCase().includes(term)) ||
@@ -111,12 +113,12 @@ export function useCatalogFilters(dependencies: CatalogFiltersDependencies) {
         });
 
         return pool;
-    }, [jewelryList, searchQuery, selectedCategory, selectedColor, sortBy, statsFilter]);
+    }, [jewelryList, activeCollection, archiveView, searchQuery, selectedCategory, selectedColor, sortBy, statsFilter]);
 
     return {
         statsFilter, setStatsFilter, searchQuery, setSearchQuery, selectedCategory, setSelectedCategory,
         selectedColor, setSelectedColor, sortBy, setSortBy, viewMode, setViewMode, dashboardStats, statsCopy,
-        filteredAndSortedJewelry
+        filteredAndSortedJewelry, archiveView, setArchiveView
     };
 }
 

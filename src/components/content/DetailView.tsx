@@ -1,3 +1,4 @@
+import { usePublicLanguage } from "../../lib/use-public-language";
 import React, { useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
@@ -17,11 +18,12 @@ export function DetailView({
   onClose,
   onPrevious,
   onNext,
-  previousLabel = 'Προηγούμενο',
-  nextLabel = 'Επόμενο',
+  previousLabel,
+  nextLabel,
   children,
   className = ''
 }: DetailViewProps) {
+  const { t } = usePublicLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -99,17 +101,17 @@ export function DetailView({
       }}
     >
       {onPrevious && (
-        <button type="button" onClick={onPrevious} aria-label={previousLabel} title={previousLabel} className="detail-view-nav detail-view-nav--previous">
+        <button type="button" onClick={onPrevious} aria-label={previousLabel ?? t('Προηγούμενο', 'Previous')} title={previousLabel ?? t('Προηγούμενο', 'Previous')} className="detail-view-nav detail-view-nav--previous">
           <ChevronLeft aria-hidden="true" />
         </button>
       )}
       {onNext && (
-        <button type="button" onClick={onNext} aria-label={nextLabel} title={nextLabel} className="detail-view-nav detail-view-nav--next">
+        <button type="button" onClick={onNext} aria-label={nextLabel ?? t('Επόμενο', 'Next')} title={nextLabel ?? t('Επόμενο', 'Next')} className="detail-view-nav detail-view-nav--next">
           <ChevronRight aria-hidden="true" />
         </button>
       )}
       <div className={`detail-view-panel relative my-auto flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden border bg-white text-stone-900 md:flex-row ${className}`} onClick={event => event.stopPropagation()}>
-        <button data-detail-close type="button" onClick={onClose} aria-label="Κλείσιμο παραθύρου" title="Κλείσιμο (Esc)"
+        <button data-detail-close type="button" onClick={onClose} aria-label={t("Κλείσιμο παραθύρου", "Close dialog")} title={t("Κλείσιμο (Esc)", "Close (Esc)")}
           className="absolute top-3 right-3 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-600 shadow-sm transition hover:bg-stone-100 hover:text-stone-900">
           <X className="h-5 w-5" aria-hidden="true" />
         </button>

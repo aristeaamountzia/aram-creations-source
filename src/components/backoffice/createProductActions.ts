@@ -22,12 +22,12 @@ type ProductActionsDependencies = Pick<
     ProductWorkspace,
     'closeItemEditor' | 'currentItem' | 'formCategory' | 'formCollection' | 'formColorsArr' | 'formCost' |
     'formDate' | 'formDimensions' | 'formManualLikes' | 'formManualViews' | 'formMaterials' | 'formName' |
-    'formNotes' | 'formOriginalPrice' | 'formPostedPlatforms' | 'formPrice' | 'formPrivateMediaList' |
+    'formNotes' | 'formEnglishCopy' | 'formOriginalPrice' | 'formPostedPlatforms' | 'formPrice' | 'formPrivateMediaList' |
     'formPurchaseLinks' | 'formShopMediaList' | 'formShopOrder' | 'formStatus' | 'formStock' | 'formStorage' |
     'formWeight' | 'isDetailOpen' | 'isEditMode' | 'setActiveDetailMediaIdx' | 'setCurrentItem' |
     'setFormCategory' | 'setFormCollection' | 'setFormColorsArr' | 'setFormCost' | 'setFormDate' |
     'setFormDimensions' | 'setFormManualLikes' | 'setFormManualViews' | 'setFormMaterials' | 'setFormName' |
-    'setFormNotes' | 'setFormOriginalPrice' | 'setFormPostedPlatforms' | 'setFormPrice' |
+    'setFormNotes' | 'setFormEnglishCopy' | 'setFormOriginalPrice' | 'setFormPostedPlatforms' | 'setFormPrice' |
     'setFormPrivateMediaList' | 'setFormPurchaseLinks' | 'setFormShopMediaList' | 'setFormShopOrder' |
     'setFormStatus' | 'setFormStock' | 'setFormStorage' | 'setFormWeight' | 'setIsAddOpen' |
     'setIsCustomCategory' | 'setIsCustomCollection' | 'setIsCustomPostedSite' | 'setIsCustomPurchaseSite' |
@@ -47,13 +47,13 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
     const {
         closeItemEditor, currentItem, customCategories, customStatuses, ensureShopCategoryOrder, formCategory,
         formCollection, formColorsArr, formCost, formDate, formDimensions, formManualLikes, formManualViews,
-        formMaterials, formName, formNotes, formOriginalPrice, formPostedPlatforms, formPrice,
+        formMaterials, formName, formNotes, formEnglishCopy, formOriginalPrice, formPostedPlatforms, formPrice,
         formPrivateMediaList, formPurchaseLinks, formShopMediaList, formShopOrder, formStatus, formStock,
         formStorage, formWeight, isDetailOpen, isEditMode, isSaving, jewelryList, mediaPreparing,
         pushUndoAction, pushVersionHistory, refreshSmartSuggestionsFromMain, rememberCustomValues,
         setActiveDetailMediaIdx, setCurrentItem, setCustomCategories, setCustomStatuses, setFormCategory,
         setFormCollection, setFormColorsArr, setFormCost, setFormDate, setFormDimensions, setFormManualLikes,
-        setFormManualViews, setFormMaterials, setFormName, setFormNotes, setFormOriginalPrice,
+        setFormManualViews, setFormMaterials, setFormName, setFormNotes, setFormEnglishCopy, setFormOriginalPrice,
         setFormPostedPlatforms, setFormPrice, setFormPrivateMediaList, setFormPurchaseLinks,
         setFormShopMediaList, setFormShopOrder, setFormStatus, setFormStock, setFormStorage, setFormWeight,
         setIsAddOpen, setIsCustomCategory, setIsCustomCollection, setIsCustomPostedSite,
@@ -77,6 +77,7 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
         setFormPostedPlatforms([]); setNewPostedSite('Instagram'); setNewPostedUrl(''); setNewPostedVisible(false); setIsCustomPostedSite(false);
 
         setFormNotes('');
+        setFormEnglishCopy({ title: '', description: '' });
         setFormShopMediaList([]);
         setFormPrivateMediaList([]);
         setUploadProgress(0); setUploadStatus('');
@@ -100,6 +101,7 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
                     setFormDimensions(draft.formDimensions || '');
                     setFormStorage(draft.formStorage || '');
                     setFormNotes(draft.formNotes || '');
+                    setFormEnglishCopy({ title: String(draft.formEnglishCopy?.title || ''), description: String(draft.formEnglishCopy?.description || '') });
                     setFormMaterials(draft.formMaterials || []);
                     setFormColorsArr(draft.formColorsArr || []);
                     setFormPurchaseLinks(draft.formPurchaseLinks || []);
@@ -123,6 +125,7 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
         setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock ?? 1); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
         setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
         setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(stripVintedCondition(item.notes || ''));
+        setFormEnglishCopy({ title: item.titleEn || '', description: item.descriptionEn || '' });
 
         const existingPurchaseLinks = item.purchaseLinks || item.productLinks || [];
         setFormPurchaseLinks(existingPurchaseLinks);
@@ -155,6 +158,7 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
         setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(0);
         setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
         setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(item.notes || '');
+        setFormEnglishCopy({ title: item.titleEn || '', description: item.descriptionEn || '' });
 
         const existingPurchaseLinks = item.purchaseLinks || item.productLinks || [];
         setFormPurchaseLinks(existingPurchaseLinks);
@@ -325,6 +329,14 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
             const sanitizedPurchaseLinks = formPurchaseLinks.map(l => ({ site: l.site || '', url: l.url || '' }));
             const sanitizedPostedPlatforms = formPostedPlatforms.map(p => ({ site: p.site || '', url: p.url || '', showInShop: p.showInShop !== false }));
 
+            const previousCopy = isEditMode ? currentItem : null;
+            const englishCopy = {
+                titleEn: formEnglishCopy.title.trim().slice(0, 160),
+                descriptionEn: formEnglishCopy.description.trim().slice(0, 2000),
+            };
+            const englishChanges = Object.fromEntries(
+                Object.entries(englishCopy).filter(([field, value]) => value !== (previousCopy?.[field] || ''))
+            );
             const itemData: CatalogRecord = {
                 name: formName.trim(),
                 category: catTrimmed,
@@ -350,6 +362,7 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
                 purchaseLinks: sanitizedPurchaseLinks,
                 postedPlatforms: sanitizedPostedPlatforms,
                 notes: stripVintedCondition(formNotes.trim()),
+                ...englishChanges,
                 imageUrl: mainImage.url,
                 fileType: mainImage.type,
                 mediaList: finalMediaUrls,
@@ -364,6 +377,9 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
                     const latest = snapshot.data();
                     assertUnchangedInventory(currentItem, latest);
                     assertInventoryChangeAllowed(latest, itemData);
+                    if (Object.keys(englishChanges).some(field => (latest[field] || '') !== (currentItem[field] || ''))) {
+                        throw new Error('Το αγγλικό κείμενο άλλαξε από άλλη ενέργεια. Άνοιξε ξανά τη φόρμα.');
+                    }
                     if (!equalHistoryValue(currentItem.mediaList, latest.mediaList) || currentItem.imageUrl !== latest.imageUrl) {
                         throw new Error('Οι εικόνες του προϊόντος άλλαξαν. Άνοιξε ξανά τη φόρμα.');
                     }

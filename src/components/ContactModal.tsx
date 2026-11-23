@@ -1,3 +1,5 @@
+import { localizedArt } from '../lib/portfolio-copy';
+import { usePublicLanguage } from "../lib/use-public-language";
 import { useDialogKeyboard } from '../lib/use-dialog-keyboard';
 import React, { useState } from 'react';
 import { ArtItem } from '../types';
@@ -14,13 +16,14 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onClose,
   artItem,
 }) => {
+  const { locale, t } = usePublicLanguage();
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    interest: artItem ? `Έργο: ${artItem.title} (${artItem.category})` : 'Γενική Ανάθεση / Συνεργασία',
+    interest: artItem ? t(`Έργο: ${artItem.title}`, `Artwork: ${localizedArt(artItem, locale).title}`) : t("Γενική Ανάθεση / Συνεργασία", "General enquiry or collaboration"),
     message: '',
   });
 
@@ -50,12 +53,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.error || `Αποτυχία αποστολής μηνύματος (Κωδικός ${response.status}).`);
+        throw new Error(t(data.error || `Αποτυχία αποστολής μηνύματος (Κωδικός ${response.status}).`, 'Your message could not be sent. Please try again.'));
       }
 
       setSubmitted(true);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Παρουσιάστηκε σφάλμα κατά την αποστολή. Παρακαλούμε δοκιμάστε ξανά.');
+      setErrorMessage(err.message || t("Παρουσιάστηκε σφάλμα κατά την αποστολή. Παρακαλούμε δοκιμάστε ξανά.", "The message could not be sent. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
@@ -73,15 +76,13 @@ export const ContactModal: React.FC<ContactModalProps> = ({
       >
         <div className="flex items-center justify-between pb-4 border-b border-stone-200">
           <div>
-            <h2 id="contact-title" className="studio-dialog-title">
-              Επικοινωνία με το εργαστήριο
-            </h2>
+            <h2 id="contact-title" className="studio-dialog-title">{t("Επικοινωνία με το εργαστήριο", "Contact the studio")}</h2>
           </div>
           <button 
             type="button"
             onClick={handleClose} 
             className="p-1 rounded-lg text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition cursor-pointer"
-            aria-label="Κλείσιμο παραθύρου"
+            aria-label={t("Κλείσιμο παραθύρου", "Close dialog")}
           >
             <X className="w-5 h-5" />
           </button>
@@ -93,11 +94,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               <CheckCircle2 className="w-7 h-7" />
             </div>
             <div className="space-y-1.5">
-              <h4 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>
-                Το μήνυμά σας εστάλη επιτυχώς
-              </h4>
-              <p className="text-xs text-stone-600 max-w-xs mx-auto leading-relaxed">
-                Ευχαριστούμε για την επικοινωνία. Το μήνυμά σας παραδόθηκε άμεσα στο atelier και θα λάβετε απάντηση στη διεύθυνση <span className="font-bold text-stone-900">{formData.email}</span>.
+              <h4 className="text-xl font-bold text-stone-900" style={{ fontFamily: 'inherit' }}>{t("Το μήνυμά σας εστάλη επιτυχώς", "Your message was sent")}</h4>
+              <p className="text-xs text-stone-600 max-w-xs mx-auto leading-relaxed">{t("Ευχαριστούμε για την επικοινωνία. Το μήνυμά σας παραδόθηκε άμεσα στο atelier και θα λάβετε απάντηση στη διεύθυνση ", "Thank you for getting in touch. We’ll reply to ")}<span className="font-bold text-stone-900">{formData.email}</span>.
               </p>
             </div>
             <div className="pt-2">
@@ -105,9 +103,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 type="button"
                 onClick={handleClose}
                 className="px-6 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition"
-              >
-                Κλείσιμο
-              </button>
+              >{t("Κλείσιμο", "Close")}</button>
             </div>
           </div>
         ) : (
@@ -120,14 +116,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             )}
 
             <div>
-              <label htmlFor="contact-name" className="block text-sm text-stone-700 mb-1 font-semibold">
-                Ονοματεπώνυμο *
-              </label>
+              <label htmlFor="contact-name" className="block text-sm text-stone-700 mb-1 font-semibold">{t("Ονοματεπώνυμο *", "Full name *")}</label>
               <input id="contact-name" autoComplete="name"
                 required
                 type="text"
                 disabled={isSubmitting}
-                placeholder="π.χ. Μαρία Παπαδοπούλου"
+                placeholder={t("π.χ. Μαρία Παπαδοπούλου", "e.g. Maria Smith")}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition disabled:opacity-60"
@@ -135,9 +129,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             </div>
 
             <div>
-              <label htmlFor="contact-email" className="block text-sm text-stone-700 mb-1 font-semibold">
-                Email Επικοινωνίας *
-              </label>
+              <label htmlFor="contact-email" className="block text-sm text-stone-700 mb-1 font-semibold">{t("Email Επικοινωνίας *", "Email address *")}</label>
               <input id="contact-email" autoComplete="email"
                 required
                 type="email"
@@ -150,9 +142,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             </div>
 
             <div>
-              <label htmlFor="contact-interest" className="block text-sm text-stone-700 mb-1 font-semibold">
-                Αντικείμενο Ενδιαφέροντος
-              </label>
+              <label htmlFor="contact-interest" className="block text-sm text-stone-700 mb-1 font-semibold">{t("Αντικείμενο Ενδιαφέροντος", "Subject")}</label>
               <input id="contact-interest"
                 type="text"
                 disabled={isSubmitting}
@@ -163,14 +153,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             </div>
 
             <div>
-              <label htmlFor="contact-message" className="block text-sm text-stone-700 mb-1 font-semibold">
-                Μήνυμα / Περιγραφή Ανάθεσης *
-              </label>
+              <label htmlFor="contact-message" className="block text-sm text-stone-700 mb-1 font-semibold">{t("Μήνυμα / Περιγραφή Ανάθεσης *", "Message or commission details *")}</label>
               <textarea id="contact-message"
                 required
                 rows={3}
                 disabled={isSubmitting}
-                placeholder="Περιγράψτε το σχέδιο, τα υλικά ή τις προτιμήσεις σας..."
+                placeholder={t("Περιγράψτε το σχέδιο, τα υλικά ή τις προτιμήσεις σας...", "Describe the design, materials, or ideas you have in mind…")}
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition disabled:opacity-60"
@@ -186,12 +174,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Αποστολή μηνύματος μέσω Resend...</span>
+                    <span>{t("Αποστολή μηνύματος μέσω Resend...", "Sending your message…")}</span>
                   </>
                 ) : (
                   <>
                     <Send className="w-3.5 h-3.5" />
-                    <span>Αποστολή Μηνύματος</span>
+                    <span>{t("Αποστολή Μηνύματος", "Send message")}</span>
                   </>
                 )}
               </button>

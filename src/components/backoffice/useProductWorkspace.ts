@@ -65,6 +65,7 @@ export function useProductWorkspace(dependencies: ProductWorkspaceDependencies) 
     };
 
     const [formNotes, setFormNotes] = useState('');
+    const [formEnglishCopy, setFormEnglishCopy] = useState({ title: '', description: '' });
     const [isCustomCategory, setIsCustomCategory] = useState(false);
     const [isCustomCollection, setIsCustomCollection] = useState(false);
     const [isCustomStatus, setIsCustomStatus] = useState(false);
@@ -85,6 +86,7 @@ export function useProductWorkspace(dependencies: ProductWorkspaceDependencies) 
                     formDimensions,
                     formStorage,
                     formNotes,
+                    formEnglishCopy,
                     formMaterials,
                     formColorsArr,
                     formPurchaseLinks,
@@ -93,7 +95,7 @@ export function useProductWorkspace(dependencies: ProductWorkspaceDependencies) 
             }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [formName, formCategory, formCollection, formStatus, formDate, formPrice, formCost, formStock, formWeight, formDimensions, formStorage, formNotes, formMaterials, formColorsArr, formPurchaseLinks, formPostedPlatforms, isAddOpen, isEditMode, isSaving]);
+    }, [formName, formCategory, formCollection, formStatus, formDate, formPrice, formCost, formStock, formWeight, formDimensions, formStorage, formNotes, formEnglishCopy, formMaterials, formColorsArr, formPurchaseLinks, formPostedPlatforms, isAddOpen, isEditMode, isSaving]);
 
     const handleDragOver = (e) => {
         e.preventDefault();
@@ -137,7 +139,7 @@ export function useProductWorkspace(dependencies: ProductWorkspaceDependencies) 
         setIsCustomPurchaseSite, formPostedPlatforms, setFormPostedPlatforms, newPostedSite, setNewPostedSite,
         newPostedUrl, setNewPostedUrl, newPostedVisible, setNewPostedVisible, isCustomPostedSite,
         setIsCustomPostedSite, formShopMediaList, setFormShopMediaList, formPrivateMediaList,
-        setFormPrivateMediaList, prepareEditorMediaFiles, closeItemEditor, formNotes, setFormNotes,
+        setFormPrivateMediaList, prepareEditorMediaFiles, closeItemEditor, formNotes, setFormNotes, formEnglishCopy, setFormEnglishCopy,
         isCustomCategory, setIsCustomCategory, isCustomCollection, setIsCustomCollection, isCustomStatus,
         setIsCustomStatus, handleDragTagStart, handleDropTag
     };

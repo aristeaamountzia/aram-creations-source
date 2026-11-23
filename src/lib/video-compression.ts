@@ -45,6 +45,7 @@ export async function prepareVideoUpload(file: File, onProgress: (value: VideoPr
     await readMediaMetadata(result, 'video');
   }
   if (signal?.aborted) throw new DOMException('Η μετατροπή ακυρώθηκε.', 'AbortError');
-  onProgress({ text: `Συμπίεση ολοκληρώθηκε: ${videoSize(file.size)} → ${videoSize(result.size)}.`, percent: 100 });
+  const action = result.size < file.size ? 'Συμπίεση' : 'Μετατροπή';
+  onProgress({ text: `${action} ολοκληρώθηκε: ${videoSize(file.size)} → ${videoSize(result.size)}.`, percent: 100 });
   return result;
 }

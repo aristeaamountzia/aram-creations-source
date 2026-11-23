@@ -7,7 +7,6 @@ import { auth } from '../../firebase';
 import type { CatalogOptions } from './useCatalogOptions';
 import type { BackOfficeSharedState } from './backoffice-types';
 import type { ProductWorkspace } from './useProductWorkspace';
-import type { MediaStudio } from './useMediaStudio';
 import type { ShopSettingsController } from './useShopSettings';
 
 type ProductAiDependencies = Pick<
@@ -19,23 +18,22 @@ type ProductAiDependencies = Pick<
     Pick<
     ProductWorkspace,
     'formCategory' | 'formColorsArr' | 'formCost' | 'formDate' | 'formDimensions' | 'formMaterials' |
-    'formName' | 'formNotes' | 'formPostedPlatforms' | 'formPrice' | 'formPrivateMediaList' |
+    'formName' | 'formNotes' | 'formEnglishCopy' | 'formPostedPlatforms' | 'formPrice' | 'formPrivateMediaList' |
     'formPurchaseLinks' | 'formShopMediaList' | 'formStatus' | 'formStock' | 'formStorage' | 'formWeight' |
     'setFormCategory' | 'setFormCollection' | 'setFormColorsArr' | 'setFormMaterials' | 'setFormName' |
-    'setFormNotes' | 'setFormStatus' | 'setFormStock' | 'setIsCustomCategory' | 'setIsCustomCollection' |
+    'setFormNotes' | 'setFormEnglishCopy' | 'setFormStatus' | 'setFormStock' | 'setIsCustomCategory' | 'setIsCustomCollection' |
     'setIsCustomStatus'
 > &
-    Pick<MediaStudio, 'loadEditableImage'> &
     Pick<ShopSettingsController, 'setActiveSettingsTab' | 'setIsSettingsOpen' | 'shopSettings'>;
 
 export function useProductAi(dependencies: ProductAiDependencies) {
     const {
         allAvailableColors, allAvailableMaterials, allAvailablePlatforms, allCollections, allFormCategories,
         allFormStatuses, currentUser, formCategory, formColorsArr, formCost, formDate, formDimensions,
-        formMaterials, formName, formNotes, formPostedPlatforms, formPrice, formPrivateMediaList,
+        formMaterials, formName, formNotes, formEnglishCopy, formPostedPlatforms, formPrice, formPrivateMediaList,
         formPurchaseLinks, formShopMediaList, formStatus, formStock, formStorage, formWeight,
-        loadEditableImage, rememberCustomValues, setActiveSettingsTab, setFormCategory, setFormCollection,
-        setFormColorsArr, setFormMaterials, setFormName, setFormNotes, setFormStatus, setFormStock,
+        rememberCustomValues, setActiveSettingsTab, setFormCategory, setFormCollection,
+        setFormColorsArr, setFormMaterials, setFormName, setFormNotes, setFormEnglishCopy, setFormStatus, setFormStock,
         setIsCustomCategory, setIsCustomCollection, setIsCustomStatus, setIsSettingsOpen, shopSettings
     } = dependencies;
 
@@ -86,6 +84,8 @@ export function useProductAi(dependencies: ProductAiDependencies) {
         const mainMedia = imageMedia[0] || null;
         return {
             name: formName,
+            titleEn: formEnglishCopy.title,
+            descriptionEn: formEnglishCopy.description,
             category: formCategory,
             collection: '',
             status: formStatus,
@@ -111,7 +111,7 @@ export function useProductAi(dependencies: ProductAiDependencies) {
         };
     };
 
-    const getAiImageDataUrls = () => prepareAiImages(getAiImageMediaCandidates(), loadEditableImage);
+    const getAiImageDataUrls = () => prepareAiImages(getAiImageMediaCandidates());
 
     const normalizeAiList = (value) => {
         if (Array.isArray(value)) return value.map(item => String(item || '').trim()).filter(Boolean);
@@ -124,6 +124,8 @@ export function useProductAi(dependencies: ProductAiDependencies) {
         return {
             title: suggestion.title || suggestion.name || '',
             description: suggestion.description || suggestion.notes || '',
+            titleEn: suggestion.titleEn || '',
+            descriptionEn: suggestion.descriptionEn || '',
             shortDescription: suggestion.shortDescription || '',
             category: suggestion.category || '',
             collection: '',
@@ -136,7 +138,7 @@ export function useProductAi(dependencies: ProductAiDependencies) {
         };
     };
 
-    const handleBackofficeAiGenerate = async (task = 'full') => {
+    const handleBackofficeAiGenerate = async (task = 'full', language: 'el' | 'bilingual' = 'el') => {
         const endpoint = getBackofficeAiEndpoint();
         if (!endpoint) {
             setAiProductError('Προσθέστε πρώτα Back-office AI endpoint στις ρυθμίσεις AI.');
@@ -147,6 +149,7 @@ export function useProductAi(dependencies: ProductAiDependencies) {
 
         setIsAiProductWorking(true);
         setAiProductError('');
+        setAiProductDraft(null);
         try {
             const imageDataUrls = await getAiImageDataUrls();
             const imageDataUrl = imageDataUrls[0] || '';
@@ -157,7 +160,7 @@ export function useProductAi(dependencies: ProductAiDependencies) {
             const data = await requestBackofficeAi({
                     mode: 'backoffice_product',
                     task,
-                    language: 'el',
+                    language,
                     prompt: aiProductPrompt,
                     product: getFormProductPayload(),
                     options: {
@@ -196,6 +199,12 @@ export function useProductAi(dependencies: ProductAiDependencies) {
         if (!aiProductDraft) return;
         if (aiProductDraft.title && (!fillOnly || !formName.trim())) setFormName(aiProductDraft.title);
         if (aiProductDraft.description && (!fillOnly || !formNotes.trim())) setFormNotes(aiProductDraft.description);
+        if (aiProductDraft.titleEn || aiProductDraft.descriptionEn) {
+            setFormEnglishCopy(previous => ({
+                title: (!fillOnly || !previous.title.trim()) && aiProductDraft.titleEn ? aiProductDraft.titleEn : previous.title,
+                description: (!fillOnly || !previous.description.trim()) && aiProductDraft.descriptionEn ? aiProductDraft.descriptionEn : previous.description,
+            }));
+        }
         if (aiProductDraft.category && (!fillOnly || !formCategory.trim())) applyAiCategory(aiProductDraft.category);
         if (aiProductDraft.colors.length && (!fillOnly || formColorsArr.length === 0)) {
             const nextColors = fillOnly ? aiProductDraft.colors : mergeUnique(formColorsArr, aiProductDraft.colors);

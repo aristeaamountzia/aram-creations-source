@@ -7,6 +7,9 @@ export interface PortfolioMediaEntry {
 
 export interface PortfolioRecordForm {
   title: string;
+  titleEn?: string;
+  descriptionEn?: string;
+  mediumEn?: string;
   category: string;
   year: string;
   medium: string;
@@ -41,6 +44,9 @@ export function buildPortfolioRecord(form: PortfolioRecordForm, updatedAt: unkno
   return {
     title: form.title.trim(),
     name: form.title.trim(),
+    ...(form.titleEn !== undefined ? { titleEn: form.titleEn.trim() } : {}),
+    ...(form.descriptionEn !== undefined ? { descriptionEn: form.descriptionEn.trim() } : {}),
+    ...(form.mediumEn !== undefined ? { mediumEn: form.mediumEn.trim() } : {}),
     category: form.category,
     year: form.year.trim(),
     medium: form.medium.trim(),

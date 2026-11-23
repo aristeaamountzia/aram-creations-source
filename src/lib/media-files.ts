@@ -41,6 +41,22 @@ export async function editableBlob(media: any, signal?: AbortSignal) {
   if (media.fileObj) return media.fileObj as Blob;
   return (await mediaResponse(typeof media === 'string' ? media : media.url, signal)).blob();
 }
+export async function loadMediaImage(media: { url: string; fileObj?: File }) {
+  // The authenticated endpoint gives stored images a same-origin path.
+  const blob = !media.fileObj && isStoredMedia(media.url) && auth.currentUser
+    ? await requestMedia(media.url, 'read').then(response => response.blob()).catch(() => editableBlob(media))
+    : await editableBlob(media);
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return { img, cleanup: () => URL.revokeObjectURL(url) };
+  } catch {
+    URL.revokeObjectURL(url);
+    throw new Error('Το αρχείο δεν μπορεί να αποκωδικοποιηθεί ως εικόνα.');
+  }
+}
 export async function downloadMedia(media: any, filename = 'aram-media') {
   const source = typeof media === 'string' ? { url: media } : media;
   if (!source) throw new Error('Δεν υπάρχει αρχείο για λήψη.');

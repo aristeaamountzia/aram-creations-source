@@ -98,7 +98,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
         ...catalogHistory, isSaving, jewelryList, setIsSaving
     });
     const productAi = useProductAi({
-        ...catalogOptions, ...productWorkspace, ...mediaStudio, ...shopSettingsController, currentUser
+        ...catalogOptions, ...productWorkspace, ...shopSettingsController, currentUser
     });
     const { mediaPreparing, setVideoProgress } = mediaUploads;
     const {
@@ -110,12 +110,12 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
     const {
         dashboardStats, filteredAndSortedJewelry, searchQuery, selectedCategory, selectedColor, setSearchQuery,
         setSelectedCategory, setSelectedColor, setSortBy, setStatsFilter, setViewMode, sortBy, statsCopy,
-        statsFilter, viewMode
+        statsFilter, viewMode, archiveView, setArchiveView
     } = catalogFilters;
     const { allFilterCategories, allFilterColors, allFormStatuses, getStatusColor } = catalogOptions;
     const { closeImageEditor, imageEditorTarget, isApplyingImageEdit } = mediaStudio;
     const {
-        clearBulkSelection, dragOverProductId, draggedProductId, handleBulkDelete, handleBulkDuplicate,
+        clearBulkSelection, dragOverProductId, draggedProductId, handleBulkArchive, isArchiving, handleBulkDelete, handleBulkDuplicate,
         handleLassoStart, handleMoveShopOrder, handleProductDragEnd, handleProductDragOver,
         handleProductDragStart, handleProductDrop, handleProductSelectionClick, isBulkOpen,
         isShopOrderMoveDisabled, lassoRect, productGridRef, selectItem, selectVisibleItems, selectedItemIds,
@@ -182,7 +182,8 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
             }
             user.getIdTokenResult(true).then((tokenResult) => {
                 if (version !== authVersion) return;
-                setIsAdminClaim(tokenResult.claims.admin === true || user.email?.toLowerCase() === 'aristeaamnta@gmail.com');
+                setIsAdminClaim(tokenResult.claims.admin === true ||
+                    (tokenResult.claims.email === 'aristeaamnta@gmail.com' && tokenResult.claims.email_verified === true));
             }).catch((error) => {
                 if (version !== authVersion) return;
                 console.error('Could not verify admin claim:', error);
@@ -412,22 +413,30 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                 categories={[{ id: 'Όλα', label: 'Όλες οι Κατηγορίες' }, ...allFilterCategories.map(category => ({ id: category, label: category }))]}
                 selectedCategory={selectedCategory} onCategory={setSelectedCategory}
                 actions={<>
-                <select className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 focus:outline-none focus:border-stone-400 text-sm" value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)}>
+                <select aria-label="Ενεργά ή αρχειοθετημένα προϊόντα" value={archiveView} disabled={isArchiving}
+                    onChange={event => {
+                        setArchiveView(event.target.value === 'archived' ? 'archived' : 'active');
+                        clearBulkSelection();
+                    }} className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 text-sm">
+                    <option value="active">Ενεργός κατάλογος</option>
+                    <option value="archived">Αρχείο προϊόντων</option>
+                </select>
+                <select aria-label="Φίλτρο χρώματος" className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 focus:outline-none focus:border-stone-400 text-sm" value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)}>
                     <option value="Όλα">Όλα τα Χρώματα</option>
                     {allFilterColors.map(col => <option key={col} value={col}>{col}</option>)}
                 </select>
-                <select className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 focus:outline-none focus:border-stone-400 text-sm" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <select aria-label="Ταξινόμηση προϊόντων" className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 focus:outline-none focus:border-stone-400 text-sm" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                     <option value="entry_new">Νεότερα</option>
                     <option value="entry_old">Παλαιότερα</option>
                     <option value="shop_order">Σειρά Shop</option>
                     <option value="date_made_new">Ημ. Κατασκευής (Νεότερα)</option>
-                    <option value="date_made_old">Ημ. Κατασκευής (Pαλαιότερα)</option>
+                    <option value="date_made_old">Ημ. Κατασκευής (Παλαιότερα)</option>
                     <option value="name_asc">Όνομα (Α-Ω)</option>
                     <option value="name_desc">Όνομα (Ω-Α)</option>
                 </select>
-                <div className="flex border border-stone-200 rounded-lg overflow-hidden md:ml-auto">
-                    <button onClick={() => setViewMode('grid')} className={`p-2 transition ${viewMode === 'grid' ? 'bg-stone-200 text-stone-800' : 'bg-white text-stone-400 hover:text-stone-600'}`}><IconGrid /></button>
-                    <button onClick={() => setViewMode('list')} className={`p-2 transition ${viewMode === 'list' ? 'bg-stone-200 text-stone-800' : 'bg-white text-stone-400 hover:text-stone-600'}`}><IconList /></button>
+                <div role="group" aria-label="Διάταξη καταλόγου" className="flex border border-stone-200 rounded-lg overflow-hidden md:ml-auto">
+                    <button type="button" aria-label="Πλέγμα" aria-pressed={viewMode === 'grid'} onClick={() => setViewMode('grid')} className={`p-2 transition ${viewMode === 'grid' ? 'bg-stone-200 text-stone-800' : 'bg-white text-stone-400 hover:text-stone-600'}`}><IconGrid /></button>
+                    <button type="button" aria-label="Λίστα" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} className={`p-2 transition ${viewMode === 'list' ? 'bg-stone-200 text-stone-800' : 'bg-white text-stone-400 hover:text-stone-600'}`}><IconList /></button>
                 </div>
                 </>} />
             </div>
@@ -443,6 +452,10 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                 </div>
                 {selectedItemIds.length > 0 && (
                     <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={isArchiving} onClick={() => handleBulkArchive(archiveView === 'active')} className="px-4 py-2 border border-stone-200 rounded-lg text-xs font-bold disabled:opacity-50">
+                            {isArchiving ? 'Ενημέρωση…' : archiveView === 'active' ? 'Αρχειοθέτηση' : 'Επαναφορά στο Shop'}
+                        </button>
+                        {archiveView === 'active' && <>
                         <VintedRefresh statuses={allFormStatuses} items={selectedItems} sourceUrl={getVintedSourceUrl} endpoint={getVintedApis().link} pricing={(basePrice) => ({
                             vintedBasePrice: basePrice,
                             buyerFixed: parseVintedMoney(vintedPricingSettings.buyerFixed),
@@ -455,6 +468,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                         })} />
                         <button onClick={() => setIsBulkOpen(true)} className="px-4 py-2 bg-stone-900 text-white rounded-lg text-xs font-bold hover:bg-stone-800 transition">Μαζική επεξεργασία</button>
                         <button onClick={handleBulkDuplicate} className="px-4 py-2 bg-stone-100 text-stone-700 rounded-lg text-xs font-bold hover:bg-stone-200 transition">Αντιγραφή</button>
+                        </>}
                         <button onClick={handleBulkDelete} className="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg text-xs font-bold hover:bg-rose-100 transition">Διαγραφή</button>
                         <button onClick={clearBulkSelection} className="px-4 py-2 bg-white border border-stone-200 text-stone-500 rounded-lg text-xs font-bold hover:bg-stone-50 transition">Καθαρισμός</button>
                     </div>
@@ -550,7 +564,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                                         <div className="flex justify-between items-center pt-3 border-t border-stone-100">
                                             <span className={`font-bold ${isSold ? 'text-stone-400' : 'text-stone-900'}`}>{item.price ? `${item.price}€` : '-'}</span>
                                             <div className="flex gap-1">
-                                                {!isSold && (
+                                                {archiveView === 'active' && !isSold && (
                                                     <button type="button" onClick={(e) => handleQuickSold(e, item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="Γρήγορη Πώληση"><IconBolt /></button>
                                                 )}
                                                 <button type="button" onClick={() => handleCloneItem(item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-stone-500 hover:bg-stone-100 hover:text-stone-800 rounded-lg transition" title="Αντιγραφή"><IconClone /></button>
@@ -616,7 +630,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                                     <div className="flex gap-1 mt-3 md:mt-0 w-full md:w-auto justify-end border-t border-stone-100 md:border-none pt-3 md:pt-0">
                                         <button type="button" onClick={(e) => { e.stopPropagation(); handleMoveShopOrder(item, 'up'); }} disabled={isShopOrderMoveDisabled(item, 'up')} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-amber-700 disabled:text-stone-300 hover:bg-amber-50 rounded-lg transition" title="Πιο πάνω στο Shop">↑</button>
                                         <button type="button" onClick={(e) => { e.stopPropagation(); handleMoveShopOrder(item, 'down'); }} disabled={isShopOrderMoveDisabled(item, 'down')} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-amber-700 disabled:text-stone-300 hover:bg-amber-50 rounded-lg transition" title="Πιο κάτω στο Shop">↓</button>
-                                        {!isSold && (
+                                        {archiveView === 'active' && !isSold && (
                                             <button type="button" onClick={(e) => handleQuickSold(e, item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="Γρήγορη Πώληση"><IconBolt /></button>
                                         )}
                                         <button type="button" onClick={() => handleCloneItem(item)} className="p-2 min-w-[32px] min-h-[32px] flex items-center justify-center text-stone-500 hover:bg-stone-200 rounded-lg transition" title="Αντιγραφή"><IconClone /></button>

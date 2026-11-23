@@ -1,21 +1,7 @@
-import { editableBlob } from './media-files';
+import { loadMediaImage } from './media-files';
 
 type AiMedia = { url: string; type?: string; fileObj?: File; fileName?: string };
 type LoadedImage = { img: HTMLImageElement; cleanup: () => void };
-
-export async function loadMediaImage(media: AiMedia): Promise<LoadedImage> {
-  const url = URL.createObjectURL(await editableBlob(media));
-  try {
-    const img = new Image();
-    img.referrerPolicy = 'no-referrer';
-    img.src = url;
-    await img.decode();
-    return { img, cleanup: () => URL.revokeObjectURL(url) };
-  } catch {
-    URL.revokeObjectURL(url);
-    throw new Error('Το αρχείο δεν μπορεί να αποκωδικοποιηθεί ως εικόνα.');
-  }
-}
 
 /** Keep the same three-image, 768px JPEG input for both admin workspaces. */
 export async function prepareAiImages(media: AiMedia[], loadImage = loadMediaImage): Promise<string[]> {

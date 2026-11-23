@@ -1,3 +1,4 @@
+import { usePublicLanguage } from "../lib/use-public-language";
 import React, { useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { VideoPlayer } from './VideoPlayer';
@@ -13,6 +14,7 @@ interface ImageLightboxProps {
 
 /** Shared media viewer for Shop, Portfolio and back-office import previews. */
 export function ImageLightbox({ images, index, title, onIndexChange, onClose }: ImageLightboxProps) {
+  const { t } = usePublicLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const touchRef = useRef<{ x: number; y: number } | null>(null);
@@ -56,11 +58,11 @@ export function ImageLightbox({ images, index, title, onIndexChange, onClose }: 
 
   if (!images.length) return null;
 
-  return <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={`Πλήρης οθόνη — ${title}`} className="image-lightbox" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
-    <button ref={closeRef} type="button" className="image-lightbox-close" aria-label="Κλείσιμο μεγέθυνσης (Esc)" onClick={onClose}><X aria-hidden="true" /></button>
+  return <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t(`Πλήρης οθόνη — ${title}`, `Full screen — ${title}`)} className="image-lightbox" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
+    <button ref={closeRef} type="button" className="image-lightbox-close" aria-label={t("Κλείσιμο μεγέθυνσης (Esc)", "Close full screen (Esc)")} onClick={onClose}><X aria-hidden="true" /></button>
     {images.length > 1 && <>
-      <button type="button" className="image-lightbox-prev" aria-label="Προηγούμενο αρχείο" onClick={() => move(-1)}><ChevronLeft aria-hidden="true" /></button>
-      <button type="button" className="image-lightbox-next" aria-label="Επόμενο αρχείο" onClick={() => move(1)}><ChevronRight aria-hidden="true" /></button>
+      <button type="button" className="image-lightbox-prev" aria-label={t("Προηγούμενο αρχείο", "Previous file")} onClick={() => move(-1)}><ChevronLeft aria-hidden="true" /></button>
+      <button type="button" className="image-lightbox-next" aria-label={t("Επόμενο αρχείο", "Next file")} onClick={() => move(1)}><ChevronRight aria-hidden="true" /></button>
     </>}
     <div className="image-lightbox-stage"
       onTouchStart={event => { touchRef.current = event.touches.length === 1 ? { x: event.touches[0].clientX, y: event.touches[0].clientY } : null; }}
@@ -78,8 +80,8 @@ export function ImageLightbox({ images, index, title, onIndexChange, onClose }: 
     </div>
     <div className="image-lightbox-caption">
       <p>{title}</p>
-      <p role="status" aria-live="polite">{isVideo ? 'Βίντεο' : 'Εικόνα'} {current + 1} από {images.length}</p>
-      {isVideo && videoLink(media.url) && <a className="lightbox-external-link" href={videoLink(media.url)!.original} target="_blank" rel="noopener noreferrer">Άνοιγμα στον πάροχο βίντεο</a>}
+      <p role="status" aria-live="polite">{isVideo ? t("Βίντεο", "Video") : t("Εικόνα", "Image")} {current + 1}{t(" από ", " of ")}{images.length}</p>
+      {isVideo && videoLink(media.url) && <a className="lightbox-external-link" href={videoLink(media.url)!.original} target="_blank" rel="noopener noreferrer">{t("Άνοιγμα στον πάροχο βίντεο", "Open on the video provider’s site")}</a>}
     </div>
   </div>;
 }

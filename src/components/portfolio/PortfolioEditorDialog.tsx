@@ -215,6 +215,18 @@ export function PortfolioEditorDialog(props: Props) {
                   className="w-full rounded-xl border border-stone-200 p-3 text-xs bg-stone-50 focus:bg-white outline-none resize-none"
                 />
               </div>
+              <details className="space-y-3 rounded-xl border border-stone-200 p-3">
+                <summary className="cursor-pointer text-xs font-bold">Αγγλική έκδοση</summary>
+                <label className="block space-y-1 text-xs"><span>Τίτλος</span>
+                  <input lang="en" value={form.titleEn} maxLength={160} onChange={e => setForm({ ...form, titleEn: e.target.value })} className="w-full rounded-xl border border-stone-200 p-3" />
+                </label>
+                <label className="block space-y-1 text-xs"><span>Υλικό / τεχνική</span>
+                  <input lang="en" value={form.mediumEn} maxLength={200} onChange={e => setForm({ ...form, mediumEn: e.target.value })} className="w-full rounded-xl border border-stone-200 p-3" />
+                </label>
+                <label className="block space-y-1 text-xs"><span>Περιγραφή</span>
+                  <textarea lang="en" value={form.descriptionEn} rows={4} maxLength={4000} onChange={e => setForm({ ...form, descriptionEn: e.target.value })} className="w-full rounded-xl border border-stone-200 p-3" />
+                </label>
+              </details>
             </>
           )}
 

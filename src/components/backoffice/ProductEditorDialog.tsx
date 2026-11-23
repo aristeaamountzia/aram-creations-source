@@ -18,7 +18,7 @@ type ProductEditorDialogProps = Pick<
     ProductWorkspace,
     'activeFormTab' | 'closeItemEditor' | 'currentItem' | 'formCategory' | 'formCollection' | 'formColorsArr' |
     'formCost' | 'formDate' | 'formDimensions' | 'formManualLikes' | 'formManualViews' | 'formMaterials' |
-    'formName' | 'formNotes' | 'formOriginalPrice' | 'formPostedPlatforms' | 'formPrice' |
+    'formName' | 'formNotes' | 'formEnglishCopy' | 'formOriginalPrice' | 'formPostedPlatforms' | 'formPrice' |
     'formPrivateMediaList' | 'formPurchaseLinks' | 'formShopMediaList' | 'formStatus' | 'formStock' |
     'formStorage' | 'formWeight' | 'handleDragTagStart' | 'handleDropTag' | 'isAddOpen' | 'isCustomCategory' |
     'isCustomCollection' | 'isCustomPostedSite' | 'isCustomPurchaseSite' | 'isCustomStatus' |
@@ -26,7 +26,7 @@ type ProductEditorDialogProps = Pick<
     'newPostedUrl' | 'newPostedVisible' | 'newPurchaseSite' | 'newPurchaseUrl' | 'setActiveFormTab' |
     'setFormCategory' | 'setFormCollection' | 'setFormColorsArr' | 'setFormCost' | 'setFormDate' |
     'setFormDimensions' | 'setFormManualLikes' | 'setFormManualViews' | 'setFormMaterials' | 'setFormName' |
-    'setFormNotes' | 'setFormOriginalPrice' | 'setFormPostedPlatforms' | 'setFormPrice' |
+    'setFormNotes' | 'setFormEnglishCopy' | 'setFormOriginalPrice' | 'setFormPostedPlatforms' | 'setFormPrice' |
     'setFormPrivateMediaList' | 'setFormPurchaseLinks' | 'setFormShopMediaList' | 'setFormStatus' |
     'setFormStock' | 'setFormStorage' | 'setFormWeight' | 'setIsCustomCategory' | 'setIsCustomCollection' |
     'setIsCustomPostedSite' | 'setIsCustomPurchaseSite' | 'setIsCustomStatus' | 'setIsCustomStorage' |
@@ -70,7 +70,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
         allAvailableMaterials, allAvailablePlatforms, allCollections, allFormCategories, allFormStatuses,
         allStorages, applyAiProductDraft, canRestoreMediaOriginal, closeItemEditor, currentItem,
         duplicateNameInfo, formCategory, formCollection, formColorsArr, formCost, formDate, formDimensions,
-        formManualLikes, formManualViews, formMaterials, formName, formNotes, formOriginalPrice,
+        formManualLikes, formManualViews, formMaterials, formName, formNotes, formEnglishCopy, formOriginalPrice,
         formPostedPlatforms, formPrice, formPrivateMediaList, formPurchaseLinks, formShopMediaList, formStatus,
         formStock, formStorage, formWeight, getBackofficeAiEndpoint, getColorSwatch, getStatusColor,
         handleAddColor, handleAddMaterial, handleAddPostedPlatform, handleAddPurchaseLink,
@@ -82,7 +82,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
         newColorHex, newColorInput, newMaterialInput, newPostedSite, newPostedUrl, newPostedVisible,
         newPurchaseSite, newPurchaseUrl, openImageEditor, refreshSmartSuggestionsFromMain, setActiveFormTab,
         setAiProductPrompt, setFormCategory, setFormCollection, setFormColorsArr, setFormCost, setFormDate,
-        setFormDimensions, setFormManualLikes, setFormManualViews, setFormMaterials, setFormName, setFormNotes,
+        setFormDimensions, setFormManualLikes, setFormManualViews, setFormMaterials, setFormName, setFormNotes, setFormEnglishCopy,
         setFormOriginalPrice, setFormPostedPlatforms, setFormPrice, setFormPrivateMediaList,
         setFormPurchaseLinks, setFormShopMediaList, setFormStatus, setFormStock, setFormStorage, setFormWeight,
         setIsCustomCategory, setIsCustomCollection, setIsCustomPostedSite, setIsCustomPurchaseSite,
@@ -276,6 +276,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                     <div className="space-y-3">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <button type="button" onClick={() => handleBackofficeAiGenerate('full')} disabled={isAiProductWorking} className="px-4 py-2 bg-stone-900 text-white rounded-lg text-xs font-bold hover:bg-stone-800 disabled:opacity-50 transition shadow-xs">Πλήρης πρόταση</button>
+                                            <button type="button" onClick={() => handleBackofficeAiGenerate('full', 'bilingual')} disabled={isAiProductWorking} className="px-4 py-2 border border-stone-200 rounded-lg text-xs font-bold disabled:opacity-50">Ελληνικά + Αγγλικά</button>
                                             <button type="button" onClick={() => handleBackofficeAiGenerate('title')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-stone-200 text-stone-800 rounded-lg text-xs font-bold hover:bg-stone-100 disabled:opacity-50 transition">Τίτλος</button>
                                             <button type="button" onClick={() => handleBackofficeAiGenerate('description')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-stone-200 text-stone-800 rounded-lg text-xs font-bold hover:bg-stone-100 disabled:opacity-50 transition">Περιγραφή</button>
                                             <button type="button" onClick={() => handleBackofficeAiGenerate('tags')} disabled={isAiProductWorking} className="px-4 py-2 bg-white border border-stone-200 text-stone-800 rounded-lg text-xs font-bold hover:bg-stone-100 disabled:opacity-50 transition">Χρώματα / Υλικά</button>
@@ -333,6 +334,12 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                             {aiProductDraft.colors.length > 0 && <div><span className="font-black text-stone-500">Χρώματα:</span> <span className="text-stone-800">{aiProductDraft.colors.join(', ')}</span></div>}
                                             {aiProductDraft.materials.length > 0 && <div><span className="font-black text-stone-500">Υλικά:</span> <span className="text-stone-800">{aiProductDraft.materials.join(', ')}</span></div>}
                                             {aiProductDraft.description && <p className="border-t border-violet-50 pt-2 leading-relaxed text-stone-700">{aiProductDraft.description}</p>}
+                                            {(aiProductDraft.titleEn || aiProductDraft.descriptionEn) && (
+                                                <div lang="en" className="space-y-1 border-t border-stone-200 pt-2">
+                                                    {aiProductDraft.titleEn && <p className="font-bold">{aiProductDraft.titleEn}</p>}
+                                                    {aiProductDraft.descriptionEn && <p className="leading-relaxed">{aiProductDraft.descriptionEn}</p>}
+                                                </div>
+                                            )}
                                             {aiProductDraft.instagramCaption && <p className="border-t border-violet-50 pt-2 leading-relaxed text-stone-500">{aiProductDraft.instagramCaption}</p>}
                                         </div>
                                     )}
@@ -344,8 +351,8 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                             <h3 className="text-sm font-black text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Βασικα Στοιχεια</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="md:col-span-2">
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Όνομα Δημιουργίας *</label>
-                                    <input required type="text" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formName} onChange={e => setFormName(e.target.value)} />
+                                    <label htmlFor="shop-product-name" className="block text-xs font-bold text-stone-600 mb-1">Όνομα Δημιουργίας *</label>
+                                    <input id="shop-product-name" required type="text" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formName} onChange={e => setFormName(e.target.value)} />
                                     {duplicateNameInfo && (
                                         <div className="mt-2 border border-amber-200 bg-amber-50 rounded-xl p-3">
                                             <p className="text-xs font-bold text-amber-800">Υπάρχει ήδη καταχώρηση με αυτό το όνομα: {duplicateNameInfo.duplicate.name}</p>
@@ -427,8 +434,8 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                             <h3 className="text-sm font-black text-emerald-600/70 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Οικονομικα & Αποθεμα</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Τιμή Πώλησης (€)</label>
-                                    <input type="number" step="any" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formPrice} onChange={e => setFormPrice(e.target.value)} />
+                                    <label htmlFor="shop-product-price" className="block text-xs font-bold text-stone-600 mb-1">Τιμή Πώλησης (€)</label>
+                                    <input id="shop-product-price" type="number" step="any" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formPrice} onChange={e => setFormPrice(e.target.value)} />
                                 </div>
                                 <div>
                                     <div className="flex items-center justify-between mb-1">
@@ -698,6 +705,19 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                 <label className="block text-xs font-bold text-stone-600 mb-1">Περιγραφή / σημειώσεις προϊόντος</label>
                                 <textarea className="w-full border border-stone-200 rounded-lg px-4 py-3 h-24 bg-white focus:bg-white outline-none resize-none" value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Περιγραφή που μπορείς να επεξεργαστείς πριν εμφανιστεί στο shop..."></textarea>
                             </div>
+                            <details className="rounded-xl border border-stone-200 p-3" open={formEnglishCopy.title || formEnglishCopy.description ? true : undefined}>
+                                <summary className="cursor-pointer text-sm font-bold">Αγγλικό κείμενο για εξαγωγή</summary>
+                                <div className="mt-3 space-y-3">
+                                    <label className="block text-xs font-bold">Αγγλικός τίτλος
+                                        <input lang="en" maxLength={160} value={formEnglishCopy.title} onChange={event => setFormEnglishCopy({ ...formEnglishCopy, title: event.target.value })}
+                                            className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2" />
+                                    </label>
+                                    <label className="block text-xs font-bold">Αγγλική περιγραφή
+                                        <textarea lang="en" rows={4} maxLength={2000} value={formEnglishCopy.description} onChange={event => setFormEnglishCopy({ ...formEnglishCopy, description: event.target.value })}
+                                            className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2" />
+                                    </label>
+                                </div>
+                            </details>
                         </section>
 
                     </form>

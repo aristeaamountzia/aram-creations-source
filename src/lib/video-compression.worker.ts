@@ -15,8 +15,9 @@ scope.onmessage = async ({ data: { file, stripAudio } }) => {
     if (video.codec === 'hevc' || !await video.canDecode()) throw new Error('Απαιτείται μετατροπή του codec βίντεο.');
     const keepAudio = Boolean(audio && !stripAudio);
     if (keepAudio && !await audio.canDecode()) throw new Error('Απαιτείται μετατροπή του codec ήχου.');
+    const compatibleSource = file.type === 'video/mp4' && video.codec === 'avc' ? file.size : undefined;
     for (let attempt = 0; attempt < 2; attempt++) {
-      const plan = videoEncodingPlan(width, height, duration, keepAudio, attempt > 0);
+      const plan = videoEncodingPlan(width, height, duration, keepAudio, attempt > 0, compatibleSource);
       const videoCodec = await getFirstEncodableVideoCodec(['avc'], { width: plan.width, height: plan.height, bitrate: plan.bitrate, frameRate: 30 });
       const audioCodec = keepAudio ? await getFirstEncodableAudioCodec(['aac'], { numberOfChannels: 2, sampleRate: 48000, bitrate: plan.audioBitrate }) : null;
       if (!videoCodec || (keepAudio && !audioCodec)) throw new Error('Απαιτείται μετατροπή σε MP4/H.264/AAC.');

@@ -4,6 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { normalizeOrder, priceOrder, nextStatus, OrderError } from '../../server/orders-core';
 import { notifyOrder } from '../../server/order-notifications';
+import { localizedName } from '../../src/lib/public-copy';
 import { createStripeCheckoutSession, retrieveStripeCheckoutSession } from '../../server/stripe-service';
 import { cancelOrder, initialOrderStatus, markStripeOrderPaid, resolveStripeOrderId, reservationPatch } from '../../server/order-lifecycle';
 import { cancelUnpaidCheckout, closeUnpaidStripeCheckout, hashCancelToken } from '../../server/checkout-cancellation';
@@ -150,6 +151,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
       }
 
       const input = normalizeOrder(parsedBody);
+      const checkoutLocale = parsedBody.locale === 'en' ? 'en' as const : 'el' as const;
       let cancelToken = input.paymentMethod === 'stripe' ? randomBytes(32).toString('base64url') : '';
       const requestHash = createHash('sha256').update(JSON.stringify(input)).digest('hex');
       const now = new Date();
@@ -191,6 +193,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
             shippingCost: data.shippingCost,
             status: data.status,
             items: data.items,
+            checkoutLocale: data.checkoutLocale === 'en' ? 'en' as const : 'el' as const,
             checkoutUrl: stripeCheckoutUrl
           };
         }
@@ -225,6 +228,7 @@ export function createOrdersHandler(connect: typeof database = database, notify:
           ...priced,
           ...(cancelToken ? { checkoutCancelTokenHash: hashCancelToken(cancelToken), checkoutCancelToken: cancelToken } : {}),
           customer: input.customer,
+          checkoutLocale,
           shippingMethod: input.shippingMethod,
           paymentMethod: input.paymentMethod,
           number,
@@ -260,13 +264,14 @@ export function createOrdersHandler(connect: typeof database = database, notify:
           subtotal: priced.subtotal,
           shippingCost: priced.shippingCost,
           status: initialOrderStatus(input.paymentMethod),
-          items: priced.items
+          items: priced.items,
+          checkoutLocale
         };
       });
 
       if (input.paymentMethod === 'stripe') {
         if (['paid', 'shipped', 'delivered'].includes(receipt.status)) {
-          const { created: _created, ...publicReceipt } = receipt;
+          const { created: _created, checkoutLocale: _checkoutLocale, ...publicReceipt } = receipt;
           return reply({ ok: true, order: publicReceipt }, 200, origin);
         }
         if (stripeCheckoutUrl) {
@@ -292,9 +297,10 @@ export function createOrdersHandler(connect: typeof database = database, notify:
           try {
             const session = await createStripeCheckoutSession({
               orderId: receipt.id,
+              locale: receipt.checkoutLocale,
               orderNumber: receipt.number,
               items: (receipt.items || []).map((it: any) => ({
-                name: it.name || 'Χειροποίητο κόσμημα',
+                name: localizedName(it, receipt.checkoutLocale) || (receipt.checkoutLocale === 'en' ? 'Handmade jewelry' : 'Χειροποίητο κόσμημα'),
                 price: it.price,
                 quantity: it.quantity,
                 imageUrl: it.imageUrl
@@ -328,12 +334,12 @@ export function createOrdersHandler(connect: typeof database = database, notify:
             throw new OrderError(`${stripeErr.message || 'Η Stripe δεν απάντησε.'} Η προσπάθεια έχει αποθηκευτεί· δοκίμασε ξανά με τα ίδια στοιχεία.`, 502);
           }
         }
-        const { created: _created, ...publicReceipt } = receipt;
+        const { created: _created, checkoutLocale: _checkoutLocale, ...publicReceipt } = receipt;
         return reply({ ok: true, order: publicReceipt, checkoutUrl: stripeCheckoutUrl }, 201, origin);
       }
 
       await notify(db, receipt.id).catch(() => console.error('Order email remains queued'));
-      const { created: _created, ...publicReceipt } = receipt;
+      const { created: _created, checkoutLocale: _checkoutLocale, ...publicReceipt } = receipt;
       return reply({ ok: true, order: publicReceipt }, 201, origin);
     } catch (error) {
       if (error instanceof OrderError) return reply({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status, origin);

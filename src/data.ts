@@ -8,7 +8,7 @@ export const CATEGORIES: CategoryInfo[] = [
     subtitle: 'Boutique & Wearable Creations',
     pillar: 'shop',
     pillarLabel: 'The Boutique (E-Shop)',
-    description: 'Μοναδικά χειροποίητα κοσμήματα (σκουλαρίκια, κολιέ, βραχιόλια) με αληθινά άνθη, βότσαλα, χάλκινο σύρμα και υγρό γυαλί.',
+    description: 'Μοναδικά χειροποίητα κοσμήματα (σκουλαρίκια, κολιέ, βραχιόλια) με αληθινά άνθη, βότσαλα και ρητίνη.',
     itemCount: 8,
     coverImage: 'https://static.wixstatic.com/media/a497a5_a2b9c8e3dce5421a93c225998463eba3~mv2.jpg'
   },
@@ -173,8 +173,8 @@ export const JEWELRY_CATALOG: JewelryProduct[] = [
     title: 'Flower Earrings & Natural Bloom Drops',
     subtitle: 'Χειροποίητα σκουλαρίκια με αληθινά άνθη & υγρό γυαλί',
     price: 45,
-    materials: ['Αληθινά πέταλα λουλουδιών', 'Υγρό γυαλί', 'Χάλκινο σύρμα', 'Ασήμι 925'],
-    description: 'Μοναδικά χειροποίητα κοσμήματα δημιουργημένα με αληθινά άνθη λουλουδιών, υγρό γυαλί και χάλκινο σύρμα. Από τη συλλογή κοσμημάτων του Wix.',
+    materials: ['Αληθινά πέταλα λουλουδιών', 'Υγρό γυαλί', 'Ασήμι 925'],
+    description: 'Χειροποίητα κοσμήματα με αληθινά άνθη και ρητίνη.',
     images: [
       'https://static.wixstatic.com/media/a497a5_470534b859b94edd9791a95bdc3dbfea~mv2.jpg',
       'https://static.wixstatic.com/media/a497a5_a2b9c8e3dce5421a93c225998463eba3~mv2.jpg'

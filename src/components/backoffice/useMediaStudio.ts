@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { editableBlob } from '../../lib/media-files';
+import { loadMediaImage } from '../../lib/media-files';
 import type { ProductWorkspace } from './useProductWorkspace';
 import type { ProductMedia } from './useProductMedia';
 
@@ -165,28 +165,13 @@ export function useMediaStudio(dependencies: MediaStudioDependencies) {
         }
     };
 
-    const loadEditableImage = async (media) => {
-        const blob = await editableBlob(media);
-        const url = URL.createObjectURL(blob);
-        try {
-            const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-                const nextImg = new Image();
-                nextImg.referrerPolicy = 'no-referrer';
-                nextImg.onload = () => resolve(nextImg);
-                nextImg.onerror = () => reject(new Error('Το αρχείο δεν είναι έγκυρη στατική εικόνα.'));
-                nextImg.src = url;
-            });
-            return { img, cleanup: () => URL.revokeObjectURL(url) };
-        } catch (error) { URL.revokeObjectURL(url); throw error; }
-    };
-
     const applyImageEditor = async () => {
         if (!imageEditorTarget || !imageEditorMedia || isApplyingImageEdit) return;
         setImageEditorError('');
         setIsApplyingImageEdit(true);
         let loadedImage = null;
         try {
-            loadedImage = await loadEditableImage(imageEditorMedia);
+            loadedImage = await loadMediaImage(imageEditorMedia);
             const img = loadedImage.img;
             const rotate = ((imageEditorSettings.rotate % 360) + 360) % 360;
             const swap = rotate === 90 || rotate === 270;
@@ -329,7 +314,7 @@ export function useMediaStudio(dependencies: MediaStudioDependencies) {
         setImageEditorImageInfo, isApplyingImageEdit, imageEditorMedia, isAnimatedGifMedia,
         IMAGE_EDITOR_ASPECTS, getImageEditorAspect, handleOpenImageEditor, openImageEditor, closeImageEditor,
         getImageEditorPanBounds, clampImageEditorPan, getImageEditorPreviewStyle, startImageEditorDrag,
-        moveImageEditorDrag, stopImageEditorDrag, loadEditableImage, applyImageEditor, canRestoreMediaOriginal,
+        moveImageEditorDrag, stopImageEditorDrag, applyImageEditor, canRestoreMediaOriginal,
         handleRestoreEditedMedia
     };
 }

@@ -21,9 +21,10 @@ export async function transcodeVideoInBrowser(file: File, onProgress: (value: Vi
     const rotation = Math.abs(Number(video.tags?.rotate || video.side_data_list?.find((side: any) => side.rotation)?.rotation || 0));
     const rotated = rotation % 180 === 90;
     const hasAudio = !options?.stripAudio && metadata.streams.some((stream: any) => stream.codec_type === 'audio');
+    const compatibleSource = file.type === 'video/mp4' && video.codec_name === 'h264' ? file.size : undefined;
     for (let attempt = 0; attempt < 2; attempt++) {
       if (signal?.aborted) throw codecAbort();
-      const plan = videoEncodingPlan(Number(rotated ? video.height : video.width), Number(rotated ? video.width : video.height), duration, hasAudio, attempt > 0);
+      const plan = videoEncodingPlan(Number(rotated ? video.height : video.width), Number(rotated ? video.width : video.height), duration, hasAudio, attempt > 0, compatibleSource);
       const progress = ({ time }: { time: number }) => {
         const percent = Math.min(99, Math.max(0, Math.floor(time / 1_000_000 / duration * 100)));
         onProgress({ text: `${attempt ? 'Δεύτερη μετατροπή' : 'Μετατροπή'} ${file.name} σε MP4: ${percent}%`, percent });

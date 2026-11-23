@@ -1,14 +1,15 @@
-type Inventory = { status?: string; stock?: number; checkoutReservations?: Record<string, number> };
+type Inventory = { status?: string; stock?: number; isDeleted?: boolean; deletedAt?: unknown; checkoutReservations?: Record<string, number> };
 
 export const hasActiveReservations = (item: Inventory) => Object.values(item.checkoutReservations || {}).some(quantity => Number(quantity) > 0);
+export const isArchivedJewelry = (item: Pick<Inventory, 'isDeleted' | 'deletedAt'>) => Boolean(item.isDeleted || item.deletedAt);
 
 export function assertInventoryChangeAllowed(latest: Inventory, patch?: Inventory) {
   if (patch && Object.keys(patch).some(key => key === 'checkoutReservations' || key.startsWith('checkoutReservations.'))) {
     throw new Error('Οι δεσμεύσεις αποθέματος αλλάζουν μόνο από τις παραγγελίες.');
   }
   if (!hasActiveReservations(latest)) return;
-  if (!patch || ('stock' in patch && patch.stock !== latest.stock) || ('status' in patch && patch.status !== latest.status)) {
-    throw new Error('Υπάρχει ενεργή παραγγελία. Άλλαξε ή ακύρωσε την παραγγελία πριν αλλάξεις το απόθεμα, την κατάσταση ή διαγράψεις το προϊόν.');
+  if (!patch || ('stock' in patch && patch.stock !== latest.stock) || ('status' in patch && patch.status !== latest.status) || isArchivedJewelry(patch)) {
+    throw new Error('Υπάρχει ενεργή παραγγελία. Ολοκλήρωσέ την ή ακύρωσέ την πριν αλλάξεις το απόθεμα, την κατάσταση ή αρχειοθετήσεις ή διαγράψεις το προϊόν.');
   }
 }
 

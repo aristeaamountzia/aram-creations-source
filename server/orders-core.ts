@@ -33,7 +33,8 @@ export function priceOrder(input: ReturnType<typeof normalizeOrder>, catalog: Ar
     const cents = Math.round(Number(product.price) * 100);
     if (!Number.isFinite(cents) || cents <= 0) throw new OrderError('Ένα προϊόν δεν έχει έγκυρη τιμή. Επικοινώνησε μαζί μας.', 409);
     subtotalCents += cents * requested.quantity;
-    return { ...requested, name: String(product.name || product.title || 'Χειροποίητη δημιουργία'), price: cents / 100, imageUrl: String(product.imageUrl || product.src || '') };
+    const titleEn = typeof product.titleEn === 'string' ? product.titleEn.trim().slice(0, 160) : '';
+    return { ...requested, name: String(product.name || product.title || 'Χειροποίητη δημιουργία'), ...(titleEn ? { titleEn } : {}), price: cents / 100, imageUrl: String(product.imageUrl || product.src || '') };
   });
   const activeShipping = {
     boxnow: customShipping?.boxnow || shipping.boxnow,

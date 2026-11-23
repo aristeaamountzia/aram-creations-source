@@ -1,6 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { prepareAiImages } from '../src/lib/ai-images';
+import { loadMediaImage } from '../src/lib/media-files';
+import { auth } from '../src/firebase';
+
+test('AI reads stored Firebase images through the authenticated same-origin endpoint', async t => {
+  for (const [target, key, value] of [
+    [auth, 'currentUser', { getIdToken: async () => 'test-token' }],
+    [globalThis, 'Image', class { src = ''; async decode() {} }],
+  ] as const) {
+    const original = Object.getOwnPropertyDescriptor(target, key);
+    Object.defineProperty(target, key, { configurable: true, value });
+    t.after(() => original ? Object.defineProperty(target, key, original) : Reflect.deleteProperty(target, key));
+  }
+  const url = 'https://firebasestorage.googleapis.com/v0/b/aramcreations-e1529.firebasestorage.app/o/jewelry%2Fvinted-imports%2Fsample.jpg';
+  const fetch = t.mock.method(globalThis, 'fetch', async (input: string, init: RequestInit) => {
+    assert.equal(input, '/api/media');
+    assert.equal(new Headers(init.headers).get('authorization'), 'Bearer test-token');
+    assert.equal(JSON.parse(String(init.body)).action, 'read');
+    return new Response(new Blob(['fixture'], { type: 'image/jpeg' }));
+  });
+  const image = await loadMediaImage({ url });
+  image.cleanup();
+  assert.equal(fetch.mock.callCount(), 1);
+});
 
 test('AI image preparation reports a failed image instead of silently sending text only', async () => {
   await assert.rejects(prepareAiImages([{ url: 'image' }], async () => { throw new Error('HTTP 403'); }), /εικόνα 1.*HTTP 403/);

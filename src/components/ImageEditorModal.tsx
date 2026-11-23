@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { editableBlob } from '../lib/media-files';
+import { loadMediaImage } from '../lib/media-files';
+import { useDialogKeyboard } from '../lib/use-dialog-keyboard';
+import { imageCropSize, type AspectRatio } from '../lib/image-crop';
 import { X } from 'lucide-react';
 
 export interface ImageEditorModalProps {
@@ -10,8 +12,6 @@ export interface ImageEditorModalProps {
   onClose: () => void;
   onSave: (image: Blob | string) => Promise<void>;
 }
-
-type AspectRatio = 'free' | '1:1' | '4:5' | '16:9';
 
 export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   open,
@@ -28,7 +28,12 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const busy = useRef(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [natural, setNatural] = useState<{ source: string; width: number; height: number }>();
+  const dialog = useDialogKeyboard(open && Boolean(imageUrl), () => { if (!busy.current) onClose(); });
   const isGif = /\.gif(?:$|[?#])/i.test(source);
+  const dimensions = natural?.source === source ? natural : undefined;
+  const crop = imageCropSize(dimensions?.width || 1, dimensions?.height || 1, rotation, aspect);
+  const ratio = crop.width / crop.height;
 
   function adjust(patch: Partial<typeof initial>) {
     setHistory(previous => {
@@ -47,30 +52,21 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     busy.current = true;
     setIsProcessing(true);
     setErrorMessage('');
-    let temporaryUrl: string | undefined;
+    let loaded: Awaited<ReturnType<typeof loadMediaImage>> | undefined;
     try {
       if (rotation === 0 && zoom === 100 && aspect === 'free' && brightness === 100 && contrast === 100 && saturation === 100) {
         if (source !== imageUrl) await onSave(source);
       } else {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = source;
-        try {
-          await img.decode();
-        } catch {
-          temporaryUrl = URL.createObjectURL(await editableBlob({ url: source }));
-          img.src = temporaryUrl;
-          await img.decode();
-        }
-        const sideways = Math.abs(rotation % 180) === 90;
-        const width = sideways ? img.naturalHeight : img.naturalWidth;
-        const height = sideways ? img.naturalWidth : img.naturalHeight;
-        const ratio = aspect === 'free' ? width / height : { '1:1': 1, '4:5': 4 / 5, '16:9': 16 / 9 }[aspect];
+        loaded = await loadMediaImage({ url: source });
+        const { img } = loaded;
+        const size = imageCropSize(img.naturalWidth, img.naturalHeight, rotation, aspect);
         const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(Math.min(width, height * ratio)));
-        canvas.height = Math.max(1, Math.round(Math.min(height, width / ratio)));
+        canvas.width = Math.max(1, Math.round(size.width));
+        canvas.height = Math.max(1, Math.round(size.height));
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Δεν ήταν δυνατή η επεξεργασία της εικόνας.');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(rotation * Math.PI / 180);
@@ -83,7 +79,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Η αποθήκευση της εικόνας απέτυχε.');
     } finally {
-      if (temporaryUrl) URL.revokeObjectURL(temporaryUrl);
+      loaded?.cleanup();
       busy.current = false;
       setIsProcessing(false);
     }
@@ -91,12 +87,14 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
   return (
     <div
+      ref={dialog}
       role="dialog"
       aria-modal="true"
+      tabIndex={-1}
       aria-label="Επεξεργασία Εικόνας"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4"
     >
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-stone-200 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[calc(100dvh-1rem)] sm:max-h-[92dvh] flex flex-col overflow-hidden border border-stone-200">
         {/* Header */}
         <div className="px-6 py-4 border-b border-stone-200 flex items-center justify-between bg-stone-50">
           <div>
@@ -115,34 +113,30 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
         </div>
 
         {errorMessage && (
-          <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 text-xs text-amber-800 flex items-center gap-2">
+          <div role="alert" className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 text-xs text-amber-800 flex items-center gap-2">
             
             <span>{errorMessage}</span>
           </div>
         )}
 
         {/* Content Body: Preview + Controls */}
-        <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-6 p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto grid content-start grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-4 p-3 sm:p-5">
           {/* Visual Preview Box */}
-          <div className="flex flex-col items-center justify-center bg-stone-900 rounded-xl p-4 overflow-hidden min-h-[320px] relative shadow-inner">
+          <div className="flex flex-col items-center justify-center bg-stone-900 rounded-xl p-3 pb-9 md:pb-10 overflow-hidden min-h-40 md:min-h-72 relative shadow-inner">
             <div
-              className={`relative overflow-hidden transition-all duration-200 flex items-center justify-center ${
-                aspect === '1:1'
-                  ? 'aspect-square w-full max-w-[340px]'
-                  : aspect === '4:5'
-                  ? 'aspect-[4/5] w-full max-w-[300px]'
-                  : aspect === '16:9'
-                  ? 'aspect-video w-full max-w-[420px]'
-                  : 'w-full h-full max-h-[380px]'
-              }`}
+              className="relative shrink-0 overflow-hidden bg-white"
+              style={{ aspectRatio: ratio, width: `min(100%, calc(min(38dvh, 420px) * ${ratio}))` }}
             >
               <img
                 src={source}
                 alt={title}
                 referrerPolicy="no-referrer"
-                className="max-h-full max-w-full object-contain transition-transform duration-150"
+                onLoad={event => setNatural({ source, width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}
+                className="absolute left-1/2 top-1/2 max-w-none"
                 style={{
-                  transform: `rotate(${rotation}deg) scale(${zoom / 100})`,
+                  width: dimensions ? `${dimensions.width / crop.width * 100}%` : '100%',
+                  height: dimensions ? `${dimensions.height / crop.height * 100}%` : 'auto',
+                  transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${zoom / 100})`,
                   filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`
                 }}
               />
@@ -173,7 +167,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               <label className="block text-xs font-black uppercase tracking-wider text-stone-500 mb-2">
                 Αναλογία Διαστάσεων (Crop)
               </label>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                 {(
                   [
                     ['free', 'Ελεύθερο'],
@@ -185,6 +179,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   <button
                     key={val}
                     type="button"
+                    aria-pressed={aspect === val}
                     onClick={() => adjust({ aspect: val })}
                     className={`px-2.5 py-2 text-xs font-bold rounded-lg border transition ${
                       aspect === val
@@ -234,6 +229,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               </div>
               <input
                 type="range"
+                aria-label="Ζουμ"
                 min="50"
                 max="250"
                 step="5"
@@ -256,6 +252,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                 </div>
                 <input
                   type="range"
+                  aria-label="Φωτεινότητα"
                   min="50"
                   max="150"
                   step="2"
@@ -272,6 +269,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                 </div>
                 <input
                   type="range"
+                  aria-label="Αντίθεση"
                   min="50"
                   max="150"
                   step="2"
@@ -288,6 +286,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                 </div>
                 <input
                   type="range"
+                  aria-label="Κορεσμός"
                   min="0"
                   max="200"
                   step="5"
@@ -316,7 +315,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-stone-200 bg-stone-50 flex items-center justify-between">
+        <div className="px-3 sm:px-6 py-3 border-t border-stone-200 bg-stone-50 flex flex-wrap gap-2 items-center justify-between">
           <button
             type="button"
             onClick={onClose}
@@ -328,7 +327,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
           <button
             type="button"
             onClick={handleApplyChanges}
-            disabled={isProcessing}
+            disabled={isProcessing || isGif}
             className="px-6 py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-sm font-bold shadow-md transition flex items-center gap-2 disabled:opacity-50"
           >
             {isProcessing ? 'Επεξεργασία…' : 'Εφαρμογή & Αποθήκευση'}

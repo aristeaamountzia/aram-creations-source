@@ -11,6 +11,7 @@ export function PortfolioImageEditor(props: Props) {
   if (!imageEditorTarget) return null;
   return (
     <ImageEditorModal
+      key={imageEditorTarget.url}
       open={Boolean(imageEditorTarget)}
       imageUrl={imageEditorTarget.url}
       title={imageEditorTarget.title}

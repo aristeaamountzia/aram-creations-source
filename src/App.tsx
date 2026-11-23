@@ -1,8 +1,11 @@
 import { ArtistProfileDialog } from './components/ArtistProfile';
 import { initialHeroSnapshot } from './lib/hero-media';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SectionMode, ArtItem, JewelryItem, CartItem } from './types';
-import { searchPages, SITE_URL, studioContent } from './lib/search-content';
+import { searchPage, SITE_URL, searchStructuredData } from './lib/search-content';
+import { localeFromPath, modeFromLocation, publicPath } from './lib/public-locale';
+import { localizedName } from './lib/public-copy';
+import { PublicLanguage, usePublicLanguage } from './lib/use-public-language';
 import { Header } from './components/Header';
 import { ShopView } from './components/ShopView';
 const PortfolioView = React.lazy(() =>
@@ -24,7 +27,7 @@ import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from './firebase';
 import { normalizeShopSettings, ShopSettings, DEFAULT_SHOP_SETTINGS } from './shopSettings';
 import { designStudioCss } from './lib/design-studio';
-import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio } from './lib/design-studio';
+import { DEFAULT_DESIGN_STUDIO, DesignStudio, normalizeDesignStudio, normalizeVisualTheme, type VisualTheme } from './lib/design-studio';
 import { GlobalNotificationToast } from './components/GlobalNotificationToast';
 import { notifyOperationSuccess } from './lib/sound-notifications';
 import { confirmStripePayment } from './lib/stripe-confirmation';
@@ -38,7 +41,7 @@ const getInitialThemeState = () => {
       if (parsed && parsed.designStudio) {
         const ds = normalizeDesignStudio(parsed.designStudio);
         return {
-          visualTheme: (parsed.visualTheme === 'classic' ? 'classic' : 'atelier') as 'atelier' | 'classic',
+          visualTheme: normalizeVisualTheme(parsed.visualTheme),
           designStudioContent: ds,
           designStudioCss: designStudioCss(ds)
         };
@@ -52,30 +55,47 @@ const getInitialThemeState = () => {
   };
 };
 
-export const App: React.FC = () => {
-  const [currentMode, setCurrentMode] = useState<SectionMode>(window.location.pathname.startsWith('/portfolio') ? 'portfolio' : 'shop');
+export const App: React.FC = () => (
+  <PublicLanguage.Provider value={localeFromPath(window.location.pathname)}><Site /></PublicLanguage.Provider>
+);
+
+const Site: React.FC = () => {
+  const { locale, t } = usePublicLanguage();
+  const [currentMode, setCurrentMode] = useState<SectionMode>(() => modeFromLocation(window.location.pathname, window.location.hash));
   const [initialTheme] = useState(getInitialThemeState);
-  const [visualTheme, setVisualTheme] = useState<'atelier' | 'classic'>(initialTheme.visualTheme);
+  const [visualTheme, setVisualTheme] = useState<VisualTheme>(initialTheme.visualTheme);
   const [designStudio, setDesignStudio] = useState<Record<string, string>>(initialTheme.designStudioCss);
   const [designStudioContent, setDesignStudioContent] = useState<DesignStudio>(initialTheme.designStudioContent);
   useEffect(() => {
     for (const [key, value] of Object.entries(designStudio)) document.documentElement.style.setProperty(key, value);
   }, [designStudio]);
-  const hasInitializedHistory = useRef(false);
+  useEffect(() => {
+    document.documentElement.dataset.visualTheme = visualTheme;
+  }, [visualTheme]);
   const selectMode = useCallback((mode: SectionMode) => {
-    const target = mode === 'portfolio' ? '/portfolio/' : mode === 'admin' ? '/#admin' : '/';
+    const target = mode === 'admin' ? publicPath(locale) + '#admin' : publicPath(locale, mode);
     if (`${window.location.pathname}${window.location.hash}` !== target) window.history.pushState(null, '', target);
     setCurrentMode(mode);
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
-    const page = searchPages[currentMode === 'portfolio' ? 'portfolio' : 'shop'];
+    const section = currentMode === 'portfolio' ? 'portfolio' : 'shop';
+    const page = searchPage(section, locale);
+    document.documentElement.lang = currentMode === 'admin' ? 'el' : locale;
     document.title = page.title;
     document.querySelector('link[rel="canonical"]')?.setAttribute('href', SITE_URL + page.path);
     for (const selector of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) document.querySelector(selector)?.setAttribute('content', page.description);
     for (const selector of ['meta[property="og:title"]', 'meta[name="twitter:title"]']) document.querySelector(selector)?.setAttribute('content', page.title);
     document.querySelector('meta[property="og:url"]')?.setAttribute('content', SITE_URL + page.path);
-  }, [currentMode]);
+    document.querySelector('meta[property="og:locale"]')?.setAttribute('content', locale === 'en' ? 'en_GB' : 'el_GR');
+    for (const link of document.querySelectorAll<HTMLLinkElement>('link[hreflang]')) {
+      link.href = SITE_URL + publicPath(link.hreflang === 'en' ? 'en' : 'el', section);
+    }
+    for (const selector of ['meta[property="og:image"]', 'meta[name="twitter:image"]']) document.querySelector(selector)?.setAttribute('content', SITE_URL + page.image);
+    for (const selector of ['meta[property="og:image:alt"]', 'meta[name="twitter:image:alt"]']) document.querySelector(selector)?.setAttribute('content', page.imageAlt);
+    const schema = document.getElementById('aram-schema-jsonld');
+    if (schema) schema.textContent = JSON.stringify(searchStructuredData(page, locale));
+  }, [currentMode, locale]);
 
   // Cart state persisted in localStorage
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
@@ -162,11 +182,11 @@ export const App: React.FC = () => {
       })
       .catch((error) => {
         if (!active) return;
-        setPaymentConfirmation({ status: 'error', error: error instanceof Error ? error.message : String(error) });
+        setPaymentConfirmation({ status: 'error', error: t(error instanceof Error ? error.message : String(error), 'The payment could not be confirmed. Try again.') });
       });
 
     return () => { active = false; controller.abort(); };
-  }, [stripeReturn, confirmationAttempt]);
+  }, [stripeReturn, confirmationAttempt, t]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -174,7 +194,7 @@ export const App: React.FC = () => {
     if (!params.get('session_id') && cancelled) {
       const controller = new AbortController();
       let active = true;
-      setPaymentAlert('Έλεγχος ακύρωσης της συνεδρίας πληρωμής…');
+      setPaymentAlert(t("Έλεγχος ακύρωσης της συνεδρίας πληρωμής…", "Checking checkout cancellation…"));
       fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -192,10 +212,10 @@ export const App: React.FC = () => {
         cleanUrl.searchParams.delete('order_cancelled');
         cleanUrl.searchParams.delete('cancel_token');
         window.history.replaceState(window.history.state, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
-        setPaymentAlert('Η πληρωμή ακυρώθηκε. Τα είδη παραμένουν στην τσάντα αγορών σας.');
+        setPaymentAlert(t("Η πληρωμή ακυρώθηκε. Τα είδη παραμένουν στην τσάντα αγορών σας.", "Payment was cancelled. Your items are still in your bag."));
         setIsCartOpen(true);
       }).catch(error => {
-        if (active) setPaymentAlert(`Η ακύρωση δεν επιβεβαιώθηκε: ${error instanceof Error ? error.message : String(error)}`);
+        if (active) setPaymentAlert(t(`Η ακύρωση δεν επιβεβαιώθηκε: ${error instanceof Error ? error.message : String(error)}`, 'Payment cancellation could not be confirmed. Reload this page to try again.'));
       });
       return () => { active = false; controller.abort(); };
     }
@@ -213,16 +233,9 @@ export const App: React.FC = () => {
   // Handle URL hash #admin and secret keyboard shortcut (Ctrl+Alt+A)
   useEffect(() => {
     const handleHash = () => {
-      if (window.location.hash === '#admin') {
-        setCurrentMode('admin');
-      } else if (window.location.hash.startsWith('#portfolio') || (window.location.hash !== '#shop' && window.location.pathname.startsWith('/portfolio'))) {
-        setCurrentMode('portfolio');
-      } else {
-        setCurrentMode('shop');
-      }
+      setCurrentMode(modeFromLocation(window.location.pathname, window.location.hash));
     };
     if (!window.history.state?.aramShop) window.history.replaceState({ ...(window.history.state || {}), aramShop: true }, '', `${window.location.pathname}${window.location.search}${window.location.hash}`);
-    hasInitializedHistory.current = true;
     handleHash();
     window.addEventListener('hashchange', handleHash);
     window.addEventListener('popstate', handleHash);
@@ -257,13 +270,13 @@ export const App: React.FC = () => {
         return [...prev, { item, quantity: 1, customInscription }];
       }
     });
-    notifyOperationSuccess('Προσθήκη στο Καλάθι', `Το '${item.name || item.title || 'κόσμημα'}' προστέθηκε επιτυχώς.`);
+    notifyOperationSuccess(t("Προσθήκη στο Καλάθι", "Added to bag"), t(`Το «${localizedName(item, locale) || 'κόσμημα'}» προστέθηκε στο καλάθι.`, `${localizedName(item, locale) || 'Jewelry'} was added to your bag.`));
     setIsCartOpen(true);
   };
 
   const handleRemoveItem = (itemId: string) => {
     setCartItems((prev) => prev.filter((ci) => ci.item.id !== itemId));
-    notifyOperationSuccess('Ενημέρωση Καλαθιού', 'Το είδος αφαιρέθηκε από το καλάθι.');
+    notifyOperationSuccess(t("Ενημέρωση Καλαθιού", "Bag updated"), t("Το είδος αφαιρέθηκε από το καλάθι.", "The item was removed from your bag."));
   };
 
   const handleClearCart = () => {
@@ -279,7 +292,7 @@ export const App: React.FC = () => {
 
   return (
     <div style={designStudio as React.CSSProperties} data-section={currentMode} data-visual-theme={visualTheme} className="aram-site studio-shell min-h-screen w-full min-w-0 flex flex-col">
-      <a href="#main-content" className="studio-skip">Μετάβαση στο περιεχόμενο</a>
+      <a href="#main-content" className="studio-skip">{t("Μετάβαση στο περιεχόμενο", "Skip to content")}</a>
       {/* Prominent Global Notification Toast with Luxury Audio Feedback */}
       <GlobalNotificationToast />
       {/* Discreet owner banner when admin view is active */}
@@ -296,7 +309,7 @@ export const App: React.FC = () => {
             }}
             className="px-3 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-100 transition flex items-center gap-1.5 border border-stone-600 font-bold text-xs"
           >
-            <span>← Επιστροφή στο Κατάστημα</span>
+            <span>{t("← Επιστροφή στο Κατάστημα", "← Back to Shop")}</span>
           </button>
         </div>
       )}
@@ -325,7 +338,7 @@ export const App: React.FC = () => {
               <div className="min-h-screen flex items-center justify-center p-8 text-stone-500 font-sans">
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-8 h-8 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm font-medium">Φόρτωση Portfolio...</span>
+                  <span className="text-sm font-medium">{t("Φόρτωση Portfolio...", "Loading portfolio…")}</span>
                 </div>
               </div>
             }
@@ -340,17 +353,16 @@ export const App: React.FC = () => {
               <div className="min-h-screen flex items-center justify-center p-8 text-stone-500 font-sans">
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-8 h-8 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm font-medium">Φόρτωση Back-Office...</span>
+                  <span className="text-sm font-medium">{t("Φόρτωση Back-Office...", "Loading Back Office…")}</span>
                 </div>
               </div>
             }
           >
-            <BackOfficeView
+            <PublicLanguage.Provider value="el"><BackOfficeView
               onExit={() => selectMode('shop')}
-            />
+            /></PublicLanguage.Provider>
           </React.Suspense>
         )}
-        {currentMode !== 'admin' && <div className="studio-information mx-auto max-w-5xl px-6 py-12" dangerouslySetInnerHTML={{ __html: studioContent(currentMode === 'portfolio') }} />}
       </main>
 
       {/* Cart Drawer Slide-over */}
@@ -398,15 +410,13 @@ export const App: React.FC = () => {
           {paymentConfirmation.status === 'checking' ? (
             <div className="flex items-center gap-3">
               <span className="w-5 h-5 shrink-0 rounded-full border-2 border-stone-500 border-t-white animate-spin" aria-hidden="true" />
-              <span>Επιβεβαίωση πληρωμής με τη Stripe…</span>
+              <span>{t("Επιβεβαίωση πληρωμής με τη Stripe…", "Confirming payment with Stripe…")}</span>
             </div>
           ) : (
             <>
-              <p>Δεν ολοκληρώθηκε η επιβεβαίωση πληρωμής: {paymentConfirmation.error}</p>
-              <p className="text-xs text-stone-300">Το καλάθι σας παραμένει αποθηκευμένο. Η επανάληψη ελέγχει την ίδια πληρωμή.</p>
-              <button type="button" onClick={() => setConfirmationAttempt(attempt => attempt + 1)} className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-stone-900 hover:bg-stone-100 transition">
-                Επανάληψη ελέγχου
-              </button>
+              <p>{t("Δεν ολοκληρώθηκε η επιβεβαίωση πληρωμής: ", "Payment confirmation could not be completed: ")}{paymentConfirmation.error}</p>
+              <p className="text-xs text-stone-300">{t("Το καλάθι σας παραμένει αποθηκευμένο. Η επανάληψη ελέγχει την ίδια πληρωμή.", "Your bag is saved. Retrying checks the same payment.")}</p>
+              <button type="button" onClick={() => setConfirmationAttempt(attempt => attempt + 1)} className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-stone-900 hover:bg-stone-100 transition">{t("Επανάληψη ελέγχου", "Try again")}</button>
             </>
           )}
         </div>
@@ -417,7 +427,7 @@ export const App: React.FC = () => {
           <button
             onClick={() => setPaymentAlert(null)}
             className="text-stone-400 hover:text-white transition p-1"
-            aria-label="Κλείσιμο"
+            aria-label={t("Κλείσιμο", "Close")}
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -431,32 +441,35 @@ export const App: React.FC = () => {
         <div className="studio-footer-grid">
           <div className="studio-footer-brand">
             <span>{designStudioContent.brandName}</span>
-            <p>Χειροποίητα κοσμήματα.</p>
+            <p>{currentMode === 'portfolio' ? t(designStudioContent.portfolioCaption, 'Art and design') : t(designStudioContent.shopCaption, 'Handmade jewelry')}</p>
           </div>
           <div>
-            <h2>Εξερευνήστε</h2>
-            <a href="/">Shop</a>
-            <a href="/portfolio/">Portfolio</a>
-            <button type="button" onClick={() => setIsAboutOpen(true)}>Βιογραφικό</button>
+            <h2>{t("Σελίδες", "Explore")}</h2>
+            <a href={publicPath(locale)}>{t(designStudioContent.shopNavLabel, "Shop")}</a>
+            <a href={publicPath(locale, "portfolio")}>{t(designStudioContent.portfolioNavLabel, "Portfolio")}</a>
+            <button type="button" onClick={() => setIsAboutOpen(true)}>{t("Βιογραφικό", "About the artist")}</button>
           </div>
           <div>
-            <h2>Επικοινωνία</h2>
-            <button type="button" onClick={() => handleContactArtist()}>Στείλτε μήνυμα</button>
-            <a href="mailto:aristeaamnta@gmail.com">aristeaamnta@gmail.com</a>
-            <a href="https://www.instagram.com/aram.creations/">Instagram</a>
-            <a href="https://www.vinted.gr/member/231329281">Vinted</a>
+            <h2>{t(designStudioContent.contactLabel, 'Contact')}</h2>
+            <button type="button" onClick={() => handleContactArtist()}>{t("Στείλτε μήνυμα", "Send a message")}</button>
+            <a href="mailto:aristeaamnta@gmail.com">Email</a>
           </div>
           <div>
-            <h2>Πληροφορίες</h2>
-            <button type="button" onClick={() => setLegalModalType('terms')}>Όροι χρήσης</button>
-            <button type="button" onClick={() => setLegalModalType('privacy')}>Πολιτική απορρήτου</button>
-            <button type="button" onClick={() => setLegalModalType('returns')}>Αποστολές και επιστροφές</button>
-            <a href="https://linktr.ee/aristeaamnt">Όλα τα κανάλια</a>
-            <div className="studio-footer-social"><a href="https://www.tiktok.com/@aram.creations">TikTok</a><a href="https://www.facebook.com/share/1DmHHwXCMC/">Facebook</a></div>
+            <h2>{t("Πληροφορίες", "Information")}</h2>
+            <button type="button" onClick={() => setLegalModalType('terms')}>{t("Όροι χρήσης", "Terms of use")}</button>
+            <button type="button" onClick={() => setLegalModalType('privacy')}>{t("Πολιτική απορρήτου", "Privacy policy")}</button>
+            <button type="button" onClick={() => setLegalModalType('returns')}>{t("Αποστολές και επιστροφές", "Shipping and returns")}</button>
           </div>
         </div>
         <div className="studio-footer-end">
           <span>© {new Date().getFullYear()} Aram Creations</span>
+          <nav className="studio-footer-social" aria-label={t("Κοινωνικά δίκτυα", "Social media")}>
+            <a href="https://www.instagram.com/aram.creations/">Instagram</a>
+            <a href="https://www.vinted.gr/member/231329281">Vinted</a>
+            <a href="https://www.tiktok.com/@aram.creations">TikTok</a>
+            <a href="https://www.facebook.com/share/1DmHHwXCMC/">Facebook</a>
+            <a href="https://linktr.ee/aristeaamnt">{t("Όλα τα κανάλια", "All links")}</a>
+          </nav>
           <button type="button" onClick={() => selectMode('admin')}><Lock size={14} aria-hidden="true" /> Back Office</button>
         </div>
       </footer>

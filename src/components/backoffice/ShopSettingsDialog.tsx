@@ -191,7 +191,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                         <span>Αξιολογήσεις Vinted</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                             activeSettingsTab === 'reviews' ? 'bg-stone-900 text-white' : 'bg-stone-200/70 text-stone-600'
-                        }`}>${vintedReviewsData.stats.feedbackCount || 10} Κριτικές</span>
+                        }`}>{vintedReviewsData.stats.feedbackCount ?? 10} Κριτικές</span>
                     </button>
                 </div>
 
@@ -215,7 +215,8 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                     {!settingsLoaded && !settingsLoadError && <p role="status" className="text-sm text-stone-600">Φόρτωση κοινών ρυθμίσεων…</p>}
                     <fieldset disabled={!settingsLoaded || isSavingSettings} className="min-w-0 border-0 p-0">
                     {activeSettingsTab === 'design' && (
-                        <DesignStudioSettings value={shopSettings.designStudio}
+                        <DesignStudioSettings value={shopSettings.designStudio} theme={shopSettings.visualTheme}
+                            onThemeChange={visualTheme => setShopSettings(prev => ({ ...prev, visualTheme }))}
                             onChange={value => setShopSettings(prev => ({ ...prev, designStudio: value }))} />
                     )}
 
