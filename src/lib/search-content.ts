@@ -39,7 +39,13 @@ export function searchStructuredData(page: typeof searchPages[keyof typeof searc
       {
         '@type': 'OnlineStore', '@id': SITE_URL + '/#store', name: 'Aram Creations',
         url: SITE_URL + '/', logo: SITE_URL + '/logo.png', description: searchPage('shop', locale).description,
-        sameAs: ['https://www.instagram.com/aram.creations/', 'https://www.vinted.gr/member/231329281'],
+        sameAs: [
+          'https://www.vinted.gr/member/231329281',
+          'https://www.instagram.com/aram.creations/',
+          'https://www.tiktok.com/@aram.creations',
+          'https://www.facebook.com/share/1DmHHwXCMC/',
+          'https://linktr.ee/aristeaamnt',
+        ],
       },
       {
         '@type': 'WebSite', '@id': SITE_URL + '/#website', name: 'Aram Creations', url: SITE_URL + '/',
@@ -73,5 +79,5 @@ export function initialContent(portfolio = false, locale: PublicLocale = 'el') {
   const alternate = english ? 'el' : 'en';
   const shop = publicPath(locale);
   const work = publicPath(locale, 'portfolio');
-  return `<div id="root-loader"><header class="studio-loading-header"><a href="${shop}">aram.creations</a><nav aria-label="${english ? 'Main navigation' : 'Κύρια πλοήγηση'}"><a href="${shop}">Shop</a><a href="${work}">Portfolio</a><a href="${publicPath(alternate, portfolio ? 'portfolio' : 'shop')}" lang="${alternate}">${english ? 'Ελληνικά' : 'English'}</a></nav></header><main>${heroShell(portfolio, locale)}<noscript><p class="studio-noscript">${english ? 'Enable JavaScript to browse the catalog.' : 'Για τον κατάλογο ενεργοποιήστε τη JavaScript.'} <a href="mailto:aristeaamnta@gmail.com">${english ? 'Contact' : 'Επικοινωνία'}</a></p></noscript></main></div>`;
+  return `<div id="root-loader"><header class="studio-loading-header"><a href="${shop}">aram.creations</a><nav aria-label="${english ? 'Main navigation' : 'Κύρια πλοήγηση'}"><a href="${shop}">Shop</a><a href="${work}">Portfolio</a><a href="${publicPath(alternate, portfolio ? 'portfolio' : 'shop')}" lang="${alternate}">${english ? 'Ελληνικά' : 'English'}</a></nav></header><main>${heroShell(portfolio, locale)}<noscript><p class="studio-noscript">${english ? 'Enable JavaScript to browse the catalog.' : 'Για τον κατάλογο ενεργοποιήστε τη JavaScript.'} <a href="mailto:aristeaamnta@gmail.com">${english ? 'Contact' : 'Επικοινωνία'}</a></p><nav class="studio-noscript-nav" aria-label="${english ? 'Site links' : 'Σύνδεσμοι ιστότοπου'}"><a href="${shop}#customer-reviews">${english ? 'Customer Reviews' : 'Αξιολογήσεις'}</a> | <a href="${shop}#artist-profile">${english ? 'Artist Profile' : 'Βιογραφικό'}</a> | <a href="${shop}#contact">${english ? 'Contact' : 'Επικοινωνία'}</a> | <a href="${shop}#terms">${english ? 'Terms of Use' : 'Όροι Χρήσης'}</a> | <a href="${shop}#privacy">${english ? 'Privacy Policy' : 'Πολιτική Απορρήτου'}</a> | <a href="${shop}#returns">${english ? 'Shipping and Returns' : 'Αποστολές και Επιστροφές'}</a></nav></noscript></main></div>`;
 }

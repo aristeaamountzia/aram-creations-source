@@ -110,8 +110,33 @@ const Site: React.FC = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [shopSettingsData, setShopSettingsData] = useState<ShopSettings>(DEFAULT_SHOP_SETTINGS);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const closeAbout = useCallback(() => setIsAboutOpen(false), []);
+  const closeAbout = useCallback(() => {
+    setIsAboutOpen(false);
+    if (window.location.hash === '#artist-profile' || window.location.hash === '#about') {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, []);
   const [legalModalType, setLegalModalType] = useState<LegalPolicyType>(null);
+  const closeLegalModal = useCallback(() => {
+    setLegalModalType(null);
+    if (['#terms', '#privacy', '#returns'].includes(window.location.hash)) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleHashSync = () => {
+      const hash = window.location.hash;
+      if (hash === '#terms') setLegalModalType('terms');
+      else if (hash === '#privacy') setLegalModalType('privacy');
+      else if (hash === '#returns') setLegalModalType('returns');
+      else if (hash === '#artist-profile' || hash === '#about') setIsAboutOpen(true);
+      else if (hash === '#contact') setIsContactOpen(true);
+    };
+    handleHashSync();
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
   // This listener is intentionally presentation-only: the existing shop settings
   // document remains the single source of truth and no commerce data is touched.
   useEffect(() => onSnapshot(doc(db, 'settings', 'shop'), snapshot => {
@@ -379,7 +404,7 @@ const Site: React.FC = () => {
       {/* Legal Policies Modal (Terms, Privacy, Returns) */}
       <LegalModal
         type={legalModalType}
-        onClose={() => setLegalModalType(null)}
+        onClose={closeLegalModal}
         onSelectType={setLegalModalType}
       />
 
@@ -387,7 +412,12 @@ const Site: React.FC = () => {
       <ContactModal
         key={contactArtItem?.id || 'general'}
         isOpen={isContactOpen}
-        onClose={() => setIsContactOpen(false)}
+        onClose={() => {
+          setIsContactOpen(false);
+          if (window.location.hash === '#contact') {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        }}
         artItem={contactArtItem}
       />
 
@@ -447,18 +477,18 @@ const Site: React.FC = () => {
             <h2>{t("Σελίδες", "Explore")}</h2>
             <a href={publicPath(locale)}>{t(designStudioContent.shopNavLabel, "Shop")}</a>
             <a href={publicPath(locale, "portfolio")}>{t(designStudioContent.portfolioNavLabel, "Portfolio")}</a>
-            <button type="button" onClick={() => setIsAboutOpen(true)}>{t("Βιογραφικό", "About the artist")}</button>
+            <a href="#artist-profile" onClick={(e) => { e.preventDefault(); setIsAboutOpen(true); window.location.hash = 'artist-profile'; }}>{t("Βιογραφικό", "About the artist")}</a>
           </div>
           <div>
             <h2>{t(designStudioContent.contactLabel, 'Contact')}</h2>
-            <button type="button" onClick={() => handleContactArtist()}>{t("Στείλτε μήνυμα", "Send a message")}</button>
+            <a href="#contact" onClick={(e) => { e.preventDefault(); handleContactArtist(); window.location.hash = 'contact'; }}>{t("Στείλτε μήνυμα", "Send a message")}</a>
             <a href="mailto:aristeaamnta@gmail.com">Email</a>
           </div>
           <div>
             <h2>{t("Πληροφορίες", "Information")}</h2>
-            <button type="button" onClick={() => setLegalModalType('terms')}>{t("Όροι χρήσης", "Terms of use")}</button>
-            <button type="button" onClick={() => setLegalModalType('privacy')}>{t("Πολιτική απορρήτου", "Privacy policy")}</button>
-            <button type="button" onClick={() => setLegalModalType('returns')}>{t("Αποστολές και επιστροφές", "Shipping and returns")}</button>
+            <a href="#terms" onClick={(e) => { e.preventDefault(); setLegalModalType('terms'); window.location.hash = 'terms'; }}>{t("Όροι χρήσης", "Terms of use")}</a>
+            <a href="#privacy" onClick={(e) => { e.preventDefault(); setLegalModalType('privacy'); window.location.hash = 'privacy'; }}>{t("Πολιτική απορρήτου", "Privacy policy")}</a>
+            <a href="#returns" onClick={(e) => { e.preventDefault(); setLegalModalType('returns'); window.location.hash = 'returns'; }}>{t("Αποστολές και επιστροφές", "Shipping and returns")}</a>
           </div>
         </div>
         <div className="studio-footer-end">
