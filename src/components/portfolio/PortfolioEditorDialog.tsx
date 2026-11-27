@@ -129,10 +129,11 @@ export function PortfolioEditorDialog(props: Props) {
           {editorTab === 'basics' && (
             <>
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
+                <label htmlFor="portfolio-project-title" className="block text-xs font-bold text-stone-700 mb-1">
                   Τίτλος Έργου *
                 </label>
                 <input
+                  id="portfolio-project-title"
                   required
                   value={form.title}
                   onChange={e => setForm({ ...form, title: e.target.value })}
@@ -141,10 +142,11 @@ export function PortfolioEditorDialog(props: Props) {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                  <label htmlFor="portfolio-project-category" className="block text-xs font-bold text-stone-700 mb-1">
                     {design.labels.category}
                   </label>
                   <select
+                    id="portfolio-project-category"
                     value={form.category}
                     onChange={e =>
                       setForm({ ...form, category: e.target.value as CategoryId })
@@ -159,10 +161,11 @@ export function PortfolioEditorDialog(props: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                  <label htmlFor="portfolio-project-status" className="block text-xs font-bold text-stone-700 mb-1">
                     {design.labels.status}
                   </label>
                   <select
+                    id="portfolio-project-status"
                     value={form.status}
                     onChange={e => setForm({ ...form, status: e.target.value })}
                     className="w-full rounded-xl border border-stone-200 p-2.5 text-xs bg-stone-50 focus:bg-white outline-none"
@@ -175,10 +178,11 @@ export function PortfolioEditorDialog(props: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                  <label htmlFor="portfolio-project-year" className="block text-xs font-bold text-stone-700 mb-1">
                     {design.labels.year}
                   </label>
                   <input
+                    id="portfolio-project-year"
                     value={form.year}
                     onChange={e => setForm({ ...form, year: e.target.value })}
                     placeholder="π.χ. 2024"
@@ -186,10 +190,11 @@ export function PortfolioEditorDialog(props: Props) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                  <label htmlFor="portfolio-project-medium" className="block text-xs font-bold text-stone-700 mb-1">
                     {design.labels.medium}
                   </label>
                   <input
+                    id="portfolio-project-medium"
                     list="portfolio-material-options"
                     value={form.medium}
                     onChange={e => setForm({ ...form, medium: e.target.value })}
@@ -204,10 +209,11 @@ export function PortfolioEditorDialog(props: Props) {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
+                <label htmlFor="portfolio-project-description" className="block text-xs font-bold text-stone-700 mb-1">
                   Περιγραφή Έργου
                 </label>
                 <textarea
+                  id="portfolio-project-description"
                   rows={4}
                   value={form.description}
                   onChange={e => setForm({ ...form, description: e.target.value })}
@@ -235,10 +241,11 @@ export function PortfolioEditorDialog(props: Props) {
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                  <label htmlFor="portfolio-project-dimensions" className="block text-xs font-bold text-stone-700 mb-1">
                     {design.labels.dimensions}
                   </label>
                   <input
+                    id="portfolio-project-dimensions"
                     value={form.dimensions}
                     onChange={e => setForm({ ...form, dimensions: e.target.value })}
                     placeholder="π.χ. 45 x 30 cm"
@@ -246,10 +253,11 @@ export function PortfolioEditorDialog(props: Props) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                  <label htmlFor="portfolio-project-origin" className="block text-xs font-bold text-stone-700 mb-1">
                     Προέλευση / Συλλογή
                   </label>
                   <input
+                    id="portfolio-project-origin"
                     value={form.origin}
                     onChange={e => setForm({ ...form, origin: e.target.value })}
                     placeholder="π.χ. Συλλογή Μυθολογία"
@@ -258,10 +266,11 @@ export function PortfolioEditorDialog(props: Props) {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
+                <label htmlFor="portfolio-project-detailsText" className="block text-xs font-bold text-stone-700 mb-1">
                   Πρόσθετες λεπτομέρειες, μία ανά γραμμή
                 </label>
                 <textarea
+                  id="portfolio-project-detailsText"
                   rows={3}
                   value={form.detailsText}
                   onChange={e => setForm({ ...form, detailsText: e.target.value })}

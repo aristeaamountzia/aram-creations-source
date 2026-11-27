@@ -68,6 +68,23 @@ test('auto mode falls back to OpenAI after one Gemini quota failure', async t =>
   assert.deepEqual(result, { title: 'Κυκλαδικό ίχνος' });
 });
 
+test('Gemini rotates keys after quota errors before switching providers', async t => {
+  t.mock.method(console, 'warn', () => {});
+  const keys: Array<string | null> = [];
+  const result = await generateBackofficeAiJson('prompt', [], {
+    AI_PROVIDER: 'gemini',
+    GEMINI_API_KEYS: 'first-key; second-key',
+  }, async (_input, init) => {
+    keys.push(new Headers(init?.headers).get('x-goog-api-key'));
+    if (keys.length === 1) {
+      return Response.json({ error: { code: 429, status: 'RESOURCE_EXHAUSTED' } }, { status: 429 });
+    }
+    return Response.json({ candidates: [{ content: { parts: [{ text: '{"title":"Έργο"}' }] } }] });
+  });
+  assert.deepEqual(keys, ['first-key', 'second-key']);
+  assert.deepEqual(result, { title: 'Έργο' });
+});
+
 test('model-not-found errors try the next configured model', async t => {
   t.mock.method(console, 'warn', () => {});
   const models: string[] = [];

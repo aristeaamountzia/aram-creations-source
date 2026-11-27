@@ -1,6 +1,8 @@
+import { useId } from 'react';
 import { IconX, IconImage, IconBox, IconClone, IconExternalLink } from './icons';
 import { sanitizeVintedDescription as stripVintedCondition } from '../../lib/vinted-sanitizer';
 import { inventoryLabel } from '../../lib/stock-edit';
+import { useDialogKeyboard } from '../../lib/use-dialog-keyboard';
 import { MediaDownload } from '../MediaDownload';
 import type { ProductWorkspace } from './useProductWorkspace';
 import type { CatalogOptions } from './useCatalogOptions';
@@ -18,16 +20,24 @@ export function ProductDetailDialog(props: ProductDetailDialogProps) {
         activeDetailMediaIdx, currentItem, getStatusColor, handleCloneItem, handleDeleteItem, handleOpenEdit,
         isDetailOpen, setActiveDetailMediaIdx, setIsDetailOpen
     } = props;
+    const titleId = useId();
+    const close = () => setIsDetailOpen(false);
+    const dialog = useDialogKeyboard(Boolean(isDetailOpen && currentItem), close);
     if (!(isDetailOpen && currentItem)) return null;
 
     return (
         <div
-            onClick={(e) => { if (e.target === e.currentTarget) setIsDetailOpen(false); }}
-            className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 cursor-pointer overflow-y-auto"
+            onClick={(e) => { if (e.target === e.currentTarget) close(); }}
+            className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-start justify-center p-3 sm:p-4 z-50 cursor-pointer overflow-y-auto"
         >
             <div
+                ref={dialog}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+                tabIndex={-1}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row border border-stone-200 cursor-default animate-fade-in"
+                className="my-auto bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row border border-stone-200 cursor-default animate-fade-in"
             >
 
                 <div className="w-full md:w-1/2 p-3 md:p-4 bg-stone-50 border-r border-stone-100 flex flex-col justify-center relative">
@@ -52,7 +62,7 @@ export function ProductDetailDialog(props: ProductDetailDialogProps) {
                                 </>
                             );
                         })()}
-                        <button onClick={() => setIsDetailOpen(false)} className="absolute top-2 left-2 md:hidden p-1.5 bg-white/90 rounded-full text-stone-800 shadow-md"><IconX /></button>
+                        <button type="button" onClick={close} aria-label="Κλείσιμο" className="absolute top-2 left-2 md:hidden p-1.5 bg-white/90 rounded-full text-stone-800 shadow-md"><IconX /></button>
                     </div>
 
                     {(() => {
@@ -61,11 +71,11 @@ export function ProductDetailDialog(props: ProductDetailDialogProps) {
                         return (
                             <div className="flex gap-2 mt-3 overflow-x-auto p-1 max-w-full justify-center">
                                 {currentMediaArray.map((m, idx) => (
-                                    <button key={idx} onClick={() => setActiveDetailMediaIdx(idx)} className={`w-12 h-12 rounded-md overflow-hidden flex-shrink-0 border-2 transition relative ${activeDetailMediaIdx === idx ? 'border-amber-400 scale-105 shadow-md' : 'border-stone-200 opacity-70 hover:opacity-100'}`}>
+                                    <button key={idx} type="button" onClick={() => setActiveDetailMediaIdx(idx)} aria-label={`${m.type === 'video' ? 'Βίντεο' : 'Εικόνα'} ${idx + 1}`} aria-pressed={activeDetailMediaIdx === idx} className={`w-12 h-12 rounded-md overflow-hidden flex-shrink-0 border-2 transition relative ${activeDetailMediaIdx === idx ? 'border-stone-900 scale-105 shadow-md' : 'border-stone-200 opacity-70 hover:opacity-100'}`}>
                                         {m.type === 'video' ? (
                                             <div className="w-full h-full bg-stone-800 flex items-center justify-center text-[10px]">VIDEO</div>
                                         ) : (
-                                            <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={m.url} className="w-full h-full object-cover" />
+                                            <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={m.url} alt="" className="w-full h-full object-cover" />
                                         )}
                                         {m.showInShop === false && <span className="absolute top-0 right-0 bg-stone-900/90 text-white text-[8px] p-0.5 rounded-bl"></span>}
                                     </button>
@@ -81,7 +91,7 @@ export function ProductDetailDialog(props: ProductDetailDialogProps) {
                 <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col max-h-[85vh] overflow-y-auto relative bg-white">
                     <div className="absolute top-6 right-6 hidden md:flex gap-2">
                         <button onClick={() => handleCloneItem(currentItem)} className="p-2 bg-stone-100 hover:bg-stone-200 rounded-full text-stone-500 transition" title="Αντιγραφή"><IconClone /></button>
-                        <button onClick={() => setIsDetailOpen(false)} className="p-2 bg-stone-100 hover:bg-stone-200 rounded-full text-stone-500 transition" title="Κλείσιμο"><IconX /></button>
+                        <button type="button" onClick={close} className="p-2 bg-stone-100 hover:bg-stone-200 rounded-full text-stone-500 transition" title="Κλείσιμο"><IconX /></button>
                     </div>
 
                     <div className="mb-6 pr-20">
@@ -91,7 +101,7 @@ export function ProductDetailDialog(props: ProductDetailDialogProps) {
                             </span>
                             <p className="text-[10px] uppercase font-bold text-stone-400 tracking-wider">{currentItem.category} {currentItem.collection && `| ${currentItem.collection}`}</p>
                         </div>
-                        <h2 className="text-2xl font-black text-stone-900 leading-tight mb-2">{currentItem.name}</h2>
+                        <h2 id={titleId} className="text-2xl font-black text-stone-900 leading-tight mb-2">{currentItem.name}</h2>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
@@ -174,7 +184,7 @@ export function ProductDetailDialog(props: ProductDetailDialogProps) {
 
                     <div className="mt-auto flex justify-between items-center pt-4 border-t border-stone-100">
                         <button onClick={() => handleDeleteItem(currentItem.id, currentItem.mediaList, currentItem.imageUrl)} className="text-rose-500 text-sm font-bold hover:text-rose-700 transition">Διαγραφή</button>
-                        <button onClick={() => { setIsDetailOpen(false); handleOpenEdit(currentItem); }} className="bg-stone-900 hover:bg-stone-800 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition shadow-md">Επεξεργασία</button>
+                        <button onClick={() => { close(); handleOpenEdit(currentItem); }} className="bg-stone-900 hover:bg-stone-800 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition shadow-md">Επεξεργασία</button>
                     </div>
                 </div>
             </div>
