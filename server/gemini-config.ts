@@ -5,7 +5,7 @@ type GeminiEnvironment = {
 };
 
 export function getGeminiApiKeys(environment: GeminiEnvironment = process.env): string[] {
-  const configuredKeys = environment.GEMINI_API_KEYS?.split(/[\\s,;]+/g) ?? [];
+  const configuredKeys = environment.GEMINI_API_KEYS?.split(/[\s,;]+/g) ?? [];
   const legacyKeys = [environment.GEMINI_API_KEY, environment.GOOGLE_API_KEY];
   return [...new Set([...configuredKeys, ...legacyKeys].map(key => key?.trim()).filter((key): key is string => Boolean(key)))];
 }
