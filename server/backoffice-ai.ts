@@ -199,8 +199,9 @@ export async function generateBackofficeAiJson(
           triedGeminiFallback = true;
           continue;
         }
-        // Credentials and quota failures move directly to the next provider.
-        if (failure.reason !== 'model' && failure.reason !== 'invalid_response') break;
+        // A 400/404 can reflect model-specific capabilities or configuration.
+        // Try the next configured model before falling back to another provider.
+        if (failure.reason !== 'model' && failure.reason !== 'invalid_response' && failure.status !== 400) break;
       }
     }
   }
