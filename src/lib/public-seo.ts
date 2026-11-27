@@ -50,6 +50,21 @@ const encodedId = (id: string) => encodeURIComponent(id);
 export const publicProductPath = (locale: PublicLocale, id: string) => `${locale === 'en' ? '/en' : ''}/product/${encodedId(id)}`;
 export const publicArtworkPath = (locale: PublicLocale, id: string) => `${locale === 'en' ? '/en' : ''}/portfolio/${encodedId(id)}`;
 
+export function publicContentRoute(pathname: string, routeId = '') {
+  const parts = pathname.split('/').filter(Boolean);
+  if (pathname === '/sitemap.xml') return { resource: 'sitemap', id: '', locale: 'el' as PublicLocale };
+  const locale: PublicLocale = parts[0] === 'en' ? 'en' : 'el';
+  const offset = locale === 'en' ? 1 : 0;
+  const section = parts[offset];
+  if (section !== 'product' && section !== 'portfolio') return null;
+  let id = parts[offset + 1] || routeId;
+  if (parts[offset + 1]) {
+    try { id = decodeURIComponent(id); } catch { return null; }
+  }
+  if (!id || id.includes('/')) return null;
+  return { resource: section === 'product' ? 'product' : 'artwork', id, locale };
+}
+
 function alternates(elUrl: string, enUrl: string) {
   return `<xhtml:link rel="alternate" hreflang="el" href="${escapeXml(SITE_URL + elUrl)}"/><xhtml:link rel="alternate" hreflang="en" href="${escapeXml(SITE_URL + enUrl)}"/><xhtml:link rel="alternate" hreflang="x-default" href="${escapeXml(SITE_URL + elUrl)}"/>`;
 }

@@ -46,4 +46,9 @@ for (const name of ['artist-profile', 'shop-metrics', 'contact', 'catalog-backup
 // Importing the finished bundles catches runtime failures before a deploy.
 const bundles = (await readdir(output)).filter(name => name.endsWith('.mjs'));
 for (const name of bundles) await import(pathToFileURL(join(output, name)).href);
+const publicContent = await import(pathToFileURL(join(output, 'public-content.mjs')).href);
+const expectedPublicContentPaths = ['/sitemap.xml', '/product/:id', '/en/product/:id', '/portfolio/:id', '/en/portfolio/:id'];
+if (JSON.stringify(publicContent.config?.path) !== JSON.stringify(expectedPublicContentPaths)) {
+  throw new Error('The public-content function is missing its expected Netlify custom paths.');
+}
 console.log(`Netlify Functions prepared and import-checked (${bundles.length} bundles).`);

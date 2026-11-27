@@ -4,7 +4,7 @@ import test from 'node:test';
 import config from '../vite.config';
 import { initialContent, searchPage, searchPages } from '../src/lib/search-content';
 import { languageSwitchPath, modeFromLocation, portfolioItemId, portfolioItemPath, storefrontLink } from '../src/lib/public-locale';
-import { buildPublicSitemap, mergePublicPortfolio, renderPublicArtwork, renderPublicProduct } from '../src/lib/public-seo';
+import { buildPublicSitemap, mergePublicPortfolio, publicContentRoute, renderPublicArtwork, renderPublicProduct } from '../src/lib/public-seo';
 
 test('search landing pages include readable content and distinct portfolio metadata', async () => {
   const resolved = typeof config === 'function' ? await config({ command: 'build', mode: 'production' }) : config;
@@ -104,6 +104,15 @@ test('generated sitemap includes public detail URLs, locale alternates and safe 
   assert.match(sitemap, /<image:loc>https:\/\/cdn\.example\.test\/work\.jpg<\/image:loc>/);
   assert.doesNotMatch(sitemap, /deleted-product|archived-work/);
   assert.doesNotMatch(sitemap, /<lastmod>/);
+});
+
+test('Netlify SEO paths resolve to the sitemap or the correct localized public item', () => {
+  assert.deepEqual(publicContentRoute('/sitemap.xml'), { resource: 'sitemap', id: '', locale: 'el' });
+  assert.deepEqual(publicContentRoute('/product/necklace%201'), { resource: 'product', id: 'necklace 1', locale: 'el' });
+  assert.deepEqual(publicContentRoute('/product/necklace%201', 'other-id'), { resource: 'product', id: 'necklace 1', locale: 'el' });
+  assert.deepEqual(publicContentRoute('/en/portfolio/work-1'), { resource: 'artwork', id: 'work-1', locale: 'en' });
+  assert.equal(publicContentRoute('/en/portfolio/%E0%A4%A'), null);
+  assert.equal(publicContentRoute('/en/portfolio/'), null);
 });
 
 test('SEO detail pages preserve seed content, honor portfolio tombstones, and escape public text', () => {
