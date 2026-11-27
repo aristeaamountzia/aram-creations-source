@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { getGeminiApiKey } from "./gemini-config";
+import { getGeminiApiKey, getGeminiApiKeys } from "./gemini-config";
 
 type AiProvider = "gemini" | "openai";
 
@@ -8,6 +8,7 @@ type AiEnvironment = {
   AI_PROVIDER_ORDER?: string;
   AI_ACCESS_CODE?: string;
   AI_BACKOFFICE_SECRET?: string;
+  GEMINI_API_KEYS?: string;
   GEMINI_API_KEY?: string;
   GOOGLE_API_KEY?: string;
   GEMINI_MODEL?: string;
@@ -76,12 +77,12 @@ export function getAiProviderPlan(environment: AiEnvironment = process.env): AiP
   const available: AiProvider[] = [];
   for (const provider of providers) {
     const hasKey = provider === "gemini"
-      ? Boolean(getGeminiApiKey(environment))
+      ? getGeminiApiKeys(environment).length > 0
       : Boolean(environment.OPENAI_API_KEY?.trim());
     if (hasKey) available.push(provider);
   }
   if (!available.length) {
-    throw new BackofficeAiConfigurationError("Set GEMINI_API_KEY (or GOOGLE_API_KEY) or OPENAI_API_KEY in the server environment.");
+    throw new BackofficeAiConfigurationError("Set GEMINI_API_KEYS, GEMINI_API_KEY (or GOOGLE_API_KEY), or OPENAI_API_KEY in the server environment.");
   }
   if (configuredProvider !== "auto" && available[0] !== configuredProvider) {
     const variable = configuredProvider === "gemini" ? "GEMINI_API_KEY" : "OPENAI_API_KEY";
@@ -117,9 +118,7 @@ function parseJsonObject(text: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
-async function generateWithGemini(prompt: string, images: string[], model: string, environment: AiEnvironment, fetcher: typeof fetch, timeoutMs: number): Promise<Record<string, unknown>> {
-  const apiKey = getGeminiApiKey(environment);
-  if (!apiKey) throw new BackofficeAiConfigurationError("Set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini.");
+async function generateWithGemini(prompt: string, images: string[], model: string, apiKey: string, environment: AiEnvironment, fetcher: typeof fetch, timeoutMs: number): Promise<Record<string, unknown>> {
   const ai = new GoogleGenAI({
     apiKey,
     httpOptions: {
@@ -182,27 +181,38 @@ export async function generateBackofficeAiJson(
     // Reserve time for the next provider instead of exhausting the Function's
     // execution limit in SDK retries or an unbounded model loop.
     const providerDeadline = Date.now() + Math.floor((deadline - Date.now()) / (providers.length - index));
-    let triedGeminiFallback = false;
+    const geminiKeys = provider === "gemini" ? getGeminiApiKeys(environment) : [""];
+    let stopProvider = false;
     for (const model of getAiModelOrder(provider, environment)) {
-      const timeoutMs = Math.min(20_000, providerDeadline - Date.now());
-      if (timeoutMs <= 0) { failures.set(provider, new ProviderFailure('timeout')); break; }
-      try {
-        return provider === "gemini"
-          ? await generateWithGemini(prompt, images, model, environment, fetcher, timeoutMs)
-          : await generateWithOpenAi(prompt, images, model, environment, fetcher, timeoutMs);
-      } catch (error) {
-        if (error instanceof BackofficeAiConfigurationError) throw error;
-        const failure = providerFailure(error);
-        failures.set(provider, failure);
-        console.warn('Back Office AI provider failed', { provider, status: failure.status, reason: failure.reason });
-        if (provider === 'gemini' && !triedGeminiFallback && (failure.reason === 'timeout' || failure.reason === 'unavailable')) {
-          triedGeminiFallback = true;
-          continue;
+      let tryNextModel = false;
+      for (const apiKey of geminiKeys) {
+        const timeoutMs = Math.min(20_000, providerDeadline - Date.now());
+        if (timeoutMs <= 0) { failures.set(provider, new ProviderFailure('timeout')); stopProvider = true; break; }
+        try {
+          return provider === "gemini"
+            ? await generateWithGemini(prompt, images, model, apiKey, environment, fetcher, timeoutMs)
+            : await generateWithOpenAi(prompt, images, model, environment, fetcher, timeoutMs);
+        } catch (error) {
+          if (error instanceof BackofficeAiConfigurationError) throw error;
+          const failure = providerFailure(error);
+          failures.set(provider, failure);
+          console.warn('Back Office AI provider failed', { provider, status: failure.status, reason: failure.reason });
+          if (provider === 'gemini' && (failure.reason === 'authentication' || failure.reason === 'quota')) {
+            // Try the next configured key when this key is rejected or has no quota.
+            continue;
+          }
+          // A 400/404 can reflect model-specific capabilities or configuration.
+          // Try the next configured model before falling back to another provider.
+          if (failure.reason === 'model' || failure.reason === 'invalid_response' || failure.status === 400) {
+            tryNextModel = true;
+            break;
+          }
+          stopProvider = true;
+          break;
         }
-        // A 400/404 can reflect model-specific capabilities or configuration.
-        // Try the next configured model before falling back to another provider.
-        if (failure.reason !== 'model' && failure.reason !== 'invalid_response' && failure.status !== 400) break;
       }
+      if (stopProvider) break;
+      if (!tryNextModel && provider === 'gemini') break;
     }
   }
   throw new BackofficeAiGenerationError(`Δεν ολοκληρώθηκε η πρόταση από τον πάροχο AI. ${[...failures].map(([provider, failure]) => failureMessage(provider, failure)).join(' ')}`);
