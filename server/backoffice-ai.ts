@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { getGeminiApiKey, getGeminiApiKeys } from "./gemini-config";
+import { getGeminiApiKeys } from "./gemini-config";
 
 type AiProvider = "gemini" | "openai";
 
