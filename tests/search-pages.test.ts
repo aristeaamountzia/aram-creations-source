@@ -4,6 +4,7 @@ import test from 'node:test';
 import config from '../vite.config';
 import { initialContent, searchPage, searchPages } from '../src/lib/search-content';
 import { languageSwitchPath, modeFromLocation, portfolioItemId, portfolioItemPath, storefrontLink } from '../src/lib/public-locale';
+import { buildPublicSitemap, mergePublicPortfolio, renderPublicArtwork, renderPublicProduct } from '../src/lib/public-seo';
 
 test('search landing pages include readable content and distinct portfolio metadata', async () => {
   const resolved = typeof config === 'function' ? await config({ command: 'build', mode: 'production' }) : config;
@@ -69,6 +70,64 @@ test('old and new Portfolio links resolve the same artwork in both languages', (
   assert.equal(portfolioItemId('#portfolio/%E0%A4%A'), null);
   assert.equal(portfolioItemId('#portfolio/'), null);
   assert.equal(languageSwitchPath('el', 'portfolio', '', link.hash), portfolioItemPath('el', item));
+});
+
+test('sitemap lists supported locale pages without fabricated modification dates', () => {
+  const sitemap = readFileSync(new URL('../public/sitemap.xml', import.meta.url), 'utf8');
+  const urls = [...sitemap.matchAll(/<url>([\s\S]*?)<\/url>/g)].map(([, url]) => url);
+  const expectedPaths = ['/', '/en/', '/portfolio/', '/en/portfolio/'];
+
+  assert.equal(urls.length, expectedPaths.length);
+  assert.deepEqual(urls.map(url => url.match(/<loc>https:\/\/aramcreationsofficial\.netlify\.app([^<]*)<\/loc>/)?.[1]), expectedPaths);
+  assert.doesNotMatch(sitemap, /<lastmod>/, 'lastmod should be emitted only when it can reflect actual content changes');
+  for (const url of urls) {
+    assert.match(url, /hreflang="el"/);
+    assert.match(url, /hreflang="en"/);
+    assert.match(url, /hreflang="x-default"/);
+  }
+});
+
+test('generated sitemap includes public detail URLs, locale alternates and safe image entries', () => {
+  const sitemap = buildPublicSitemap({
+    products: [
+      { id: 'necklace-1', name: 'Necklace', imageUrl: 'https://cdn.example.test/necklace.jpg' },
+      { id: 'deleted-product', name: 'Old', deletedAt: '2026-01-01' },
+    ],
+    artworks: [
+      { id: 'work-1', title: 'Work', mediaList: [{ url: 'https://cdn.example.test/work.jpg', type: 'image' }] },
+      { id: 'archived-work', title: 'Old work', isDeleted: true },
+    ],
+  });
+  assert.equal((sitemap.match(/<url>/g) || []).length, 8);
+  assert.match(sitemap, /<loc>https:\/\/aramcreationsofficial\.netlify\.app\/product\/necklace-1<\/loc>/);
+  assert.match(sitemap, /hreflang="en" href="https:\/\/aramcreationsofficial\.netlify\.app\/en\/portfolio\/work-1"/);
+  assert.match(sitemap, /<image:loc>https:\/\/cdn\.example\.test\/work\.jpg<\/image:loc>/);
+  assert.doesNotMatch(sitemap, /deleted-product|archived-work/);
+  assert.doesNotMatch(sitemap, /<lastmod>/);
+});
+
+test('SEO detail pages preserve seed content, honor portfolio tombstones, and escape public text', () => {
+  const artwork = mergePublicPortfolio([{ id: 'work', title: 'Seed' }, { id: 'removed', title: 'Removed' }], [
+    { id: 'work', titleEn: 'English title' }, { id: 'removed', isDeleted: true },
+  ]);
+  assert.deepEqual(artwork, [{ id: 'work', title: 'Seed', titleEn: 'English title' }]);
+  const productPage = renderPublicProduct({ id: 'p1', name: '<Necklace>', description: 'A & B', price: 18 }, 'en');
+  assert.match(productPage, /<html lang="en">/);
+  assert.match(productPage, /&lt;Necklace&gt;/);
+  assert.match(productPage, /"@type":"Product"/);
+  const artworkPage = renderPublicArtwork({ id: 'work', title: 'Blue', titleEn: 'Blue work' }, 'en');
+  assert.match(artworkPage, /"@type":"CreativeWork"/);
+  assert.match(artworkPage, /canonical" href="https:\/\/aramcreationsofficial\.netlify\.app\/en\/portfolio\/work"/);
+});
+
+test('Netlify uses a branded not-found page instead of the homepage rewrite for unknown paths', () => {
+  const netlifyConfig = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
+  const notFound = readFileSync(new URL('../public/404.html', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(netlifyConfig, /from\s*=\s*"\/\*"\s*\n\s*to\s*=\s*"\/index\.html"\s*\n\s*status\s*=\s*200/);
+  assert.match(notFound, /<title>[^<]*404[^<]*<\/title>/);
+  assert.match(notFound, /href="\/"/);
+  assert.match(notFound, /href="\/en\/"/);
 });
 
 test('checkout and configured links keep their targets when the language changes', () => {

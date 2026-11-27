@@ -37,7 +37,7 @@ await build({
   banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' },
 });
 
-for (const name of ['artist-profile', 'shop-metrics', 'contact', 'catalog-backups', 'catalog-backup-schedule', 'catalog-backup-worker', 'order-email-retry', 'order-email-test', 'wix-project', 'stripe-confirm', 'stripe-webhook', 'vinted-reviews']) {
+for (const name of ['artist-profile', 'shop-metrics', 'contact', 'catalog-backups', 'catalog-backup-schedule', 'catalog-backup-worker', 'order-email-retry', 'order-email-test', 'wix-project', 'stripe-confirm', 'stripe-webhook', 'vinted-reviews', 'public-content']) {
   await build({ entryPoints: [join(source, `${name}.ts`)], outfile: join(output, `${name}.mjs`), bundle: true, platform: 'node', format: 'esm', packages: 'bundle', target: 'node20', external: ['firebase-admin'], banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' } });
 }
 

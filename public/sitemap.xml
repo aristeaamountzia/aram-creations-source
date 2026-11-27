@@ -1,47 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  <!-- 1. Boutique / E-Shop (Greek) -->
-  <url>
-    <loc>https://aramcreationsofficial.netlify.app/</loc>
-    <xhtml:link rel="alternate" hreflang="el" href="https://aramcreationsofficial.netlify.app/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://aramcreationsofficial.netlify.app/en/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://aramcreationsofficial.netlify.app/" />
-    <lastmod>2026-11-23</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-
-  <!-- 2. Boutique / E-Shop (English) -->
-  <url>
-    <loc>https://aramcreationsofficial.netlify.app/en/</loc>
-    <xhtml:link rel="alternate" hreflang="el" href="https://aramcreationsofficial.netlify.app/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://aramcreationsofficial.netlify.app/en/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://aramcreationsofficial.netlify.app/" />
-    <lastmod>2026-11-23</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.95</priority>
-  </url>
-
-  <!-- 3. Portfolio / Artwork Showcase (Greek) -->
-  <url>
-    <loc>https://aramcreationsofficial.netlify.app/portfolio/</loc>
-    <xhtml:link rel="alternate" hreflang="el" href="https://aramcreationsofficial.netlify.app/portfolio/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://aramcreationsofficial.netlify.app/en/portfolio/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://aramcreationsofficial.netlify.app/portfolio/" />
-    <lastmod>2026-11-23</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-
-  <!-- 4. Portfolio / Artwork Showcase (English) -->
-  <url>
-    <loc>https://aramcreationsofficial.netlify.app/en/portfolio/</loc>
-    <xhtml:link rel="alternate" hreflang="el" href="https://aramcreationsofficial.netlify.app/portfolio/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://aramcreationsofficial.netlify.app/en/portfolio/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://aramcreationsofficial.netlify.app/portfolio/" />
-    <lastmod>2026-11-23</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url><loc>https://aramcreationsofficial.netlify.app/</loc><xhtml:link rel="alternate" hreflang="el" href="https://aramcreationsofficial.netlify.app/"/><xhtml:link rel="alternate" hreflang="en" href="https://aramcreationsofficial.netlify.app/en/"/><xhtml:link rel="alternate" hreflang="x-default" href="https://aramcreationsofficial.netlify.app/"/></url>
+  <url><loc>https://aramcreationsofficial.netlify.app/en/</loc><xhtml:link rel="alternate" hreflang="el" href="https://aramcreationsofficial.netlify.app/"/><xhtml:link rel="alternate" hreflang="en" href="https://aramcreationsofficial.netlify.app/en/"/><xhtml:link rel="alternate" hreflang="x-default" href="https://aramcreationsofficial.netlify.app/"/></url>
+  <url><loc>https://aramcreationsofficial.netlify.app/portfolio/</loc><xhtml:link rel="alternate" hreflang="el" href="https://aramcreationsofficial.netlify.app/portfolio/"/><xhtml:link rel="alternate" hreflang="en" href="https://aramcreationsofficial.netlify.app/en/portfolio/"/><xhtml:link rel="alternate" hreflang="x-default" href="https://aramcreationsofficial.netlify.app/portfolio/"/></url>
+  <url><loc>https://aramcreationsofficial.netlify.app/en/portfolio/</loc><xhtml:link rel="alternate" hreflang="el" href="https://aramcreationsofficial.netlify.app/portfolio/"/><xhtml:link rel="alternate" hreflang="en" href="https://aramcreationsofficial.netlify.app/en/portfolio/"/><xhtml:link rel="alternate" hreflang="x-default" href="https://aramcreationsofficial.netlify.app/portfolio/"/></url>
 </urlset>

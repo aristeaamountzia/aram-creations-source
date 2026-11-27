@@ -588,11 +588,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
             </button>
 
             {/* Sort Select */}
-            <div className="catalog-sort flex max-w-full min-w-0 items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-700">
+            <div className="catalog-sort flex max-w-full min-w-0 flex-wrap items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-xs text-stone-700">
               <label htmlFor="catalog-sort-select" className="text-[11px] text-stone-500 uppercase font-bold cursor-pointer">{t("Ταξινόμηση:", "Sort:")}</label>
               <select
                 id="catalog-sort-select"
                 aria-label={t("Ταξινόμηση δημιουργιών", "Sort products")}
+                aria-describedby="catalog-sort-note"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="min-w-0 max-w-full bg-transparent font-bold text-stone-800 focus:outline-none cursor-pointer text-xs"
@@ -603,6 +604,9 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 <option value="price-asc">{t("Τιμή (Χαμηλή → Υψηλή)", "Price (low to high)")}</option>
                 <option value="price-desc">{t("Τιμή (Υψηλή → Χαμηλή)", "Price (high to low)")}</option>
               </select>
+              <span id="catalog-sort-note" className="basis-full text-[10px] font-normal text-stone-500">
+                {t("Τα εξαντλημένα εμφανίζονται τελευταία.", "Sold items appear last.")}
+              </span>
             </div>
           </>} />
         </details>

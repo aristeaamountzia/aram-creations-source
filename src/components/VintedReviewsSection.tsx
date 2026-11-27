@@ -216,7 +216,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
                     />
                   ))}
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">{t("100% Θετικές (", "100% positive (")}{totalReviewCount}{t(" Κριτικές)", " reviews)")}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">{totalReviewCount}{t(" συνολικές αξιολογήσεις Vinted", " total Vinted ratings")}</span>
               </div>
             </div>
 
@@ -234,6 +234,7 @@ export const VintedReviewsSection: React.FC<VintedReviewsSectionProps> = ({
           </div>
         </div>
 
+        <h3 className="sr-only">{t("Γραπτά σχόλια πελατών", "Written customer reviews")}</h3>
         {/* Authentic Reviews Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
           {displayedReviews.map((review) => {

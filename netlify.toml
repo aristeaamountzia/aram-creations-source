@@ -1,3 +1,5 @@
+"$schema" = "https://open-api.netlify.com/netlify.schema.json"
+
 [build]
   command = "npm run build"
   publish = "dist"
@@ -29,6 +31,36 @@
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["firebase-admin"]
+
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/.netlify/functions/public-content?resource=sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/product/:id"
+  to = "/.netlify/functions/public-content?resource=product&id=:id&locale=el"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/en/product/:id"
+  to = "/.netlify/functions/public-content?resource=product&id=:id&locale=en"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/portfolio/:id"
+  to = "/.netlify/functions/public-content?resource=artwork&id=:id&locale=el"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/en/portfolio/:id"
+  to = "/.netlify/functions/public-content?resource=artwork&id=:id&locale=en"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/api/artist-profile"
@@ -113,11 +145,6 @@
   to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
 
 [[headers]]
   for = "/*"

@@ -1,6 +1,6 @@
 import { usePublicLanguage } from "../../lib/use-public-language";
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { Pause } from 'lucide-react';
+import { Pause, Play } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import { FALLBACK_HERO_SNAPSHOT, heroPosterFor } from '../../lib/hero-media';
 import { videoLink } from '../../lib/video-links';
@@ -28,6 +28,7 @@ export function CollectionHero({ collection, title, description, videoUrl, appea
   const reducedMotion = useReducedMotion();
   const [paused, setPaused] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [userRequestedPlay, setUserRequestedPlay] = useState(false);
   const [failed, setFailed] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
@@ -38,7 +39,8 @@ export function CollectionHero({ collection, title, description, videoUrl, appea
   const fallback = isShop ? FALLBACK_HERO_SNAPSHOT.heroVideoUrl : FALLBACK_HERO_SNAPSHOT.portfolioHeroVideoUrl;
   const source = useFallback ? fallback : videoUrl;
   const externalVideo = videoLink(source);
-  const autoplay = Boolean(videoUrl) && !preview && !reducedMotion && !paused && !failed;
+  const autoplay = Boolean(videoUrl) && !preview && !paused && !failed && (!reducedMotion || userRequestedPlay);
+  const videoIsPlaying = autoplay && (Boolean(externalVideo) || playing);
   useEffect(() => {
     if (!autoplay || externalVideo) return;
     const resume = () => {
@@ -73,12 +75,19 @@ export function CollectionHero({ collection, title, description, videoUrl, appea
             catalog.scrollIntoView({ block: 'start' });
           }}>{isShop ? t("Δείτε τη συλλογή", "Explore the collection") : t("Δείτε τα έργα", "View the work")}</a>}
           {children}
-          {autoplay && (playing || externalVideo) && (
-            <button className="gallery-motion-pause" type="button" aria-label={t("Παύση βίντεο", "Pause video")} onClick={(event) => {
-              setPaused(true);
-              event.currentTarget.closest('section')?.querySelector<HTMLElement>('.studio-primary')?.focus();
-            }}>
-              <Pause size={16} aria-hidden="true" />
+          {!preview && Boolean(videoUrl) && !failed && (
+            <button className="gallery-motion-pause" type="button"
+              aria-label={videoIsPlaying ? t("Παύση βίντεο", "Pause video") : t("Αναπαραγωγή βίντεο", "Play video")}
+              onClick={() => {
+                if (videoIsPlaying) {
+                  setPaused(true);
+                  setUserRequestedPlay(false);
+                } else {
+                  setPaused(false);
+                  setUserRequestedPlay(true);
+                }
+              }}>
+              {videoIsPlaying ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
             </button>
           )}
         </div>

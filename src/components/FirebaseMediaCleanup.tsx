@@ -112,8 +112,8 @@ export function FirebaseMediaCleanup({
   const [protectedHistoryPaths, setProtectedHistoryPaths] = useState<Set<string>>(new Set());
 
   // Controls which categories of cleanup the admin wants to execute
-  const [cleanDuplicates, setCleanDuplicates] = useState(true);
-  const [cleanOrphans, setCleanOrphans] = useState(true);
+  const [cleanDuplicates, setCleanDuplicates] = useState(false);
+  const [cleanOrphans, setCleanOrphans] = useState(false);
   const [cleanDocReferences, setCleanDocReferences] = useState(false);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [protectHistoryFiles, setProtectHistoryFiles] = useState(true);
@@ -592,10 +592,14 @@ export function FirebaseMediaCleanup({
   };
 
   const openAndScan = () => {
+    if (isScanning || isExecuting) return;
+    setCleanDuplicates(false);
+    setCleanOrphans(false);
+    setCleanDocReferences(false);
+    setSelectedPaths(new Set());
+    setSelectedDuplicateVintedDocIds(new Set());
     setIsOpen(true);
-    if (!storageFiles && !isScanning) {
-      void startScan();
-    }
+    void startScan();
   };
 
   const candidates = [...new Map([...(cleanDuplicates ? plan?.duplicateFilesToDelete || [] : []), ...(cleanOrphans ? plan?.orphanedFiles || [] : [])].map(file => [file.fullPath, file])).values()];
