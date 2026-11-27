@@ -368,14 +368,14 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Κατηγορία *</label>
+                                    <label htmlFor="shop-product-category" className="block text-xs font-bold text-stone-600 mb-1">Κατηγορία *</label>
                                     {isCustomCategory ? (
                                         <div className="flex gap-2">
-                                            <input type="text" required className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formCategory} onChange={e => setFormCategory(e.target.value)} placeholder="Νέα κατηγορία..." autoFocus />
+                                            <input id="shop-product-category" type="text" required className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formCategory} onChange={e => setFormCategory(e.target.value)} placeholder="Νέα κατηγορία..." autoFocus />
                                             <button type="button" onClick={() => { setIsCustomCategory(false); setFormCategory('Κολιέ'); }} className="px-3 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded-lg font-bold">X</button>
                                         </div>
                                     ) : (
-                                        <select required className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formCategory} onChange={e => {
+                                        <select id="shop-product-category" required className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formCategory} onChange={e => {
                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomCategory(true); setFormCategory(''); }
                                             else { setFormCategory(e.target.value); }
                                         }}>
@@ -387,14 +387,14 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Ονομασία Συλλογής</label>
+                                    <label htmlFor="shop-product-collection" className="block text-xs font-bold text-stone-600 mb-1">Ονομασία Συλλογής</label>
                                     {isCustomCollection ? (
                                         <div className="flex gap-2">
-                                            <input type="text" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formCollection} onChange={e => setFormCollection(e.target.value)} placeholder="Νέα συλλογή..." autoFocus />
+                                            <input id="shop-product-collection" type="text" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formCollection} onChange={e => setFormCollection(e.target.value)} placeholder="Νέα συλλογή..." autoFocus />
                                             <button type="button" onClick={() => { setIsCustomCollection(false); setFormCollection(''); }} className="px-3 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded-lg font-bold">X</button>
                                         </div>
                                     ) : (
-                                        <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formCollection} onChange={e => {
+                                        <select id="shop-product-collection" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formCollection} onChange={e => {
                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomCollection(true); setFormCollection(''); }
                                             else { setFormCollection(e.target.value); }
                                         }}>
@@ -406,14 +406,14 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Κατάσταση *</label>
+                                    <label htmlFor="shop-product-status" className="block text-xs font-bold text-stone-600 mb-1">Κατάσταση *</label>
                                     {isCustomStatus ? (
                                         <div className="flex gap-2">
-                                            <input type="text" required className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formStatus} onChange={e => setFormStatus(e.target.value)} placeholder="Νέα κατάσταση..." autoFocus />
+                                            <input id="shop-product-status" type="text" required className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formStatus} onChange={e => setFormStatus(e.target.value)} placeholder="Νέα κατάσταση..." autoFocus />
                                             <button type="button" onClick={() => { setIsCustomStatus(false); setFormStatus('Διαθέσιμο'); }} className="px-3 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded-lg font-bold">X</button>
                                         </div>
                                     ) : (
-                                        <select required className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formStatus} onChange={e => {
+                                        <select id="shop-product-status" required className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formStatus} onChange={e => {
                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomStatus(true); setFormStatus(''); }
                                             else { setFormStatus(e.target.value); setFormStock(stockForSelectedStatus(e.target.value, Number(formStock))); }
                                         }}>
@@ -424,8 +424,8 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Ημερομηνία Κατασκευής</label>
-                                    <input type="date" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formDate} onChange={e => setFormDate(e.target.value)} />
+                                    <label htmlFor="shop-product-creation-date" className="block text-xs font-bold text-stone-600 mb-1">Ημερομηνία Κατασκευής</label>
+                                    <input id="shop-product-creation-date" type="date" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formDate} onChange={e => setFormDate(e.target.value)} />
                                 </div>
                             </div>
                         </section>
@@ -439,30 +439,30 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                 </div>
                                 <div>
                                     <div className="flex items-center justify-between mb-1">
-                                        <label className="block text-xs font-bold text-stone-600">Αρχική Τιμή (€)</label>
+                                        <label htmlFor="shop-product-original-price" className="block text-xs font-bold text-stone-600">Αρχική Τιμή (€)</label>
                                         {Number(formOriginalPrice) > Number(formPrice) && Number(formPrice) > 0 && (
                                             <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
                                                 -{Math.round(((Number(formOriginalPrice) - Number(formPrice)) / Number(formOriginalPrice)) * 100)}%
                                             </span>
                                         )}
                                     </div>
-                                    <input type="number" step="any" placeholder="π.χ. 24.00 (προαιρετικό)" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formOriginalPrice} onChange={e => setFormOriginalPrice(e.target.value)} />
+                                    <input id="shop-product-original-price" type="number" step="any" placeholder="π.χ. 24.00 (προαιρετικό)" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formOriginalPrice} onChange={e => setFormOriginalPrice(e.target.value)} />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Κόστος Υλικών (€)</label>
-                                    <input type="number" step="any" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formCost} onChange={e => setFormCost(e.target.value)} />
+                                    <label htmlFor="shop-product-material-cost" className="block text-xs font-bold text-stone-600 mb-1">Κόστος Υλικών (€)</label>
+                                    <input id="shop-product-material-cost" type="number" step="any" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formCost} onChange={e => setFormCost(e.target.value)} />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Χειροκίνητα Likes</label>
-                                    <input type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formManualLikes} onChange={e => setFormManualLikes(Math.max(0, Number(e.target.value) || 0))} />
+                                    <label htmlFor="shop-product-manual-likes" className="block text-xs font-bold text-stone-600 mb-1">Χειροκίνητα Likes</label>
+                                    <input id="shop-product-manual-likes" type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formManualLikes} onChange={e => setFormManualLikes(Math.max(0, Number(e.target.value) || 0))} />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Χειροκίνητες Προβολές</label>
-                                    <input type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formManualViews} onChange={e => setFormManualViews(Math.max(0, Number(e.target.value) || 0))} />
+                                    <label htmlFor="shop-product-manual-views" className="block text-xs font-bold text-stone-600 mb-1">Χειροκίνητες Προβολές</label>
+                                    <input id="shop-product-manual-views" type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formManualViews} onChange={e => setFormManualViews(Math.max(0, Number(e.target.value) || 0))} />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Απόθεμα (Τεμ.)</label>
-                                    <input type="number" min="0" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formStock} onChange={e => {
+                                    <label htmlFor="shop-product-stock" className="block text-xs font-bold text-stone-600 mb-1">Απόθεμα (Τεμ.)</label>
+                                    <input id="shop-product-stock" type="number" min="0" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formStock} onChange={e => {
                                         const value = e.target.value;
                                         setFormStock(value);
                                         if (value !== '' && Number(value) > 0 && formStatus === 'Πουλήθηκε') setFormStatus('Διαθέσιμο');
@@ -476,22 +476,22 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                             <h3 className="text-sm font-black text-amber-600/70 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Διαστασεις & Αποθηκευση</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Βάρος</label>
-                                    <input type="text" placeholder="π.χ. 15g" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formWeight} onChange={e => setFormWeight(e.target.value)} />
+                                    <label htmlFor="shop-product-weight" className="block text-xs font-bold text-stone-600 mb-1">Βάρος</label>
+                                    <input id="shop-product-weight" type="text" placeholder="π.χ. 15g" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formWeight} onChange={e => setFormWeight(e.target.value)} />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Διαστάσεις</label>
-                                    <input type="text" placeholder="π.χ. 4x3 cm" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formDimensions} onChange={e => setFormDimensions(e.target.value)} />
+                                    <label htmlFor="shop-product-dimensions" className="block text-xs font-bold text-stone-600 mb-1">Διαστάσεις</label>
+                                    <input id="shop-product-dimensions" type="text" placeholder="π.χ. 4x3 cm" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formDimensions} onChange={e => setFormDimensions(e.target.value)} />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Κωδ. Αποθήκευσης</label>
+                                    <label htmlFor="shop-product-storage" className="block text-xs font-bold text-stone-600 mb-1">Κωδ. Αποθήκευσης</label>
                                     {isCustomStorage ? (
                                         <div className="flex gap-2">
-                                            <input type="text" placeholder="π.χ. Κουτί Α2" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formStorage} onChange={e => setFormStorage(e.target.value)} autoFocus />
+                                            <input id="shop-product-storage" type="text" placeholder="π.χ. Κουτί Α2" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formStorage} onChange={e => setFormStorage(e.target.value)} autoFocus />
                                             <button type="button" onClick={() => { setIsCustomStorage(false); setFormStorage(''); }} className="px-3 bg-stone-200 hover:bg-stone-300 rounded-lg font-bold text-stone-600 transition">X</button>
                                         </div>
                                     ) : (
-                                        <select className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formStorage} onChange={e => { if (e.target.value === 'NEW_CUSTOM') { setIsCustomStorage(true); setFormStorage(''); } else setFormStorage(e.target.value); }}>
+                                        <select id="shop-product-storage" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white outline-none" value={formStorage} onChange={e => { if (e.target.value === 'NEW_CUSTOM') { setIsCustomStorage(true); setFormStorage(''); } else setFormStorage(e.target.value); }}>
                                             <option value="">Χωρίς αποθήκευση</option>
                                             {allStorages.map(storage => <option key={storage} value={storage}>{storage}</option>)}
                                             <option value="NEW_CUSTOM">+ Νέος κωδικός...</option>
@@ -505,7 +505,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                             <h3 className="text-sm font-black text-indigo-500/70 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Χρωματα & Υλικα</h3>
 
                             <div className="mb-6">
-                                <label className="block text-xs font-bold text-stone-600 mb-2">Κύρια Χρώματα</label>
+                                <label htmlFor="shop-product-new-colour" className="block text-xs font-bold text-stone-600 mb-2">Κύρια Χρώματα</label>
                                 <div className="flex flex-wrap gap-2 mb-2">
                                     {allAvailableColors.map(col => (
                                         <button key={col} type="button" onClick={() => handleAddColor(col)} className="text-[11px] px-2.5 py-1 bg-white rounded-md hover:bg-indigo-50 border border-indigo-100 font-bold text-indigo-700 flex items-center gap-1.5">
@@ -514,7 +514,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                     ))}
                                 </div>
                                 <div className="flex gap-2 mb-2">
-                                    <input type="text" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none" placeholder="Νέο χρώμα..." value={newColorInput} onChange={e => setNewColorInput(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddColor(newColorInput, newColorHex); } }} />
+                                    <input id="shop-product-new-colour" type="text" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none" placeholder="Νέο χρώμα..." value={newColorInput} onChange={e => setNewColorInput(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddColor(newColorInput, newColorHex); } }} />
                                     <input type="color" className="h-10 w-12 rounded-lg border border-stone-200 bg-white p-1 cursor-pointer" value={newColorHex} onChange={e => setNewColorHex(e.target.value)} title="Επίλεξε ακριβή απόχρωση" aria-label="Επίλεξε ακριβή απόχρωση" />
                                     <button type="button" onClick={() => handleAddColor(newColorInput, newColorHex)} className="bg-stone-800 text-white px-4 rounded-lg text-xs font-bold">Προσθήκη</button>
                                 </div>
@@ -526,14 +526,14 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                             </div>
 
                             <div className="mb-6">
-                                <label className="block text-xs font-bold text-stone-600 mb-2">Υλικά Κατασκευής</label>
+                                <label htmlFor="shop-product-new-material" className="block text-xs font-bold text-stone-600 mb-2">Υλικά Κατασκευής</label>
                                 <div className="flex flex-wrap gap-2 mb-2">
                                     {allAvailableMaterials.map(mat => (
                                         <button key={mat} type="button" onClick={() => handleAddMaterial(mat)} className="text-[11px] px-2.5 py-1 bg-stone-100 rounded-md hover:bg-stone-200 border border-stone-200 font-medium text-stone-600">+ {mat}</button>
                                     ))}
                                 </div>
                                 <div className="flex gap-2 mb-2">
-                                    <input type="text" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none" placeholder="Νέο υλικό..." value={newMaterialInput} onChange={e => setNewMaterialInput(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddMaterial(newMaterialInput); } }} />
+                                    <input id="shop-product-new-material" type="text" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none" placeholder="Νέο υλικό..." value={newMaterialInput} onChange={e => setNewMaterialInput(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddMaterial(newMaterialInput); } }} />
                                     <button type="button" onClick={() => handleAddMaterial(newMaterialInput)} className="bg-stone-800 text-white px-4 rounded-lg text-xs font-bold">Προσθήκη</button>
                                 </div>
                                 <div className="flex flex-wrap gap-2 p-2 bg-stone-50 rounded-lg min-h-[44px] border border-stone-100">
@@ -548,15 +548,15 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                             <h3 className="text-sm font-black text-blue-500/70 uppercase tracking-wider border-b border-stone-100 pb-2 mb-4">Links & Αναρτησεις</h3>
 
                             <div>
-                                <label className="block text-xs font-bold text-stone-600 mb-2">Λινκ Αγοράς (Πού μπορεί να το αγοράσει ο πελάτης)</label>
+                                <label htmlFor="shop-product-purchase-url" className="block text-xs font-bold text-stone-600 mb-2">Λινκ Αγοράς (Πού μπορεί να το αγοράσει ο πελάτης)</label>
                                 <div className="flex flex-col sm:flex-row gap-2 mb-2">
                                     {isCustomPurchaseSite ? (
                                         <div className="flex gap-1 w-full sm:w-1/3">
-                                            <input type="text" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:bg-white outline-none transition" placeholder="π.χ. E-shop μου..." value={newPurchaseSite} onChange={e => setNewPurchaseSite(e.target.value)} autoFocus />
+                                            <input aria-label="Πλατφόρμα αγοράς" type="text" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:bg-white outline-none transition" placeholder="π.χ. E-shop μου..." value={newPurchaseSite} onChange={e => setNewPurchaseSite(e.target.value)} autoFocus />
                                             <button type="button" onClick={() => {setIsCustomPurchaseSite(false); setNewPurchaseSite('Vinted');}} className="px-3 bg-stone-200 hover:bg-stone-300 rounded-lg font-bold text-stone-600 transition">X</button>
                                         </div>
                                     ) : (
-                                        <select className="w-full sm:w-1/3 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none transition" value={newPurchaseSite} onChange={e => {
+                                        <select aria-label="Πλατφόρμα αγοράς" className="w-full sm:w-1/3 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none transition" value={newPurchaseSite} onChange={e => {
                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomPurchaseSite(true); setNewPurchaseSite(''); }
                                             else { setNewPurchaseSite(e.target.value); }
                                         }}>
@@ -565,7 +565,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                         </select>
                                     )}
 
-                                    <input type="url" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none transition" placeholder="Επικόλληση Link (https://...)" value={newPurchaseUrl} onChange={e => setNewPurchaseUrl(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddPurchaseLink(); } }} />
+                                    <input id="shop-product-purchase-url" type="url" className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none transition" placeholder="Επικόλληση Link (https://...)" value={newPurchaseUrl} onChange={e => setNewPurchaseUrl(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddPurchaseLink(); } }} />
                                     <button type="button" onClick={handleAddPurchaseLink} className="bg-stone-800 hover:bg-stone-700 text-white px-5 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition">Προσθήκη</button>
                                 </div>
                                 <div className="flex flex-wrap gap-2 p-2 bg-blue-50/30 rounded-lg min-h-[44px] border border-blue-50">
@@ -581,16 +581,16 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                             </div>
 
                             <div className="mb-2">
-                                <label className="block text-xs font-bold text-stone-600 mb-2">Πού έχει αναρτηθεί (Για δικό σου έλεγχο)</label>
+                                <label htmlFor="shop-product-post-url" className="block text-xs font-bold text-stone-600 mb-2">Πού έχει αναρτηθεί (Για δικό σου έλεγχο)</label>
 
                                 <div className="flex flex-col lg:flex-row gap-2 mb-2 lg:items-center">
                                     {isCustomPostedSite ? (
                                         <div className="flex gap-1 w-full lg:w-1/4">
-                                            <input type="text" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:bg-white outline-none transition" placeholder="π.χ. TikTok..." value={newPostedSite} onChange={e => setNewPostedSite(e.target.value)} autoFocus />
+                                            <input aria-label="Πλατφόρμα ανάρτησης" type="text" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:bg-white outline-none transition" placeholder="π.χ. TikTok..." value={newPostedSite} onChange={e => setNewPostedSite(e.target.value)} autoFocus />
                                             <button type="button" onClick={() => {setIsCustomPostedSite(false); setNewPostedSite('Instagram');}} className="px-3 bg-stone-200 hover:bg-stone-300 rounded-lg font-bold text-stone-600 transition">X</button>
                                         </div>
                                     ) : (
-                                        <select className="w-full lg:w-1/4 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none transition" value={newPostedSite} onChange={e => {
+                                        <select aria-label="Πλατφόρμα ανάρτησης" className="w-full lg:w-1/4 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none transition" value={newPostedSite} onChange={e => {
                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomPostedSite(true); setNewPostedSite(''); }
                                             else { setNewPostedSite(e.target.value); }
                                         }}>
@@ -599,7 +599,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                         </select>
                                     )}
 
-                                    <input type="url" className="w-full lg:flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none transition" placeholder="Link ανάρτησης (προαιρετικό)..." value={newPostedUrl} onChange={e => setNewPostedUrl(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddPostedPlatform(); } }} />
+                                    <input id="shop-product-post-url" type="url" className="w-full lg:flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:bg-white outline-none transition" placeholder="Link ανάρτησης (προαιρετικό)..." value={newPostedUrl} onChange={e => setNewPostedUrl(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddPostedPlatform(); } }} />
 
                                     <div className="flex gap-2 w-full lg:w-auto">
                                         <label className="flex items-center justify-center gap-2 text-sm font-medium text-stone-700 cursor-pointer flex-1 lg:flex-none bg-stone-50 border border-stone-200 px-3 py-2 rounded-lg hover:bg-white transition whitespace-nowrap">
@@ -702,8 +702,8 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                 onRemove={handleRemovePrivateMedia}
                             />
                             <div>
-                                <label className="block text-xs font-bold text-stone-600 mb-1">Περιγραφή / σημειώσεις προϊόντος</label>
-                                <textarea className="w-full border border-stone-200 rounded-lg px-4 py-3 h-24 bg-white focus:bg-white outline-none resize-none" value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Περιγραφή που μπορείς να επεξεργαστείς πριν εμφανιστεί στο shop..."></textarea>
+                                <label htmlFor="shop-product-description" className="block text-xs font-bold text-stone-600 mb-1">Περιγραφή / σημειώσεις προϊόντος</label>
+                                <textarea id="shop-product-description" className="w-full border border-stone-200 rounded-lg px-4 py-3 h-24 bg-white focus:bg-white outline-none resize-none" value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Περιγραφή που μπορείς να επεξεργαστείς πριν εμφανιστεί στο shop..."></textarea>
                             </div>
                             <details className="rounded-xl border border-stone-200 p-3" open={formEnglishCopy.title || formEnglishCopy.description ? true : undefined}>
                                 <summary className="cursor-pointer text-sm font-bold">Αγγλικό κείμενο για εξαγωγή</summary>
