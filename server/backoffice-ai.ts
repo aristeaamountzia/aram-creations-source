@@ -138,7 +138,7 @@ async function generateWithGemini(prompt: string, images: string[], model: strin
   const response = await ai.models.generateContent({
     model,
     contents,
-    config: { responseMimeType: "application/json", temperature: 0.6, abortSignal: AbortSignal.timeout(timeoutMs) },
+    config: { responseMimeType: "application/json", abortSignal: AbortSignal.timeout(timeoutMs) },
   });
   if (!response.text) throw new ProviderFailure('invalid_response');
   return parseJsonObject(response.text);
