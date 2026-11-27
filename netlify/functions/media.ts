@@ -1,7 +1,7 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getStorage } from 'firebase-admin/storage';
-import { mediaFilename, mediaLocation } from '../../server/media-path';
+import { mediaContentType, mediaFilename, mediaLocation } from '../../server/media-path';
 import { firebaseCredentials, FirebaseConfigurationError } from '../../server/firebase-credentials';
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 export default async function handler(request: Request) {
@@ -22,7 +22,7 @@ export default async function handler(request: Request) {
     if (location.bucket) {
       const file = getStorage(app).bucket(location.bucket).file(location.object);
       const [metadata] = await file.getMetadata();
-      const type = metadata.contentType || '';
+      const type = mediaContentType(metadata.contentType || '', location.object);
       if (!/^(image|video)\//.test(type)) return json({ error: 'Υποστηρίζονται εικόνες, GIF και βίντεο.' }, 415);
       if (body.action === 'download') {
         const filename = mediaFilename(body.filename || location.object.split('/').at(-1) || '', type);
@@ -36,7 +36,8 @@ export default async function handler(request: Request) {
     }
     const upstream = await fetch(location.external, { redirect: 'error', signal: AbortSignal.timeout(20000), headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'image/*,video/*' } });
     if (!upstream.ok) return json({ error: `Ο πάροχος αρχείου επέστρεψε HTTP ${upstream.status}.` }, 502);
-    const type = upstream.headers.get('content-type') || '';
+    const externalFilename = new URL(location.external).pathname.split('/').filter(Boolean).at(-1) || '';
+    const type = mediaContentType(upstream.headers.get('content-type') || '', externalFilename, body.filename || '');
     if (!/^(image|video)\//.test(type) || (body.action === 'edit' && !/^image\/(jpeg|png|webp|avif|bmp)/.test(type))) return json({ error: 'Μη υποστηριζόμενο αρχείο.' }, 415);
     const reader = upstream.body?.getReader();
     if (!reader) return json({ error: 'Δεν παραλήφθηκε αρχείο.' }, 502);
