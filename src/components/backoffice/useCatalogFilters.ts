@@ -9,13 +9,13 @@ type CatalogFiltersDependencies = Pick<BackOfficeSharedState, 'activeCollection'
 export function useCatalogFilters(dependencies: CatalogFiltersDependencies) {
     const { activeCollection, jewelryList } = dependencies;
 
-    const [statsFilter, setStatsFilter] = useState('all');
+    const [statsFilter, setStatsFilter] = useState<'all' | 'available' | 'unavailable' | 'sold' | 'archived'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Όλα');
     const [selectedColor, setSelectedColor] = useState('Όλα');
     const [sortBy, setSortBy] = useState('shop_order');
     const [viewMode, setViewMode] = useState('grid');
-    const [archiveView, setArchiveView] = useState<'active' | 'archived'>('active');
+    const archiveView = statsFilter === 'archived' ? 'archived' : 'active';
 
     const getStatsSegment = (item) => {
         if (statsFilter === 'available') return isAvailableItem(item);
@@ -118,7 +118,7 @@ export function useCatalogFilters(dependencies: CatalogFiltersDependencies) {
     return {
         statsFilter, setStatsFilter, searchQuery, setSearchQuery, selectedCategory, setSelectedCategory,
         selectedColor, setSelectedColor, sortBy, setSortBy, viewMode, setViewMode, dashboardStats, statsCopy,
-        filteredAndSortedJewelry, archiveView, setArchiveView
+        filteredAndSortedJewelry, archiveView
     };
 }
 

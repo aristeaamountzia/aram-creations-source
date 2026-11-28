@@ -110,7 +110,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
     const {
         dashboardStats, filteredAndSortedJewelry, searchQuery, selectedCategory, selectedColor, setSearchQuery,
         setSelectedCategory, setSelectedColor, setSortBy, setStatsFilter, setViewMode, sortBy, statsCopy,
-        statsFilter, viewMode, archiveView, setArchiveView
+        statsFilter, viewMode, archiveView
     } = catalogFilters;
     const { allFilterCategories, allFilterColors, allFormStatuses, getStatusColor } = catalogOptions;
     const { closeImageEditor, imageEditorTarget, isApplyingImageEdit } = mediaStudio;
@@ -383,15 +383,32 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
 
             <div className="mb-6">
                 <div className="flex flex-col sm:flex-row gap-2 sm:justify-between sm:items-end mb-3 px-1 min-w-0">
-                    <h3 className="text-xs font-black text-stone-500 uppercase tracking-wider">Στατιστικα Καταλογου</h3>
-                    <div className="backoffice-stats-filter flex flex-wrap bg-stone-200/70 rounded-lg p-1 max-w-full">
-                        <button onClick={() => setStatsFilter('available')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm ${statsFilter === 'available' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Διαθέσιμα</button>
-                        <button onClick={() => setStatsFilter('unavailable')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm whitespace-nowrap ${statsFilter === 'unavailable' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Μη Διαθέσιμα</button>
-                        <button onClick={() => setStatsFilter('sold')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm whitespace-nowrap ${statsFilter === 'sold' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Πωληθέντα</button>
-                        <button onClick={() => setStatsFilter('all')} className={`text-xs font-bold px-4 py-1.5 rounded-md transition shadow-sm ${statsFilter === 'all' ? 'bg-white text-stone-800' : 'text-stone-500 hover:text-stone-700 shadow-none'}`}>Συνολικά</button>
+                    <h3 className="text-xs font-black text-stone-500 uppercase tracking-wider">Προβολή καταλόγου</h3>
+                    <div role="group" aria-label="Προβολή καταλόγου" className="backoffice-stats-filter flex flex-wrap bg-stone-200/70 rounded-lg p-1 max-w-full">
+                        {([
+                            ['all', 'Όλα στο Shop'],
+                            ['available', 'Προς πώληση'],
+                            ['unavailable', 'Μη διαθέσιμα'],
+                            ['sold', 'Πωλημένα'],
+                            ['archived', 'Αρχείο'],
+                        ] as const).map(([value, label]) => (
+                            <button
+                                key={value}
+                                type="button"
+                                aria-pressed={statsFilter === value}
+                                disabled={isArchiving}
+                                onClick={() => {
+                                    if ((statsFilter === 'archived') !== (value === 'archived')) clearBulkSelection();
+                                    setStatsFilter(value);
+                                }}
+                                className={`text-xs font-bold px-4 py-1.5 rounded-md transition whitespace-nowrap disabled:opacity-50 ${statsFilter === value ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
+                            >
+                                {label}
+                            </button>
+                        ))}
                     </div>
                 </div>
-                <div className="backoffice-stats-grid grid grid-cols-3 gap-3 sm:gap-4">
+                {archiveView !== 'archived' && <div className="backoffice-stats-grid grid grid-cols-3 gap-3 sm:gap-4">
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex flex-col items-center justify-center text-center transition">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{statsCopy.count}</span>
                         <span className="text-xl sm:text-2xl font-black text-stone-950">{dashboardStats.count}</span>
@@ -404,7 +421,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                         <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{statsCopy.profit}</span>
                         <span className="text-xl sm:text-2xl font-black text-stone-950">{dashboardStats.profit.toFixed(2)}€</span>
                     </div>
-                </div>
+                </div>}
             </div>
 
             <div className="mb-6">
@@ -413,14 +430,6 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                 categories={[{ id: 'Όλα', label: 'Όλες οι Κατηγορίες' }, ...allFilterCategories.map(category => ({ id: category, label: category }))]}
                 selectedCategory={selectedCategory} onCategory={setSelectedCategory}
                 actions={<>
-                <select aria-label="Ενεργά ή αρχειοθετημένα προϊόντα" value={archiveView} disabled={isArchiving}
-                    onChange={event => {
-                        setArchiveView(event.target.value === 'archived' ? 'archived' : 'active');
-                        clearBulkSelection();
-                    }} className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 text-sm">
-                    <option value="active">Ενεργός κατάλογος</option>
-                    <option value="archived">Αρχείο προϊόντων</option>
-                </select>
                 <select aria-label="Φίλτρο χρώματος" className="px-4 py-2 border border-stone-200 rounded-lg bg-stone-50 focus:outline-none focus:border-stone-400 text-sm" value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)}>
                     <option value="Όλα">Όλα τα Χρώματα</option>
                     {allFilterColors.map(col => <option key={col} value={col}>{col}</option>)}

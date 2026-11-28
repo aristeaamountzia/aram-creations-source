@@ -406,7 +406,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="shop-product-status" className="block text-xs font-bold text-stone-600 mb-1">Κατάσταση *</label>
+                                    <label htmlFor="shop-product-status" className="block text-xs font-bold text-stone-600 mb-1">Κατάσταση πώλησης *</label>
                                     {isCustomStatus ? (
                                         <div className="flex gap-2">
                                             <input id="shop-product-status" type="text" required className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none transition" value={formStatus} onChange={e => setFormStatus(e.target.value)} placeholder="Νέα κατάσταση..." autoFocus />
@@ -461,7 +461,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                     <input id="shop-product-manual-views" type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formManualViews} onChange={e => setFormManualViews(Math.max(0, Number(e.target.value) || 0))} />
                                 </div>
                                 <div>
-                                    <label htmlFor="shop-product-stock" className="block text-xs font-bold text-stone-600 mb-1">Απόθεμα (Τεμ.)</label>
+                                    <label htmlFor="shop-product-stock" className="block text-xs font-bold text-stone-600 mb-1">Απόθεμα (τεμάχια)</label>
                                     <input id="shop-product-stock" type="number" min="0" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formStock} onChange={e => {
                                         const value = e.target.value;
                                         setFormStock(value);
