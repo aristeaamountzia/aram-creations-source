@@ -61,9 +61,9 @@ export function BulkEditorDialog(props: BulkEditorDialogProps) {
                 {/* Navigation Tabs */}
                 <div className="px-5 py-2.5 border-b border-stone-200 bg-stone-50/90 flex flex-wrap items-center gap-2 shrink-0">
                     {[
-                        ['fields', 'Βασικά Στοιχεία'],
+                        ['fields', 'Βασικά Στοιχεία & Απόθεμα'],
                         ['search_replace', 'Εντοπισμός & Αντικατάσταση'],
-                        ['pricing', 'Τιμές & Απόθεμα'],
+                        ['pricing', 'Τιμές'],
                         ['tags', 'Χρώματα & Υλικά']
                     ].map(([tabId, label]) => (
                         <button
@@ -111,8 +111,8 @@ export function BulkEditorDialog(props: BulkEditorDialogProps) {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-600 mb-1">Απόθεμα (τεμάχια)</label>
-                                    <input type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkStock} onChange={e => setBulkStock(e.target.value)} placeholder="Καμία αλλαγή" />
+                                    <label htmlFor="bulk-product-stock" className="block text-xs font-bold text-stone-600 mb-1">Απόθεμα (τεμάχια)</label>
+                                    <input id="bulk-product-stock" type="number" min="0" step="1" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 outline-none" value={bulkStock} onChange={e => setBulkStock(e.target.value)} placeholder="Καμία αλλαγή" />
                                 </div>
                             </div>
 
