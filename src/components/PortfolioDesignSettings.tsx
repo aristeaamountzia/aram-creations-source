@@ -56,6 +56,7 @@ export function PortfolioDesignSettings({
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1">Κεντρική Επικεφαλίδα</label>
             <input
+              aria-label="Κεντρική Επικεφαλίδα Portfolio"
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs outline-none focus:bg-white focus:border-stone-400"
               value={design.title}
               onChange={e => update({ title: e.target.value })}
@@ -64,6 +65,7 @@ export function PortfolioDesignSettings({
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1">Κείμενο Κουμπιού Επικοινωνίας</label>
             <input
+              aria-label="Κείμενο Κουμπιού Επικοινωνίας Portfolio"
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs outline-none focus:bg-white focus:border-stone-400"
               value={design.contactLabel}
               onChange={e => update({ contactLabel: e.target.value })}
@@ -73,6 +75,7 @@ export function PortfolioDesignSettings({
         <div>
           <label className="block text-xs font-bold text-stone-700 mb-1">Υπότιτλος & Περιγραφή</label>
           <textarea
+            aria-label="Υπότιτλος και Περιγραφή Portfolio"
             rows={2}
             className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs outline-none focus:bg-white focus:border-stone-400 resize-none"
             value={design.subtitle}
@@ -139,6 +142,7 @@ export function PortfolioDesignSettings({
                 </span>
                 <div className="flex-1">
                   <input
+                    aria-label={`Όνομα κατηγορίας ${index + 1}`}
                     placeholder="Όνομα κατηγορίας"
                     className="w-full rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-bold text-stone-800 outline-none focus:border-stone-400"
                     value={cat.title}
@@ -184,6 +188,7 @@ export function PortfolioDesignSettings({
               </div>
               <div className="mt-2 pl-7">
                 <input
+                  aria-label={`Σύντομη περιγραφή κατηγορίας ${index + 1}`}
                   placeholder="Σύντομη περιγραφή (προαιρετικό)"
                   className="w-full rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-[11px] text-stone-600 outline-none focus:border-stone-400"
                   value={cat.description || ''}
@@ -236,6 +241,7 @@ export function PortfolioDesignSettings({
             >
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
               <input
+                aria-label={`Όνομα κατάστασης διαθεσιμότητας: ${status.label}`}
                 className="flex-1 bg-white border border-stone-200 rounded-lg px-2.5 py-1 text-xs font-bold text-stone-800 outline-none"
                 value={status.label}
                 onChange={e =>
@@ -291,6 +297,7 @@ export function PortfolioDesignSettings({
         {/* Add tag form */}
         <form onSubmit={handleAddMaterial} className="flex gap-2 max-w-sm pt-2">
           <input
+            aria-label="Προσθήκη νέου υλικού ή τεχνικής"
             type="text"
             placeholder="Προσθήκη νέου υλικού..."
             value={newMaterial}
@@ -327,6 +334,7 @@ export function PortfolioDesignSettings({
                   {greekName}
                 </label>
                 <input
+                  aria-label={`Ετικέτα πεδίου Portfolio: ${greekName}`}
                   className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-stone-800 outline-none"
                   value={label}
                   onChange={e =>

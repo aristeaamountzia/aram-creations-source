@@ -462,11 +462,15 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       return matchesCat && (!selectedCollection || collection === selectedCollection) && matchesSearch && matchesFav;
     }).sort((a, b) => {
       const availabilityOrder = compareSoldLast(a, b);
+      if (sortBy === 'price-asc') {
+        return (Number(a.price) || 0) - (Number(b.price) || 0) || availabilityOrder;
+      }
+      if (sortBy === 'price-desc') {
+        return (Number(b.price) || 0) - (Number(a.price) || 0) || availabilityOrder;
+      }
+      if (sortBy === 'popular') return getItemLikes(b) - getItemLikes(a) || availabilityOrder;
+      if (sortBy === 'views') return getItemViews(b) - getItemViews(a) || availabilityOrder;
       if (availabilityOrder) return availabilityOrder;
-      if (sortBy === 'price-asc') return (Number(a.price) || 0) - (Number(b.price) || 0);
-      if (sortBy === 'price-desc') return (Number(b.price) || 0) - (Number(a.price) || 0);
-      if (sortBy === 'popular') return getItemLikes(b) - getItemLikes(a);
-      if (sortBy === 'views') return getItemViews(b) - getItemViews(a);
       return (Number(b.shopOrder) || 0) - (Number(a.shopOrder) || 0);
     });
   }, [jewelryList, selectedCategory, selectedCollection, searchQuery, showFavoritesOnly, favoriteIds, availableOnly, sortBy, locale]);

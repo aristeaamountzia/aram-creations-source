@@ -286,6 +286,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                     <div>
                                         <label className="block text-xs font-bold text-stone-700 mb-1">Σύνδεσμος αρχείου βίντεο (Direct URL)</label>
                                         <input
+                                            aria-label="Σύνδεσμος αρχείου βίντεο Hero Shop"
                                             type="url"
                                             placeholder="https://.../video.mp4"
                                             value={shopSettings.heroVideoUrl || ''}
@@ -360,6 +361,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                         </div>
                                         <label className="inline-flex items-center cursor-pointer">
                                             <input
+                                                aria-label="Ενεργοποίηση ανακοίνωσης κορυφής"
                                                 type="checkbox"
                                                 className="sr-only peer"
                                                 checked={shopSettings.announcementEnabled}
@@ -372,6 +374,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                         <div>
                                             <label className="block text-xs font-bold text-stone-700 mb-1">Κείμενο ανακοίνωσης</label>
                                             <input
+                                                aria-label="Κείμενο ανακοίνωσης κορυφής"
                                                 type="text"
                                                 maxLength={"140" as unknown as number}
                                                 placeholder="π.χ. Δωρεάν μεταφορικά για παραγγελίες άνω των 50€!"
@@ -383,6 +386,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                         <div>
                                             <label className="block text-xs font-bold text-stone-700 mb-1">Προαιρετικός σύνδεσμος</label>
                                             <input
+                                                aria-label="Προαιρετικός σύνδεσμος ανακοίνωσης κορυφής"
                                                 type="url"
                                                 placeholder="https://..."
                                                 className="w-full border border-stone-200 rounded-xl px-3 py-2 text-xs bg-stone-50 focus:bg-white outline-none"
@@ -463,6 +467,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                         <div key={platform} className="space-y-1">
                                             <label className="text-xs font-bold text-stone-700 capitalize">{platform}</label>
                                             <input
+                                                aria-label={`Εξωτερικός σύνδεσμος προφίλ ${platform}`}
                                                 type="url"
                                                 placeholder={`https://${platform.toLowerCase()}...`}
                                                 className="w-full border border-stone-200 rounded-xl px-3 py-2 text-xs bg-stone-50 focus:bg-white outline-none"
@@ -492,6 +497,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                             <div>
                                                 <label className="block text-[11px] font-bold text-stone-700 mb-1">Βασικό Κόστος (€)</label>
                                                 <input
+                                                    aria-label="Βασικό κόστος αποστολής Box Now σε ευρώ"
                                                     type="number"
                                                     min="0"
                                                     step="0.10"
@@ -509,6 +515,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                             <div>
                                                 <label className="block text-[11px] font-bold text-stone-700 mb-1">Όριο Δωρεάν (€)</label>
                                                 <input
+                                                    aria-label="Όριο δωρεάν αποστολής Box Now σε ευρώ"
                                                     type="number"
                                                     min="0"
                                                     step="1"
@@ -532,6 +539,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                             <div>
                                                 <label className="block text-[11px] font-bold text-stone-700 mb-1">Βασικό Κόστος (€)</label>
                                                 <input
+                                                    aria-label="Βασικό κόστος αποστολής courier σε ευρώ"
                                                     type="number"
                                                     min="0"
                                                     step="0.10"
@@ -549,6 +557,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                             <div>
                                                 <label className="block text-[11px] font-bold text-stone-700 mb-1">Όριο Δωρεάν (€)</label>
                                                 <input
+                                                    aria-label="Όριο δωρεάν αποστολής courier σε ευρώ"
                                                     type="number"
                                                     min="0"
                                                     step="1"
@@ -570,6 +579,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                 <div>
                                     <label className="block text-xs font-bold text-stone-700 mb-1">Σημείωση / Επισήμανση Μεταφορικών (για ογκώδη αντικείμενα ή μεγαλύτερες θυρίδες)</label>
                                     <input
+                                        aria-label="Σημείωση ή επισήμανση μεταφορικών"
                                         type="text"
                                         placeholder="π.χ. *Τα παραπάνω κόστη αφορούν βασικές θυρίδες. Για ογκώδη αντικείμενα ενδέχεται να υπάρξει προσαρμογή."
                                         className="w-full border border-stone-200 rounded-xl px-3.5 py-2 text-xs bg-stone-50 focus:bg-white outline-none"
@@ -844,6 +854,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
 
                                 <div>
                                     <input
+                                        aria-label="Σύνδεσμος Back-office AI endpoint"
                                         type="url"
                                         placeholder="Άστο κενό για χρήση του /api/backoffice-ai ή βάλε http://127.0.0.1:3000/api/backoffice-ai για τοπικό server"
                                         className="w-full border border-stone-200 rounded-xl px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-900 transition outline-none text-xs font-mono text-stone-800"
