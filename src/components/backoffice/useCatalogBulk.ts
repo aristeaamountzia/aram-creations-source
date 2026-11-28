@@ -1,5 +1,7 @@
+import { captureCatalogFields } from '../../lib/catalog-history';
+import { publicProductDescription, uniqueCatalogLabels, colorKey, materialKey } from '../../lib/catalog-labels';
 import { BASE_CATEGORIES, BASE_MATERIALS, BASE_COLORS, splitTags } from './catalog-config';
-import { duplicateJewelryData, isArchivedJewelry } from '../../lib/stock-edit';
+import { duplicateJewelryData, inventoryStock, isArchivedJewelry, statusForEditedStock, stockForSelectedStatus } from '../../lib/stock-edit';
 import { writeJewelryChanges } from '../../lib/jewelry-store';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { notifyOperationSuccess, notifyOperationError } from '../../lib/sound-notifications';
@@ -210,10 +212,10 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
             const nextShopOrder = (reordered.length - idx) * 10;
             return {
                 id: product.id,
-                oldData: { shopOrder: product.shopOrder || 0 },
+                oldData: captureCatalogFields(product, ['shopOrder']),
                 newData: { shopOrder: nextShopOrder }
             };
-        }).filter(update => update.oldData.shopOrder !== update.newData.shopOrder);
+        }).filter(update => (update.oldData.shopOrder || 0) !== update.newData.shopOrder);
     };
 
     const getGroupShopOrderUpdates = ({ movingIds, placement, targetId }: { movingIds: string[]; placement?: string; targetId?: string }) => {
@@ -302,25 +304,23 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
         };
 
         selectedItems.forEach(item => {
-            const oldData: CatalogRecord = {};
             const newData: CatalogRecord = {};
             let changed = false;
 
             if (bulkFindScopes.name && item.name) {
                 const nextName = replaceInString(item.name);
                 if (nextName !== item.name) {
-                    oldData.name = item.name;
                     newData.name = nextName;
                     changed = true;
                     matchCount++;
                 }
             }
 
-            if (bulkFindScopes.notes && item.notes) {
-                const nextNotes = replaceInString(item.notes);
-                if (nextNotes !== item.notes) {
-                    oldData.notes = item.notes;
-                    newData.notes = nextNotes;
+            if (bulkFindScopes.notes) {
+                const description = publicProductDescription(item);
+                const nextDescription = replaceInString(description);
+                if (nextDescription !== description) {
+                    newData.description = nextDescription;
                     changed = true;
                     matchCount++;
                 }
@@ -329,7 +329,6 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
             if (bulkFindScopes.collection && item.collection) {
                 const nextCol = replaceInString(item.collection);
                 if (nextCol !== item.collection) {
-                    oldData.collection = item.collection;
                     newData.collection = nextCol;
                     changed = true;
                     matchCount++;
@@ -341,7 +340,6 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
                     .map(m => replaceInString(m))
                     .filter(Boolean);
                 if (JSON.stringify(nextMats) !== JSON.stringify(item.materials)) {
-                    oldData.materials = item.materials;
                     newData.materials = nextMats;
                     changed = true;
                     matchCount++;
@@ -353,7 +351,6 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
                     .map(c => replaceInString(c))
                     .filter(Boolean);
                 if (JSON.stringify(nextCols) !== JSON.stringify(item.colors)) {
-                    oldData.colors = item.colors;
                     newData.colors = nextCols;
                     changed = true;
                     matchCount++;
@@ -361,7 +358,7 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
             }
 
             if (changed) {
-                updatesList.push({ id: item.id, oldData, newData });
+                updatesList.push({ id: item.id, oldData: captureCatalogFields(item, Object.keys(newData)), newData });
             }
         });
 
@@ -411,16 +408,16 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
             updates.price = parsedBulkPrice;
         }
         if (bulkStock !== '') {
-            const parsedStock = parseInt(bulkStock, 10);
-            if (!Number.isNaN(parsedStock) && parsedStock >= 0) {
-                updates.stock = parsedStock;
-                if (parsedStock === 0) updates.status = 'Πουλήθηκε';
+            const parsedStock = Number(bulkStock);
+            if (!Number.isInteger(parsedStock) || parsedStock < 0) {
+                alert('Το απόθεμα πρέπει να είναι μη αρνητικός ακέραιος αριθμός.');
+                return;
             }
+            updates.stock = parsedStock;
         }
         if (updates.status === 'Πουλήθηκε') updates.stock = 0;
-        if (bulkDraft.notes.trim()) updates.notes = bulkDraft.notes.trim();
+        if (bulkDraft.notes.trim()) updates.description = bulkDraft.notes.trim();
         const shopOrderUpdates = getBulkShopOrderUpdates(bulkDraft.shopPlacement);
-        const fields = Object.keys(updates);
         const bulkUpdateMap = new Map();
         const mergeBulkUpdate = (id, oldData, newData) => {
             const existing = bulkUpdateMap.get(id) || { id, oldData: {}, newData: {} };
@@ -432,7 +429,12 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
         // Process selected items with field updates, pricing adjustments, and tag additions/removals
         selectedItems.forEach(item => {
             const itemUpdates = { ...updates };
-            if (updates.status === 'Διαθέσιμο' && updates.stock === undefined && Number(item.stock) <= 0) itemUpdates.stock = 1;
+            if (updates.stock !== undefined && updates.status !== 'Πουλήθηκε') {
+                const status = statusForEditedStock(updates.status || item.status, Number(updates.stock));
+                if (status && (updates.status || status !== item.status)) itemUpdates.status = status;
+            } else if (updates.status === 'Διαθέσιμο' && inventoryStock(item) <= 0) {
+                itemUpdates.stock = stockForSelectedStatus(updates.status, inventoryStock(item));
+            }
 
             // Handle price percentage or fixed amount adjustment
             if (bulkPriceAdjustmentMode !== 'none' && bulkPriceAdjustmentValue !== '') {
@@ -457,22 +459,22 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
             if (bulkMaterials.length > 0) {
                 const curMats = Array.isArray(item.materials) ? item.materials : [];
                 if (bulkTagMode === 'append') {
-                    itemUpdates.materials = Array.from(new Set([...curMats, ...bulkMaterials]));
+                    itemUpdates.materials = uniqueCatalogLabels([...curMats, ...bulkMaterials], materialKey);
                 } else if (bulkTagMode === 'remove') {
-                    itemUpdates.materials = curMats.filter(m => !bulkMaterials.includes(m));
+                    itemUpdates.materials = curMats.filter(m => !bulkMaterials.some(tag => materialKey(tag) === materialKey(m)));
                 } else {
-                    itemUpdates.materials = bulkMaterials;
+                    itemUpdates.materials = uniqueCatalogLabels(bulkMaterials, materialKey);
                 }
             }
 
             if (bulkColors.length > 0) {
                 const curCols = Array.isArray(item.colors) ? item.colors : [];
                 if (bulkTagMode === 'append') {
-                    itemUpdates.colors = Array.from(new Set([...curCols, ...bulkColors]));
+                    itemUpdates.colors = uniqueCatalogLabels([...curCols, ...bulkColors], colorKey);
                 } else if (bulkTagMode === 'remove') {
-                    itemUpdates.colors = curCols.filter(c => !bulkColors.includes(c));
+                    itemUpdates.colors = curCols.filter(c => !bulkColors.some(tag => colorKey(tag) === colorKey(c)));
                 } else {
-                    itemUpdates.colors = bulkColors;
+                    itemUpdates.colors = uniqueCatalogLabels(bulkColors, colorKey);
                 }
             }
 
@@ -480,7 +482,7 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
             if (itemFields.length > 0) {
                 mergeBulkUpdate(
                     item.id,
-                    Object.fromEntries(itemFields.map(field => [field, item[field] ?? (Array.isArray(itemUpdates[field]) ? [] : '')])),
+                    captureCatalogFields(item, itemFields),
                     itemUpdates
                 );
             }
@@ -527,7 +529,7 @@ export function useCatalogBulk(dependencies: CatalogBulkDependencies) {
             pushUndoAction({
                 type: 'BULK_UPDATE',
                 items: results.map(({ id, before }) => ({
-                    id, oldData: { isDeleted: before?.isDeleted ?? false, deletedAt: before?.deletedAt ?? null }, newData: patch
+                    id, oldData: captureCatalogFields(before, Object.keys(patch)), newData: patch
                 })),
                 message
             });

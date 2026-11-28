@@ -1,7 +1,8 @@
+import { publicProductDescription, uniqueCatalogLabels, colorKey, materialKey } from '../../lib/catalog-labels';
 import { BASE_CATEGORIES, BASE_STATUSES } from './catalog-config';
 import { buildHistoryEntryFromAction } from './useCatalogHistory';
 import { sanitizeVintedDescription as stripVintedCondition } from '../../lib/vinted-sanitizer';
-import { assertUnchangedInventory, assertInventoryChangeAllowed, inventoryLabel } from '../../lib/stock-edit';
+import { assertUnchangedInventory, assertInventoryChangeAllowed, inventoryEditorPatch, inventoryLabel, inventoryStock } from '../../lib/stock-edit';
 import { addJewelryItem, writeJewelryChanges } from '../../lib/jewelry-store';
 import { stageHistory, equalHistoryValue } from '../../lib/catalog-history';
 import { notifyOperationSuccess, notifyOperationError } from '../../lib/sound-notifications';
@@ -121,17 +122,17 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
         setIsEditMode(true); setCurrentItem(item);
         setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
 
-        setFormName(item.name || ''); setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status ? inventoryLabel(item) : 'Διαθέσιμο'); setFormDate(item.creationDate || '');
-        setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock ?? 1); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
+        setFormName(item.name || ''); setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(inventoryLabel(item)); setFormDate(item.creationDate || '');
+        setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(inventoryStock(item)); setFormShopOrder(item.shopOrder || 0); setFormManualLikes(Math.max(0, Number(item.shopFavorites ?? item.likes ?? 0) || 0)); setFormManualViews(Math.max(0, Number(item.views ?? item.viewCount ?? 0) || 0));
         setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
-        setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(stripVintedCondition(item.notes || ''));
+        setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(stripVintedCondition(publicProductDescription(item)));
         setFormEnglishCopy({ title: item.titleEn || '', description: item.descriptionEn || '' });
 
         const existingPurchaseLinks = item.purchaseLinks || item.productLinks || [];
         setFormPurchaseLinks(existingPurchaseLinks);
         setNewPurchaseSite('Vinted'); setNewPurchaseUrl(''); setIsCustomPurchaseSite(false);
 
-        const existingPosted = item.postedPlatforms || (item.platforms ? item.platforms.map(p => ({ site: p, url: '', showInShop: true })) : []);
+        const existingPosted = item.postedPlatforms || (item.platforms ? item.platforms.map(p => ({ site: p, url: '', showInShop: false })) : []);
         setFormPostedPlatforms(existingPosted);
         setNewPostedSite('Instagram'); setNewPostedUrl(''); setNewPostedVisible(false); setIsCustomPostedSite(false);
 
@@ -154,17 +155,17 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
         setIsCustomCategory(false); setIsCustomCollection(false); setIsCustomStatus(false); setIsCustomStorage(false);
 
         setFormName(item.name ? item.name + ' (Αντίγραφο)' : '');
-        setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(item.status || 'Διαθέσιμο'); setFormDate(item.creationDate || new Date().toISOString().split('T')[0]);
-        setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(item.stock || 1); setFormShopOrder(0);
+        setFormCategory(item.category || 'Κολιέ'); setFormCollection(item.collection || ''); setFormStatus(inventoryLabel(item)); setFormDate(item.creationDate || new Date().toISOString().split('T')[0]);
+        setFormPrice(item.price ? item.price.toString() : ''); setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : ''); setFormCost(item.cost ? item.cost.toString() : ''); setFormStock(inventoryStock(item)); setFormShopOrder(0);
         setFormWeight(item.weight || ''); setFormDimensions(item.dimensions || ''); setFormStorage(item.storage || '');
-        setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(item.notes || '');
+        setFormMaterials(item.materials || []); setFormColorsArr(item.colors || []); setFormNotes(publicProductDescription(item));
         setFormEnglishCopy({ title: item.titleEn || '', description: item.descriptionEn || '' });
 
         const existingPurchaseLinks = item.purchaseLinks || item.productLinks || [];
         setFormPurchaseLinks(existingPurchaseLinks);
         setNewPurchaseSite('Vinted'); setNewPurchaseUrl(''); setIsCustomPurchaseSite(false);
 
-        const existingPosted = item.postedPlatforms || (item.platforms ? item.platforms.map(p => ({ site: p, url: '', showInShop: true })) : []);
+        const existingPosted = item.postedPlatforms || (item.platforms ? item.platforms.map(p => ({ site: p, url: '', showInShop: false })) : []);
         setFormPostedPlatforms(existingPosted);
         setNewPostedSite('Instagram'); setNewPostedUrl(''); setNewPostedVisible(false); setIsCustomPostedSite(false);
 
@@ -211,9 +212,9 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
         const parsedPrice = formPrice === '' ? 0 : Number(formPrice);
         const parsedOriginalPrice = formOriginalPrice === '' ? null : Number(formOriginalPrice);
         const parsedCost = formCost === '' ? 0 : Number(formCost);
-        const parsedStock = formStock === '' ? 1 : parseInt(formStock as string, 10);
+        const parsedStock = formStock === '' ? 1 : Number(formStock);
         const parsedShopOrder = isEditMode && currentItem ? parseInt(formShopOrder || currentItem.shopOrder || 0, 10) : 0;
-        if ([parsedPrice, parsedCost, parsedStock, parsedShopOrder].some(value => Number.isNaN(value)) || parsedPrice < 0 || parsedCost < 0 || parsedStock < 0 || parsedShopOrder < 0) {
+        if ([parsedPrice, parsedCost, parsedStock, parsedShopOrder].some(value => Number.isNaN(value)) || !Number.isInteger(parsedStock) || parsedPrice < 0 || parsedCost < 0 || parsedStock < 0 || parsedShopOrder < 0) {
             alert("Ελέγξτε τιμή, κόστος και απόθεμα. Επιτρέπονται μόνο μη αρνητικοί αριθμοί.");
             return;
         }
@@ -326,10 +327,20 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
             }
 
             const mainImage = finalMediaUrls.find(m => m.showInShop) || finalMediaUrls[0] || { url: '', type: 'image' };
-            const sanitizedPurchaseLinks = formPurchaseLinks.map(l => ({ site: l.site || '', url: l.url || '' }));
-            const sanitizedPostedPlatforms = formPostedPlatforms.map(p => ({ site: p.site || '', url: p.url || '', showInShop: p.showInShop !== false }));
+            const sanitizedPurchaseLinks = formPurchaseLinks.map(link => ({
+                site: link.site || '',
+                url: link.url || '',
+                ...(link.showInShop === false ? { showInShop: false } : {}),
+            }));
+            const sanitizedPostedPlatforms = formPostedPlatforms.map(p => ({ site: p.site || '', url: p.url || '', showInShop: p.showInShop === true }));
 
             const previousCopy = isEditMode ? currentItem : null;
+            const description = stripVintedCondition(formNotes.trim());
+            const previousDescription = previousCopy ? stripVintedCondition(publicProductDescription(previousCopy)) : '';
+            const descriptionChanged = !previousCopy || description !== previousDescription;
+            const inventoryChanges = inventoryEditorPatch(previousCopy, statTrimmed, parsedStock);
+            const materialChanges = !previousCopy || !equalHistoryValue(previousCopy.materials || [], formMaterials);
+            const colorChanges = !previousCopy || !equalHistoryValue(previousCopy.colors || [], formColorsArr);
             const englishCopy = {
                 titleEn: formEnglishCopy.title.trim().slice(0, 160),
                 descriptionEn: formEnglishCopy.description.trim().slice(0, 2000),
@@ -341,12 +352,11 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
                 name: formName.trim(),
                 category: catTrimmed,
                 collection: colTrimmed,
-                status: statTrimmed === 'Διαθέσιμο' && parsedStock === 0 ? 'Πουλήθηκε' : statTrimmed,
+                ...inventoryChanges,
                 creationDate: formDate,
                 price: parsedPrice,
                 originalPrice: parsedOriginalPrice && parsedOriginalPrice > parsedPrice ? parsedOriginalPrice : null,
                 cost: parsedCost,
-                stock: statTrimmed === 'Πουλήθηκε' ? 0 : parsedStock,
                 shopOrder: parsedShopOrder,
                 shopFavorites: Math.max(0, Math.trunc(Number(formManualLikes) || 0)),
                 likes: Math.max(0, Math.trunc(Number(formManualLikes) || 0)),
@@ -355,13 +365,13 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
                 weight: formWeight.trim(),
                 dimensions: formDimensions.trim(),
                 storage: formStorage.trim(),
-                materials: formMaterials,
-                colors: formColorsArr,
+                ...(materialChanges ? { materials: uniqueCatalogLabels(formMaterials, materialKey) } : {}),
+                ...(colorChanges ? { colors: uniqueCatalogLabels(formColorsArr, colorKey) } : {}),
                 platforms: sanitizedPostedPlatforms.map(p => p.site),
                 productLinks: sanitizedPurchaseLinks,
                 purchaseLinks: sanitizedPurchaseLinks,
                 postedPlatforms: sanitizedPostedPlatforms,
-                notes: stripVintedCondition(formNotes.trim()),
+                ...(descriptionChanged ? { description } : {}),
                 ...englishChanges,
                 imageUrl: mainImage.url,
                 fileType: mainImage.type,
@@ -377,6 +387,9 @@ export function createProductActions(dependencies: ProductActionsDependencies) {
                     const latest = snapshot.data();
                     assertUnchangedInventory(currentItem, latest);
                     assertInventoryChangeAllowed(latest, itemData);
+                    if (descriptionChanged && stripVintedCondition(publicProductDescription(latest)) !== previousDescription) {
+                        throw new Error('Η περιγραφή άλλαξε από άλλη ενέργεια. Άνοιξε ξανά τη φόρμα.');
+                    }
                     if (Object.keys(englishChanges).some(field => (latest[field] || '') !== (currentItem[field] || ''))) {
                         throw new Error('Το αγγλικό κείμενο άλλαξε από άλλη ενέργεια. Άνοιξε ξανά τη φόρμα.');
                     }

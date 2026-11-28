@@ -1,3 +1,4 @@
+import { inventoryStock } from '../src/lib/stock-edit';
 import { FieldValue } from 'firebase-admin/firestore';
 import { OrderError } from './orders-core';
 
@@ -27,7 +28,7 @@ export function reservationPatch(product: any, orderId: string, quantity: number
     if (existing !== quantity) throw new OrderError('Η υπάρχουσα δέσμευση αποθέματος δεν συμφωνεί με την παραγγελία.', 409);
     return null;
   }
-  const stock = Number(product?.stock ?? product?.stockCount ?? 1);
+  const stock = inventoryStock(product || {});
   if (!Number.isInteger(stock) || stock < quantity) throw new OrderError('Το προϊόν δεν έχει επαρκές απόθεμα.', 409);
   const nextStock = stock - quantity;
   return {
@@ -138,6 +139,7 @@ export async function cancelOrder(db: any, orderId: string, reason: string, allo
     const now = new Date().toISOString();
     tx.update(orderRef, {
       status: 'cancelled',
+      ...(order.status === 'paid' || order.paidAt || order.stripePaymentIntent ? { refundState: 'review_manually' } : {}),
       emailNotification: order.emailNotification === 'sent' ? 'sent' : 'cancelled',
       updatedAt: now,
       history: [...(order.history || []), { status: 'cancelled', at: now, reason, stockMutation: 'release_reservation', orderId, restored }]

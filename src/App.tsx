@@ -1,3 +1,4 @@
+import { isAvailableForSale } from './lib/stock-edit';
 import { ArtistProfileDialog } from './components/ArtistProfile';
 import { initialHeroSnapshot } from './lib/hero-media';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -280,8 +281,7 @@ const Site: React.FC = () => {
   }, [selectMode, currentMode]);
 
   const handleAddToCart = (item: JewelryItem, customInscription?: string) => {
-    const max = Math.max(0, Number(item.stock ?? item.stockCount ?? 1));
-    if (!max || item.status !== 'Διαθέσιμο') return;
+    if (!isAvailableForSale(item)) return;
     setCartItems((prev) => {
       const existingIdx = prev.findIndex((ci) => ci.item.id === item.id);
       if (existingIdx > -1) {

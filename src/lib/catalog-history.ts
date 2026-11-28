@@ -41,13 +41,21 @@ export function historyRecords(entry: any) {
   }
   return entry.id ? [{ id: kind === 'settings' ? 'shop' : entry.id, collection: kind, before: entry.before, after: entry.after }] : [];
 }
+export function captureCatalogFields(record: Record<string, any> | undefined, fields: string[]) {
+  return Object.fromEntries(fields.flatMap(field =>
+    record && Object.hasOwn(record, field) ? [[field, record[field]]] : []
+  ));
+}
+
 export function restorationFields(before: any, after: any, latest: any) {
   const ignored = new Set(['id', 'createdAt', 'updatedAt', 'checkoutReservations']);
   if (Object.values(latest?.checkoutReservations || {}).some(q => Number(q) > 0)) throw new Error('Υπάρχει ενεργή παραγγελία. Η επαναφορά δεν επιτρέπεται.');
   const patch: Record<string, any> = {};
+  const sameField = (a: any, b: any, key: string) =>
+    Object.hasOwn(a || {}, key) === Object.hasOwn(b || {}, key) && equalHistoryValue(a?.[key], b?.[key]);
   for (const key of new Set([...Object.keys(before || {}), ...Object.keys(after || {})])) {
-    if (ignored.has(key) || equalHistoryValue(before?.[key], after?.[key])) continue;
-    if (!equalHistoryValue(latest?.[key], after?.[key])) throw new Error(`Το πεδίο «${key}» άλλαξε μετά την καταγραφή. Η επαναφορά σταμάτησε.`);
+    if (ignored.has(key) || sameField(before, after, key)) continue;
+    if (!sameField(latest, after, key)) throw new Error(`Το πεδίο «${key}» άλλαξε μετά την καταγραφή. Η επαναφορά σταμάτησε.`);
     patch[key] = before && Object.hasOwn(before, key) ? before[key] : undefined;
   }
   return patch;

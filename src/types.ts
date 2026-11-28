@@ -66,6 +66,7 @@ export interface PurchaseLink {
 }
 
 export interface JewelryItem {
+  postedPlatforms?: Array<{ site: string; url: string; showInShop?: boolean }>;
   titleEn?: string;
   descriptionEn?: string;
   id: string;

@@ -1,3 +1,4 @@
+import { ORDER_STATUSES, type OrderStatus } from './orders-core';
 import type { Firestore } from 'firebase-admin/firestore';
 
 export const OWNER_EMAIL = 'aristeaamnta@gmail.com';
@@ -28,7 +29,7 @@ export async function sendOrderEmail(id: string, payload: any, send = fetch) {
     `Σύνολο: €${Number(payload.total || 0).toFixed(2)}` + (payload.shippingCost !== undefined ? ` (Μεταφορικά: €${Number(payload.shippingCost).toFixed(2)})` : ''),
     `Τρόπος Πληρωμής: ${paymentLabel}`,
     `Τρόπος Αποστολής: ${shippingLabel}`,
-    `Κατάσταση: ${payload.status === 'paid' ? 'Πληρωμένη' : 'Αναμονή πληρωμής / Νέα'}`,
+    `Κατάσταση: ${Object.hasOwn(ORDER_STATUSES, payload.status) ? ORDER_STATUSES[payload.status as OrderStatus] : 'Άγνωστη κατάσταση'}`,
     ``,
     `ΣΤΟΙΧΕΙΑ ΠΕΛΑΤΗ`,
     `----------------------------------------------------`,

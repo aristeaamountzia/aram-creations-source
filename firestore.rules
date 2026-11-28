@@ -10,17 +10,28 @@ service cloud.firestore {
 
     function validJewelry(data) {
       return data.name is string && data.price is number && data.price >= 0
-        && data.stock is int && data.stock >= 0 && data.status is string
+        && data.status is string
         && data.get('checkoutReservations', {}) is map;
+    }
+    function validStock(stock) { return stock is int && stock >= 0; }
+    function validUpdatedStock(data, previous) {
+      let stock = data.get('stock', null);
+      let legacyStock = data.get('stockCount', null);
+      return validStock(stock)
+        || (stock == null && (legacyStock == null || validStock(legacyStock)
+          || legacyStock == previous.get('stockCount', null)))
+        || (stock is string && stock.matches('^[0-9]+$'));
     }
     function noHolds(data) { return data.get('checkoutReservations', {}).size() == 0; }
     // Complete inventory records are private. Checkout owns the reservation map.
     match /jewelry/{itemId} {
       allow read: if isAdmin();
-      allow create: if isAdmin() && validJewelry(request.resource.data) && noHolds(request.resource.data);
+      allow create: if isAdmin() && validJewelry(request.resource.data)
+        && validStock(request.resource.data.get('stock', null)) && noHolds(request.resource.data);
       allow update: if isAdmin() && validJewelry(request.resource.data)
+        && validUpdatedStock(request.resource.data, resource.data)
         && request.resource.data.get('checkoutReservations', {}) == resource.data.get('checkoutReservations', {})
-        && (noHolds(resource.data) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['stock', 'status']));
+        && (noHolds(resource.data) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['stock', 'stockCount', 'status']));
       allow delete: if isAdmin() && noHolds(resource.data);
     }
 

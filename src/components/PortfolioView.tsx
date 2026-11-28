@@ -1,4 +1,4 @@
-import { localizedArt, localizedCategory } from '../lib/portfolio-copy';
+import { localizedArt, localizedCategory, localizedCategoryTitle } from '../lib/portfolio-copy';
 import { localizedTerm, publicTextLanguage } from '../lib/public-copy';
 import { portfolioItemId, portfolioItemPath } from '../lib/public-locale';
 import { usePublicLanguage } from "../lib/use-public-language";
@@ -63,6 +63,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
     });
     // Modal Detail state
     const [selectedItem, setSelectedItem] = useState<ArtItem | null>(null);
+    const selectedCategory = artCategories.find(category => category.id === selectedItem?.category);
     const [sharedId, setSharedId] = useState(() => portfolioItemId(window.location.hash));
     const [shareError, setShareError] = useState('');
     const [activeMediaIdx, setActiveMediaIdx] = useState<number>(0);
@@ -188,7 +189,8 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 const medMatch = item.medium?.toLowerCase().includes(q);
                 const dimMatch = item.dimensions?.toLowerCase().includes(q);
                 const yearMatch = item.year?.toLowerCase().includes(q);
-                const catMatch = artCategories.find((c) => c.id === item.category)?.title.toLowerCase().includes(q);
+                const category = artCategories.find((c) => c.id === item.category);
+                const catMatch = category && localizedCategoryTitle(category, locale).toLowerCase().includes(q);
                 if (!titleMatch && !descMatch && !medMatch && !dimMatch && !yearMatch && !catMatch) {
                     return false;
                 }
@@ -301,7 +303,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
         <h2 className="catalog-heading">{t("Τα έργα", "Selected work")}</h2>
         <FilterBar label={t("Φίλτρα Portfolio", "Portfolio filters")} search={searchTerm} onSearch={setSearchTerm}
           placeholder={t("Αναζήτηση έργων", "Search works")} compactCategories
-          categories={[{ id: 'all', label: t("Όλες οι κατηγορίες", "All categories") }, ...artCategories.map(category => ({ id: category.id, label: category.title, count: items.filter(item => item.category === category.id).length }))]}
+          categories={[{ id: 'all', label: t("Όλες οι κατηγορίες", "All categories") }, ...artCategories.map(category => ({ id: category.id, label: localizedCategoryTitle(category, locale), count: items.filter(item => item.category === category.id).length }))]}
           selectedCategory={selectedCatId} onCategory={id => setSelectedCatId(id as CategoryId | 'all')}
           actions={<>
             <button type="button" aria-pressed={filterMode === 'all'} onClick={() => setFilterMode('all')}>{t("Όλα (", "All (")}{items.length})</button>
@@ -310,7 +312,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
               <option value="default">{t("Προτεινόμενα", "Featured")}</option><option value="newest">{t("Νεότερα", "Newest")}</option><option value="title">{t("Αλφαβητικά (Α-Ω)", "Alphabetical (A–Z)")}</option><option value="category">{t("Ανά Κατηγορία", "By category")}</option>
             </select></div>
           </>}>
-          {activeCategoryMeta && <p className="catalog-category-note"><strong>{activeCategoryMeta.title}:</strong> <span lang={publicTextLanguage(localizedCategory(activeCategoryMeta, locale), locale)}>{localizedCategory(activeCategoryMeta, locale)}</span></p>}
+          {activeCategoryMeta && <p className="catalog-category-note"><strong>{localizedCategoryTitle(activeCategoryMeta, locale)}:</strong> <span lang={publicTextLanguage(localizedCategory(activeCategoryMeta, locale), locale)}>{localizedCategory(activeCategoryMeta, locale)}</span></p>}
         </FilterBar>
       </div>
 
@@ -416,7 +418,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                         {/* Micro-header: Category + Year / Dimension */}
                         <div className="catalog-card-meta">
                           <span className="catalog-card-category">
-                            {cat?.title || t("Έργο Τέχνης", "Artwork")}
+                            {cat ? localizedCategoryTitle(cat, locale) : t("Έργο Τέχνης", "Artwork")}
                           </span>
                           {(item.year || item.dimensions) && (
                             <span className="catalog-card-year">
@@ -483,7 +485,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ onContactArtist })
                 <div className="flex items-start justify-between gap-4 md:pr-14">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-sans uppercase px-2.5 py-1 rounded text-stone-700 bg-stone-100">
-                      {artCategories.find((c) => c.id === selectedItem.category)?.title}
+                      {selectedCategory && localizedCategoryTitle(selectedCategory, locale)}
                     </span>
                     {selectedItem.year && (<span className="text-xs font-sans px-2 py-1 rounded text-stone-600 bg-stone-100">
                         {selectedItem.year}

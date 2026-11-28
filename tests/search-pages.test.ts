@@ -1,3 +1,6 @@
+import { catalogColorSwatch, catalogLabelKey, colorKey, materialKey, uniqueCatalogLabels } from '../src/lib/catalog-labels';
+import { localizedDescription } from '../src/lib/public-copy';
+import { publicJewelryRecord } from '../src/lib/public-catalog';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -150,4 +153,31 @@ test('checkout and configured links keep their targets when the language changes
   assert.equal(storefrontLink('/api/artist-profile?cv=1', 'en', origin), '/api/artist-profile?cv=1');
   assert.equal(storefrontLink('#customer-reviews', 'en', origin), '#customer-reviews');
   assert.equal(storefrontLink('https://www.vinted.gr/items/123', 'en', origin), 'https://www.vinted.gr/items/123');
+});
+
+
+test('public descriptions agree across the Shop and the indexed product page', () => {
+  const saved = {
+    id: 'test-item',
+    name: 'Δοκιμή',
+    notes: 'Δημόσια περιγραφή\nΠροσοχή: Δεν αντιγράφηκαν όλες οι Vinted εικόνες στο Firebase Storage.',
+  };
+  const projected = { id: saved.id, ...publicJewelryRecord(saved) };
+  assert.equal(localizedDescription(projected, 'el'), 'Δημόσια περιγραφή');
+  assert.match(renderPublicProduct(projected, 'el'), /Δημόσια περιγραφή/);
+  assert.doesNotMatch(renderPublicProduct(projected, 'el'), /Firebase Storage/);
+  assert.equal(localizedDescription({ ...saved, description: '' }, 'el'), '');
+});
+
+test('catalogue aliases share swatches and explicitly public listing links remain distinguishable', () => {
+  assert.deepEqual(uniqueCatalogLabels(['Μωβ', 'μοβ'], colorKey), ['Μωβ']);
+  assert.equal(catalogColorSwatch('μέντα', { 'Μέντα': '#accafe' }), '#accafe');
+  assert.equal(catalogColorSwatch('Μοβ'), catalogColorSwatch('Μωβ'));
+  assert.deepEqual(uniqueCatalogLabels(['Υγρό Γυαλί', 'Υγρό Γυαλί (Resin)', 'Εποξική Ρητίνη'], materialKey), ['Υγρό Γυαλί', 'Εποξική Ρητίνη']);
+  assert.equal(catalogLabelKey('Σκουλαρίκια'), catalogLabelKey('σκουλαρικια'));
+  const record = publicJewelryRecord({ postedPlatforms: [
+    { site: 'Public', url: 'https://example.com/public', showInShop: true },
+    { site: 'Private', url: 'https://example.com/private' },
+  ] });
+  assert.deepEqual(record.postedPlatforms, [{ site: 'Public', url: 'https://example.com/public', showInShop: true }]);
 });

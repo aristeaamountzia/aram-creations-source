@@ -102,11 +102,18 @@ export function createOrdersHandler(connect: typeof database = database, notify:
             : await cancelOrder(db, id, 'admin_cancelled');
           return reply({ ok: true, ...result }, 200, origin);
         }
-        await db.runTransaction(async transaction => {
+        const result = await db.runTransaction(async transaction => {
           const ref = db.doc(`orders/${id}`);
           const snapshot = await transaction.get(ref);
           if (!snapshot.exists) throw new OrderError('Η παραγγελία δεν βρέθηκε.', 404);
           const order = snapshot.data()!;
+          const nextTracking = typeof tracking === 'string' ? tracking.slice(0, 200) : order.tracking || '';
+          if (status === undefined || status === order.status) {
+            if (nextTracking !== (order.tracking || '')) {
+              transaction.update(ref, { tracking: nextTracking, updatedAt: new Date().toISOString() });
+            }
+            return { status: order.status, statusChanged: false, tracking: nextTracking };
+          }
           nextStatus(order.status, status, order.paymentMethod);
           const products = await Promise.all(order.items.map((item: { id: string }) => transaction.get(db.doc(`jewelry/${item.id}`))));
           for (const product of products) {
@@ -122,12 +129,13 @@ export function createOrdersHandler(connect: typeof database = database, notify:
           }
           transaction.update(ref, {
             status,
-            tracking: typeof tracking === 'string' ? tracking.slice(0, 200) : order.tracking || '',
+            tracking: nextTracking,
             updatedAt: new Date().toISOString(),
             history: [...(order.history || []), { status, at: new Date().toISOString(), by: user.uid }]
           });
+          return { status, statusChanged: true, tracking: nextTracking };
         });
-        return reply({ ok: true }, 200, origin);
+        return reply({ ok: true, ...result }, 200, origin);
       }
 
       if (request.method !== 'POST') return reply({ error: 'Method not allowed' }, 405, origin);

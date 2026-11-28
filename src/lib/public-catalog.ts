@@ -1,6 +1,7 @@
+import { publicProductDescription } from './catalog-labels';
 export const PUBLIC_JEWELRY_COLLECTION = 'shopCatalog';
 
-const textFields = ['name', 'title', 'titleEn', 'subtitle', 'description', 'descriptionEn', 'notes', 'category', 'collection', 'status', 'badge', 'weight', 'dimensions', 'edition', 'condition', 'vintedUrl'] as const;
+const textFields = ['name', 'title', 'titleEn', 'subtitle', 'description', 'descriptionEn', 'category', 'collection', 'status', 'badge', 'weight', 'dimensions', 'edition', 'condition', 'vintedUrl'] as const;
 const numberFields = ['price', 'originalPrice', 'stock', 'stockCount', 'shopOrder', 'shopFavorites', 'shopViews', 'favorites', 'likes', 'views', 'viewCount', 'vintedFavorites', 'vintedViews'] as const;
 const booleanFields = ['inStock', 'showInNewCollection', 'showAsHeroVideo', 'showInShop', 'isCustomOrder', 'vintedSynced'] as const;
 const publicUrl = (value: unknown) => {
@@ -26,6 +27,8 @@ export function publicJewelryRecord(item: Record<string, any>): Record<string, a
     else if (typeof value === 'string' && Number.isFinite(Date.parse(value))) result[key] = value;
   }
 
+  result.description = publicProductDescription(item);
+
   const media = Array.isArray(item.mediaList) && item.mediaList.length
     ? item.mediaList.filter((entry: any) => entry && entry.showInShop !== false && publicUrl(entry.url))
         .map((entry: any) => ({ url: publicUrl(entry.url), type: entry.type === 'video' || /\.(mp4|webm|ogg|mov)(\?|$)/i.test(entry.url) ? 'video' : 'image', ...(typeof entry.title === 'string' ? { title: entry.title } : {}) }))
@@ -38,6 +41,6 @@ export function publicJewelryRecord(item: Record<string, any>): Record<string, a
   result.fileType = primary?.type || 'image';
   result.images = media.filter((entry: any) => entry.type !== 'video').map((entry: any) => entry.url);
   result.purchaseLinks = links(item.purchaseLinks || item.productLinks);
-  result.postedPlatforms = links(item.postedPlatforms);
+  result.postedPlatforms = links(Array.isArray(item.postedPlatforms) ? item.postedPlatforms.filter(entry => entry?.showInShop === true) : []).map(link => ({ ...link, showInShop: true }));
   return result;
 }

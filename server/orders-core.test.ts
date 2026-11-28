@@ -38,3 +38,9 @@ test('status transitions prevent reopening cancelled orders or shipping unpaid o
   assert.throws(() => nextStatus('cancelled', 'paid'));
   assert.throws(() => nextStatus('delivered', 'cancelled'));
 });
+
+test('Stripe orders require the verified payment path while offline payments remain manual', () => {
+  assert.throws(() => nextStatus('waiting_payment', 'paid', 'stripe'), /δεν επιτρέπεται/);
+  assert.doesNotThrow(() => nextStatus('waiting_payment', 'paid', 'iris'));
+  assert.doesNotThrow(() => nextStatus('paid', 'shipped', 'stripe'));
+});

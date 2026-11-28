@@ -1,10 +1,15 @@
 import { createHash } from 'node:crypto';
 import { adminDatabase } from '../../server/admin-database';
 const hash = (s: string) => createHash('sha256').update(s).digest('hex');
+const rateWindowMs = 3_600_000;
+class MetricsRateLimit extends Error {
+  constructor(readonly retryAfter: number) { super('RATE_LIMIT'); }
+}
 const count = (v: unknown) => Math.max(0, Math.floor(Number(v) || 0));
 export function createShopMetricsHandler(connect = adminDatabase) {
   return async (request: Request, context: { ip?: string } = {}) => {
-    const reply = (data: any, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
+    const reply = (data: any, status = 200, headers: Record<string, string> = {}) =>
+      Response.json(data, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
     try {
       if (request.method !== 'POST') return reply({ error: 'Method not allowed' }, 405);
       const origin = request.headers.get('origin');
@@ -24,8 +29,8 @@ export function createShopMetricsHandler(connect = adminDatabase) {
         const [product, visitor, limit] = await Promise.all([tx.get(productRef), tx.get(visitorRef), tx.get(limitRef)]);
         if (!product.exists || product.data()!.deletedAt || product.data()!.isDeleted) return null;
         const data = product.data()!, seen = visitor.data() || {}, rate = limit.data() || {};
-        const fresh = !rate.startedAt || now - rate.startedAt > 3_600_000;
-        if (!fresh && rate.count >= 240) throw new Error('RATE_LIMIT');
+        const fresh = !rate.startedAt || now - rate.startedAt >= rateWindowMs;
+        if (!fresh && rate.count >= 240) throw new MetricsRateLimit(Math.max(1, Math.ceil((rate.startedAt + rateWindowMs - now) / 1000)));
         const patch: Record<string, any> = {}, state: Record<string, any> = {};
         if (action === 'view' && (!seen.viewedAt || now - seen.viewedAt > 86_400_000)) {
           const views = Math.max(count(data.views), count(data.viewCount), count(data.vintedViews)) + 1;
@@ -42,7 +47,9 @@ export function createShopMetricsHandler(connect = adminDatabase) {
       return result ? reply({ ok: true, ...result }) : reply({ error: 'Το προϊόν δεν υπάρχει.' }, 404);
     } catch (error) {
       if (error instanceof SyntaxError) return reply({ error: 'Μη έγκυρα δεδομένα JSON.' }, 400);
-      if (error instanceof Error && error.message === 'RATE_LIMIT') return reply({ error: 'Έγιναν πολλές ενέργειες. Δοκίμασε αργότερα.' }, 429);
+      if (error instanceof MetricsRateLimit) return reply(
+        { error: 'Έγιναν πολλές ενέργειες. Δοκίμασε αργότερα.' }, 429, { 'Retry-After': String(error.retryAfter) }
+      );
       console.error('Shop metrics unavailable', error instanceof Error ? error.message : 'unknown');
       return reply({ error: 'Η ενημέρωση του μετρητή δεν είναι διαθέσιμη.' }, 503);
     }

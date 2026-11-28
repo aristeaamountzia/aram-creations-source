@@ -1,3 +1,4 @@
+import { colorKey, materialKey, uniqueCatalogLabels } from '../lib/catalog-labels';
 import { useTouchReorder } from '../lib/use-touch-reorder';
 import {
     IconPlus, IconSettings, IconTrash, IconEdit, IconEye, IconX, IconImage, IconGrid, IconList, IconBox,
@@ -6,7 +7,7 @@ import {
 import { useCatalogHistory } from './backoffice/useCatalogHistory';
 import { CatalogHistoryDialog } from './backoffice/CatalogHistoryDialog';
 import { useVintedReviews } from './backoffice/useVintedReviews';
-import { inventoryLabel, isSoldItem } from '../lib/stock-edit';
+import { inventoryLabel, inventoryStock, isSoldItem } from '../lib/stock-edit';
 import { ImageLightbox } from './ImageLightbox';
 import { CatalogControls } from './CatalogControls';
 import React, { useState, useEffect } from 'react';
@@ -214,20 +215,20 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
     }, [firebaseReady, currentUser, catalogRetryKey]);
 
     const exportToCSV = () => {
-        const headers = ['Όνομα', 'Κατηγορία', 'Συλλογή', 'Κατάσταση', 'Απόθεμα', 'Τιμή Πώλησης (€)', 'Κόστος (€)', 'Χρώματα', 'Υλικά', 'Κωδ. Αποθήκευσης', 'Links Αγοράς', 'Πλατφόρμες Ανάρτησης', 'Κεντρική Φωτογραφία'];
-        const rows = jewelryList.map(item => {
+        const headers = ['Όνομα', 'Κατηγορία', 'Συλλογή', 'Κατάσταση πώλησης', 'Απόθεμα', 'Τιμή Πώλησης (€)', 'Κόστος (€)', 'Χρώματα', 'Υλικά', 'Κωδ. Αποθήκευσης', 'Links Αγοράς', 'Πλατφόρμες Ανάρτησης', 'Κεντρική Φωτογραφία'];
+        const rows = filteredAndSortedJewelry.map(item => {
             const linksStr = (item.purchaseLinks || item.productLinks || []).map(l => `${l.site}: ${l.url}`).join(' | ');
             const postedStr = (item.postedPlatforms || []).map(p => `${p.site} ${p.url ? `(${p.url})` : ''} - [${p.showInShop ? 'Ορατό' : 'Κρυφό'}]`).join(' | ');
             return [
                 item.name || '',
                 item.category || '',
                 item.collection || '',
-                item.status || '',
-                item.stock || 0,
+                inventoryLabel(item),
+                inventoryStock(item),
                 item.price || 0,
                 item.cost || 0,
-                (item.colors || []).join(', '),
-                (item.materials || []).join(', '),
+                uniqueCatalogLabels(item.colors || [], colorKey).join(', '),
+                uniqueCatalogLabels(item.materials || [], materialKey).join(', '),
                 item.storage || '',
                 linksStr,
                 postedStr,
@@ -237,7 +238,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
 
         const csvString = buildCsv(headers, rows, ';');
         downloadCsv(csvString, `katalogos_aram_creations_${new Date().toISOString().split('T')[0]}.csv`);
-        notifyOperationSuccess('Εξαγωγή CSV', `Ο κατάλογος (${jewelryList.length} προϊόντα) εξήχθη επιτυχώς σε CSV.`);
+        notifyOperationSuccess('Εξαγωγή CSV', `Ο κατάλογος (${filteredAndSortedJewelry.length} προϊόντα) εξήχθη επιτυχώς σε CSV.`);
     };
 
     const handleAdminLogin = async (event) => {
@@ -371,7 +372,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                         </button>
                         <FirebaseMediaCleanup />
                         <CatalogExcelExport />
-                        <button onClick={exportToCSV} className="flex items-center justify-center px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg transition font-bold text-xs" title="Εξαγωγή CSV χωρίς ενσωματωμένες εικόνες">
+                        <button onClick={exportToCSV} className="flex items-center justify-center px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg transition font-bold text-xs" title="Εξαγωγή επιλεγμένης προβολής και φίλτρων σε CSV">
                             <IconDownload /> <span className="ml-2">CSV</span>
                         </button>
                         <button onClick={() => setIsSettingsOpen(true)} className="flex items-center justify-center p-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg transition" title="Διαχείριση Συστήματος & Εμφάνισης Shop">
@@ -506,6 +507,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                             {lassoRect && <div aria-hidden="true" className="pointer-events-none fixed z-[9999] border-2 border-emerald-500 bg-emerald-400/20 rounded shadow-sm" style={{ left: `${lassoRect.left}px`, top: `${lassoRect.top}px`, width: `${lassoRect.width}px`, height: `${lassoRect.height}px` }} />}
                             {filteredAndSortedJewelry.map((item) => {
                                 const isSold = isSoldItem(item);
+                                const stock = inventoryStock(item);
                                 const isBulkDragged = draggedProductId && selectedItemIds.includes(draggedProductId) && selectedItemIds.includes(item.id);
                                 return (
                                 <div
@@ -544,9 +546,9 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                                         </div>
                                         <div className="absolute bottom-2 left-2 bg-white/90 text-stone-600 text-[10px] font-black px-2 py-1 rounded shadow-sm border border-stone-200 opacity-0 group-hover:opacity-100 transition-opacity">Σύρε</div>
 
-                                        {item.stock > 1 && !isSold && (
+                                        {stock > 1 && !isSold && (
                                             <div className="absolute top-10 left-2 bg-stone-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded shadow flex items-center gap-1">
-                                                <IconBox /> Απόθεμα: {item.stock}
+                                                <IconBox /> Απόθεμα: {stock}
                                             </div>
                                         )}
                                         {isSold && (
@@ -566,8 +568,8 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                                         {item.collection && <p className="text-xs text-stone-500 italic mb-2">{item.collection}</p>}
 
                                         <div className="flex flex-wrap gap-1 mb-4 mt-auto pt-2">
-                                            {item.colors?.slice(0, 2).map((col, i) => <span key={i} className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 uppercase font-bold">{col}</span>)}
-                                            {item.materials?.slice(0, 2).map((mat, i) => <span key={i} className="text-[10px] bg-stone-50 text-stone-600 px-1.5 py-0.5 rounded border border-stone-200">{mat}</span>)}
+                                            {uniqueCatalogLabels(item.colors || [], colorKey).slice(0, 2).map((col, i) => <span key={i} className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 uppercase font-bold">{col}</span>)}
+                                            {uniqueCatalogLabels(item.materials || [], materialKey).slice(0, 2).map((mat, i) => <span key={i} className="text-[10px] bg-stone-50 text-stone-600 px-1.5 py-0.5 rounded border border-stone-200">{mat}</span>)}
                                         </div>
 
                                         <div className="flex justify-between items-center pt-3 border-t border-stone-100">
@@ -592,6 +594,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                         <div onPointerDown={handleLassoStart} className="flex flex-col gap-3 p-3 sm:p-4 bg-stone-50/50 rounded-2xl border border-stone-200/60 select-none">
                             {filteredAndSortedJewelry.map((item) => {
                                 const isSold = isSoldItem(item);
+                                const stock = inventoryStock(item);
                                 const isBulkDragged = draggedProductId && selectedItemIds.includes(draggedProductId) && selectedItemIds.includes(item.id);
                                 return (
                                 <div
@@ -619,7 +622,7 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                                                 <img referrerPolicy="no-referrer" loading="lazy" decoding="async" src={item.imageUrl} className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} alt={item.name} />
                                             )
                                         ) : <IconImage />}
-                                        {item.stock > 1 && !isSold && <div className="absolute bottom-0 right-0 bg-stone-900 text-white text-[9px] px-1 font-bold rounded-tl">{item.stock}x</div>}
+                                        {stock > 1 && !isSold && <div className="absolute bottom-0 right-0 bg-stone-900 text-white text-[9px] px-1 font-bold rounded-tl">{stock}x</div>}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <h3 className={`font-bold truncate ${isSold ? 'text-stone-500 line-through' : 'text-stone-800'}`}>{item.name}</h3>
@@ -629,8 +632,8 @@ export const BackOfficeView: React.FC<BackOfficeViewProps> = ({ onExit }) => {
                                         </div>
                                     </div>
                                     <div className="hidden lg:flex flex-wrap gap-1 flex-1">
-                                        {item.colors?.slice(0, 1).map((col, i) => <span key={i} className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-1 rounded border border-indigo-100 uppercase font-bold">{col}</span>)}
-                                        {item.materials?.slice(0, 1).map((mat, i) => <span key={i} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-1 rounded border border-stone-200">{mat}</span>)}
+                                        {uniqueCatalogLabels(item.colors || [], colorKey).slice(0, 1).map((col, i) => <span key={i} className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-1 rounded border border-indigo-100 uppercase font-bold">{col}</span>)}
+                                        {uniqueCatalogLabels(item.materials || [], materialKey).slice(0, 1).map((mat, i) => <span key={i} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-1 rounded border border-stone-200">{mat}</span>)}
                                         {item.storage && <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-200">{item.storage}</span>}
                                     </div>
                                     <div className={`font-bold md:w-20 md:text-right ${isSold ? 'text-stone-400' : 'text-stone-900'}`}>

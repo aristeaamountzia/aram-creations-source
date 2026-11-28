@@ -1,11 +1,12 @@
+import { catalogLabelCounts, publicProductDescription } from '../src/lib/catalog-labels';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { extractListingState, listingState, classifyVintedCategory } from './vinted-listing';
 import { chooseRefreshPatch, RefreshChoice, refreshBaseline } from '../src/lib/vinted-refresh';
-import { restorationFields, historyRecords } from '../src/lib/catalog-history';
+import { captureCatalogFields, restorationFields, historyRecords } from '../src/lib/catalog-history';
 import { sortPortfolio, movePortfolio } from '../src/lib/portfolio-order';
 import { sendOrderEmail, resolveAdminUrl } from './order-notifications';
-import { assertInventoryChangeAllowed, assertUnchangedInventory, compareSoldLast, isArchivedJewelry, inventoryLabel, stockForSelectedStatus } from '../src/lib/stock-edit';
+import { assertInventoryChangeAllowed, assertUnchangedInventory, compareSoldLast, isArchivedJewelry, inventoryEditorPatch, inventoryLabel, inventoryStock, isAvailableForSale, statusForEditedStock, stockForSelectedStatus } from '../src/lib/stock-edit';
 
 test('product archiving preserves legacy archive flags and refuses active checkout reservations', () => {
   assert.equal(isArchivedJewelry({ deletedAt: 'legacy-marker' }), true);
@@ -113,4 +114,63 @@ test('selecting available restocks zero once and badges agree with legacy stock'
   assert.equal(inventoryLabel({ status: 'Διαθέσιμο', stock: 1 }), 'Διαθέσιμο');
   assert.equal(inventoryLabel({ status: 'Κρατημένο', stock: 0 }), 'Κρατημένο');
   assert.equal(inventoryLabel({ status: 'Δωρίστηκε', stock: 0 }), 'Δωρίστηκε');
+});
+
+
+test('availability and labels use inherited stock while explicit non-sale statuses survive stock edits', () => {
+  const emptyLegacy = { status: 'Διαθέσιμο', stockCount: 0 };
+  assert.equal(inventoryStock(emptyLegacy), 0);
+  assert.equal(isAvailableForSale(emptyLegacy), false);
+  assert.equal(inventoryLabel(emptyLegacy), 'Πουλήθηκε');
+  assert.equal(isAvailableForSale({ status: 'Διαθέσιμο' }), true);
+  assert.equal(isAvailableForSale({ status: 'Διαθέσιμο', stock: 0, stockCount: 4 }), false);
+  assert.equal(isAvailableForSale({ status: 'Διαθέσιμο', stock: 1, isDeleted: true }), false);
+  assert.equal(statusForEditedStock('Κρατημένο', 0), 'Κρατημένο');
+  assert.equal(statusForEditedStock('Διαθέσιμο', 0), 'Πουλήθηκε');
+});
+
+
+test('an unrelated product edit preserves legacy stock and the stored status', () => {
+  const legacy = { status: 'Διαθέσιμο', stockCount: 0 };
+  assert.deepEqual(inventoryEditorPatch(legacy, 'Πουλήθηκε', 0), {});
+  assert.deepEqual(inventoryEditorPatch({ status: 'Κρατημένο', stockCount: 2 }, 'Κρατημένο', 2), {});
+  assert.deepEqual(inventoryEditorPatch(legacy, 'Διαθέσιμο', 1), { status: 'Διαθέσιμο', stock: 1 });
+  assert.deepEqual(inventoryEditorPatch(null, 'Διαθέσιμο', 0), { status: 'Πουλήθηκε', stock: 0 });
+});
+
+
+test('bulk history restores field presence and supports redo after serialization', () => {
+  const fixtures = [
+    { id: 'legacy', status: 'Διαθέσιμο', stockCount: 2, notes: 'Legacy copy' },
+    { id: 'zero', status: 'Διαθέσιμο', stock: 0, description: null },
+  ];
+  const change = { status: 'Πουλήθηκε', stock: 0, description: 'New copy' };
+  const before = fixtures.map(item => ({ id: item.id, ...captureCatalogFields(item, Object.keys(change)) }));
+  const after = before.map(item => ({ ...item, ...change }));
+  const stored = JSON.parse(JSON.stringify({ type: 'BULK_UPDATE', before, after }));
+  for (const [index, record] of historyRecords(stored).entries()) {
+    const original = fixtures[index];
+    const updated = { ...original, ...change };
+    const undo = restorationFields(record.before, record.after, updated);
+    const restored = { ...updated };
+    for (const [field, value] of Object.entries(undo)) {
+      if (value === undefined) delete restored[field];
+      else restored[field] = value;
+    }
+    assert.deepEqual(restored, original);
+    assert.equal(isAvailableForSale(restored), index === 0);
+    assert.equal(publicProductDescription(restored), index === 0 ? 'Legacy copy' : '');
+    const redo = restorationFields(record.after, record.before, restored);
+    assert.deepEqual({ ...restored, ...redo }, updated);
+    assert.throws(() => restorationFields(record.before, record.after, {
+      ...updated, checkoutReservations: { pending: 1 },
+    }));
+  }
+});
+
+test('catalogue usage counts group labels the same way as filters', () => {
+  assert.deepEqual(catalogLabelCounts(
+    ['Σκουλαρίκια', 'ΣΚΟΥΛΑΡΙΚΙΑ', 'σκουλαρικια', '  Real   Flowers ', undefined],
+    ['Σκουλαρίκια', 'Real Flowers', 'Unused']
+  ), { Σκουλαρίκια: 3, 'Real Flowers': 1, Unused: 0 });
 });
