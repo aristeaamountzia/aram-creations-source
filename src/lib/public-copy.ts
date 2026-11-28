@@ -1,3 +1,5 @@
+import { sanitizeVintedDescription } from './vinted-sanitizer';
+import { publicProductDescription } from './catalog-labels';
 import copy from './sites-english-copy.json';
 import { isGreekText, type PublicLocale } from './public-locale';
 
@@ -9,6 +11,9 @@ const terms: Record<string, string> = {
   'διαθέσιμο': 'Available',
   'μη διαθέσιμο': 'Unavailable',
   'πουλήθηκε': 'Sold',
+  'κρατημένο': 'Reserved',
+  'δωρίστηκε': 'Gifted',
+  'εποξική ρητίνη': 'Epoxy resin',
   'εκτός αποθέματος': 'Out of stock',
   'κατόπιν παραγγελίας': 'Made to order',
   'βραχιόλια': 'Bracelets',
@@ -58,6 +63,7 @@ interface PublicCopy {
   title?: string;
   titleEn?: string;
   description?: string;
+  notes?: string;
   descriptionEn?: string;
 }
 
@@ -69,10 +75,12 @@ export function localizedName(item: PublicCopy, locale: PublicLocale) {
 }
 
 export function localizedDescription(item: PublicCopy, locale: PublicLocale) {
-  const original = item.description || '';
-  if (locale === 'el') return original;
+  const original = publicProductDescription(item);
   const saved = products[item.id]?.description;
-  return item.descriptionEn?.trim() || (saved?.[0] === textFingerprint(original) ? saved[1] : original);
+  const description = locale === 'el'
+    ? original
+    : item.descriptionEn?.trim() || (saved?.[0] === textFingerprint(original) ? saved[1] : original);
+  return sanitizeVintedDescription(description);
 }
 
 export function localizedTerm(term: string, locale: PublicLocale) {

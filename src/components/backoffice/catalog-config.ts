@@ -2,18 +2,13 @@ import { DEFAULT_SHOP_SETTINGS } from '../../shopSettings';
 export { DEFAULT_SHOP_SETTINGS } from '../../shopSettings';
 import { DEFAULT_DESIGN_STUDIO } from '../../lib/design-studio';
 import { DEFAULT_PORTFOLIO_DESIGN } from '../../lib/portfolio-settings';
-import { isSoldItem } from '../../lib/stock-edit';
+import { inventoryStock, isAvailableForSale, isSoldItem } from '../../lib/stock-edit';
 
 export const BASE_CATEGORIES = ['Κολιέ', 'Δαχτυλίδια', 'Σκουλαρίκια', 'Βραχιόλια', 'Καρφίτσες', 'Σετ', 'Θήκες Κινητών'];
 export const BASE_STATUSES = ['Διαθέσιμο', 'Κρατημένο', 'Πουλήθηκε', 'Μη διαθέσιμο', 'Δωρίστηκε', 'Προσωπική Συλλογή', 'Υπό Κατασκευή'];
 export const BASE_MATERIALS = ['Υγρό Γυαλί', 'Αποξηραμένα Άνθη', 'Φύλλα Χρυσού', 'Ασήμι 925', 'Ορείχαλκος', 'Ακρυλικά Χρώματα'];
 export const BASE_PLATFORMS = ['Vinted', 'Wix', 'Instagram', 'Facebook', 'TikTok', 'Etsy', 'Φυσικό Κατάστημα'];
 export const BASE_COLORS = ['Διάφανο', 'Μαύρο', 'Λευκό', 'Χρυσό', 'Ασημί', 'Κόκκινο', 'Μπλε', 'Πράσινο', 'Ροζ', 'Μωβ', 'Κίτρινο', 'Πολύχρωμο'];
-export const COLOR_SWATCHES = {
-    'Διάφανο': '#f8fafc', 'Μαύρο': '#171717', 'Λευκό': '#f8fafc', 'Χρυσό': '#c9a35e',
-    'Ασημί': '#cbd5e1', 'Κόκκινο': '#b91c1c', 'Μπλε': '#2563eb', 'Πράσινο': '#2f855a',
-    'Ροζ': '#ec9fb4', 'Μωβ': '#8b5cf6', 'Κίτρινο': '#eab308', 'Πολύχρωμο': '#d1d5db'
-};
 export const MINIMAL_SHOP_SETTINGS = {
     ...DEFAULT_SHOP_SETTINGS,
     primaryColor: '#111111',
@@ -25,11 +20,11 @@ export const MINIMAL_SHOP_SETTINGS = {
     borderRadius: '0.5rem',
     heroTitleSize: 'text-2xl md:text-3xl'
 };
-export const isAvailableItem = (item) => item.status === 'Διαθέσιμο' && (item.stock === undefined || item.stock === null || Number(item.stock) > 0);
+export const isAvailableItem = isAvailableForSale;
 export const isUnavailableItem = (item) => !isAvailableItem(item) && !isSoldItem(item);
 export const splitTags = (value) => value.split(',').map(v => v.trim()).filter(Boolean);
 export const mergeUnique = (current = [], incoming = []) => Array.from(new Set([...current, ...incoming].filter(Boolean)));
-export const getEffectiveQty = (item) => Math.max(Number(item.stock || 0), 1);
+export const getEffectiveQty = (item) => Math.max(inventoryStock(item) || 0, 1);
 export const readStoredList = (key) => {
     try {
         const value = JSON.parse(localStorage.getItem(key) || '[]');

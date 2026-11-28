@@ -78,3 +78,20 @@ export function localizedCategory(category: { id: string; description: string },
     ? categoryCopy[category.id] || category.description
     : category.description;
 }
+
+const greekCategoryTitles: Record<string, string> = {
+  sculptures: 'Γλυπτική',
+  'handcrafted-memories': 'Χειροποίητα ενθύμια',
+  'custom-objects': 'Εξατομικευμένα αντικείμενα',
+  '3d-designs': 'Τρισδιάστατος σχεδιασμός',
+  drawings: 'Σχέδια',
+  photography: 'Φωτογραφία',
+  'graphic-design': 'Γραφιστική',
+  'art-projects': 'Εικαστικά έργα',
+};
+
+export function localizedCategoryTitle(category: { id: string; title: string }, locale: PublicLocale) {
+  return locale === 'el' && category.title === categorySeed.get(category.id)?.title
+    ? greekCategoryTitles[category.id] || category.title
+    : category.title;
+}

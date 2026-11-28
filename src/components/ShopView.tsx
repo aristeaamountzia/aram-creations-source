@@ -1,9 +1,10 @@
+import { catalogColorSwatch, catalogLabelKey, colorKey, materialKey, uniqueCatalogLabels } from '../lib/catalog-labels';
 import { localizedName, localizedDescription, localizedTerm, publicTextLanguage } from '../lib/public-copy';
 import { storefrontLink } from '../lib/public-locale';
 import { usePublicLanguage } from "../lib/use-public-language";
 import { CollectionHero } from './content/CollectionHero';
 import { ImageLightbox } from './ImageLightbox';
-import { compareSoldLast, inventoryLabel, isSoldItem } from '../lib/stock-edit';
+import { compareSoldLast, inventoryLabel, isAvailableForSale, isSoldItem } from '../lib/stock-edit';
 import { VintedReviewsSection } from './VintedReviewsSection';
 import { ContentCard } from './content/ContentCard';
 import { DetailView } from './content/DetailView';
@@ -16,7 +17,6 @@ import { JewelryItem } from '../types';
 import { JEWELRY_CATALOG } from '../data';
 import { db } from '../firebase';
 import { DEFAULT_SHOP_SETTINGS, normalizeShopSettings, ShopSettings } from '../shopSettings';
-import { sanitizeVintedDescription } from '../lib/vinted-sanitizer';
 import { portfolioHeroVideoUrl, initialHeroSnapshot, cacheHeroSnapshot, pickHeroSnapshot } from '../lib/hero-media';
 import { isUnconfirmedEmptyCatalog } from '../lib/catalog-snapshot';
 import { trackShopMetric } from '../lib/shop-metrics';
@@ -248,10 +248,7 @@ export function getItemViews(item: JewelryItem): number {
   return Number(item.views ?? item.viewCount ?? 0) || 0;
 }
 
-export function isAvailableForSale(item: JewelryItem): boolean {
-  const stock = item.stock;
-  return item.status === 'Διαθέσιμο' && (stock === undefined || stock === null || (Number.isFinite(Number(stock)) && Number(stock) > 0));
-}
+export { isAvailableForSale } from '../lib/stock-edit';
 
 export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   const { locale, t } = usePublicLanguage();
@@ -280,11 +277,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
   }, []);
 
   const visibleCategories = useMemo(() => {
-    const actual = new Set(jewelryList.map(item => item.category).filter(Boolean) as string[]);
-    const ordered = shopSettings.categoryOrder.filter(category => actual.has(category));
-    return ['Όλα', ...ordered, ...Array.from(actual).filter(category => !ordered.includes(category)).sort((a, b) => a.localeCompare(b, 'el'))];
+    const actual = uniqueCatalogLabels(jewelryList.map(item => item.category));
+    const keys = new Set(actual.map(catalogLabelKey));
+    const ordered = shopSettings.categoryOrder.filter(label => keys.has(catalogLabelKey(label)));
+    return ['Όλα', ...uniqueCatalogLabels([...ordered, ...actual.sort((a, b) => a.localeCompare(b, 'el'))])];
   }, [jewelryList, shopSettings.categoryOrder]);
-  const collections = useMemo(() => [...new Set(jewelryList.map(item => item.collection?.trim()).filter(Boolean))]
+  const collections = useMemo(() => uniqueCatalogLabels(jewelryList.map(item => item.collection))
     .sort((a, b) => a.localeCompare(b, 'el')), [jewelryList]);
 
   // Favorite IDs state
@@ -453,13 +451,13 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
       const materials = (item.materials || []).join(' ');
       const colors = (item.colors || []).join(' ');
 
-      const matchesCat = selectedCategory === 'Όλα' || cat === selectedCategory;
+      const matchesCat = selectedCategory === 'Όλα' || catalogLabelKey(cat) === catalogLabelKey(selectedCategory);
       const matchesSearch =
         !searchQuery ||
-        [name, cat, collection, desc, materials, colors, localizedName(item, locale), localizedDescription(item, locale), ...[cat, collection, ...(item.materials || []), ...(item.colors || [])].map(term => localizedTerm(term, locale))].join(' ').toLowerCase().includes(searchQuery.toLowerCase().trim());
+        catalogLabelKey([name, cat, collection, desc, materials, colors, localizedName(item, locale), localizedDescription(item, locale), ...[cat, collection, ...(item.materials || []), ...(item.colors || [])].map(term => localizedTerm(term, locale))].join(' ')).includes(catalogLabelKey(searchQuery));
       const matchesFav = !showFavoritesOnly || favoriteIds.includes(item.id);
 
-      return matchesCat && (!selectedCollection || collection === selectedCollection) && matchesSearch && matchesFav;
+      return matchesCat && (!selectedCollection || catalogLabelKey(collection) === catalogLabelKey(selectedCollection)) && matchesSearch && matchesFav;
     }).sort((a, b) => {
       const availabilityOrder = compareSoldLast(a, b);
       if (sortBy === 'price-asc') {
@@ -976,7 +974,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                 {/* Description */}
                 {localizedDescription(selectedItem, locale) && (
                   <p className="text-xs sm:text-sm text-stone-600 leading-relaxed font-sans whitespace-pre-wrap pt-2">
-                    <span lang={publicTextLanguage(localizedDescription(selectedItem, locale), locale)}>{sanitizeVintedDescription(localizedDescription(selectedItem, locale))}</span>
+                    <span lang={publicTextLanguage(localizedDescription(selectedItem, locale), locale)}>{localizedDescription(selectedItem, locale)}</span>
                   </p>
                 )}
 
@@ -985,7 +983,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   <div className="pt-3 border-t border-stone-100">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block mb-1.5">{t("Υλικά Κατασκευής", "Materials")}</span>
                     <div className="flex flex-wrap gap-1.5">
-                      {selectedItem.materials.map((mat, i) => (
+                      {uniqueCatalogLabels(selectedItem.materials, materialKey).map((mat, i) => (
                         <span
                           key={i}
                           className="bg-stone-100 text-stone-800 text-xs px-2.5 py-1 rounded-lg font-medium border border-stone-200"
@@ -1002,12 +1000,12 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   <div>
                     <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block mb-1.5">{t("Χρώματα", "Colors")}</span>
                     <div className="flex flex-wrap gap-1.5">
-                      {selectedItem.colors.map((col, i) => (
+                      {uniqueCatalogLabels(selectedItem.colors, colorKey).map((col, i) => (
                         <span
                           key={i}
                           className="bg-white border border-stone-200 text-stone-800 text-xs px-2.5 py-1 rounded-lg font-medium"
                         >
-                          <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5 border border-stone-200 align-middle" style={{ backgroundColor: shopSettings.colorPalette[col] || '#e7e5e4' }} aria-hidden="true" />
+                          <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5 border border-stone-200 align-middle" style={{ backgroundColor: catalogColorSwatch(col, shopSettings.colorPalette) }} aria-hidden="true" />
                           {localizedTerm(col, locale)}
                         </span>
                       ))}
@@ -1051,7 +1049,7 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                   <ShoppingBag className="w-4 h-4" />
                   <span>
                     {!isAvailableForSale(selectedItem)
-                      ? isSoldItem(selectedItem) ? t("Πουλήθηκε", "Sold") : localizedTerm(selectedItem.status || '', locale) || t("Μη διαθέσιμο", "Unavailable")
+                      ? localizedTerm(inventoryLabel(selectedItem), locale)
                       : t("Προσθήκη στην Τσάντα Αγορών", "Add to bag")}
                   </span>
                 </button>
@@ -1070,6 +1068,17 @@ export const ShopView: React.FC<ShopViewProps> = ({ onAddToCart }) => {
                     <span>{t("Αγορά μέσω ", "Buy on ")}{link.site || 'Vinted'}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
+                  );
+                })}
+                {(selectedItem.postedPlatforms || []).filter(link => link.showInShop === true).map((link, idx) => {
+                  const href = storefrontLink(link.url || '', locale, window.location.origin);
+                  if (!href || (selectedItem.purchaseLinks || []).some(purchase => storefrontLink(purchase.url || '', locale, window.location.origin) === href)) return null;
+                  return (
+                    <a key={idx} href={href} target="_blank" rel="noopener noreferrer"
+                      className="w-full py-3 rounded-xl border border-stone-200 text-stone-800 font-bold text-xs flex items-center justify-center gap-2">
+                      {t("Δείτε την ανάρτηση στο ", "View listing on ")}{link.site}
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
                   );
                 })}
               </div>

@@ -1,5 +1,6 @@
+import { catalogLabelKey, colorKey } from '../../lib/catalog-labels';
 import { isAvailableItem, isUnavailableItem, getEffectiveQty } from './catalog-config';
-import { compareSoldLast, isArchivedJewelry, isSoldItem } from '../../lib/stock-edit';
+import { compareSoldLast, inventoryStock, isArchivedJewelry, isSoldItem } from '../../lib/stock-edit';
 import { useState, useMemo } from 'react';
 import { ART_ITEMS } from '../../data';
 import type { BackOfficeSharedState } from './backoffice-types';
@@ -25,7 +26,7 @@ export function useCatalogFilters(dependencies: CatalogFiltersDependencies) {
     };
 
     const getStatsQuantity = (item) => {
-        if (statsFilter === 'available') return Number(item.stock || 0);
+        if (statsFilter === 'available') return inventoryStock(item);
         if (statsFilter === 'sold') return getEffectiveQty(item);
         return getEffectiveQty(item);
     };
@@ -84,17 +85,14 @@ export function useCatalogFilters(dependencies: CatalogFiltersDependencies) {
 
         let pool = sourceList.filter(item => {
             if (isArchivedJewelry(item) !== (archiveView === 'archived')) return false;
-            const term = searchQuery.toLowerCase();
+            const term = catalogLabelKey(searchQuery);
             const matchesStatsTab = archiveView === 'archived' || getStatsSegment(item);
-            const matchesSearch = (item.name || '').toLowerCase().includes(term) ||
-                (item.collection && item.collection.toLowerCase().includes(term)) ||
-                (item.storage && item.storage.toLowerCase().includes(term)) ||
-                (item.materials && item.materials.some(m => m.toLowerCase().includes(term))) ||
-                (item.colors && item.colors.some(c => c.toLowerCase().includes(term))) ||
-                (item.platforms && item.platforms.some(p => p.toLowerCase().includes(term)));
-
-            const matchesCategory = selectedCategory === 'Όλα' || item.category === selectedCategory;
-            const matchesColor = selectedColor === 'Όλα' || (item.colors && item.colors.includes(selectedColor));
+            const matchesSearch = [
+                item.name, item.category, item.collection, item.storage,
+                ...(item.materials || []), ...(item.colors || []), ...(item.platforms || []),
+            ].some(value => catalogLabelKey(value || '').includes(term));
+            const matchesCategory = selectedCategory === 'Όλα' || catalogLabelKey(item.category || '') === catalogLabelKey(selectedCategory);
+            const matchesColor = selectedColor === 'Όλα' || item.colors?.some(color => colorKey(color) === colorKey(selectedColor));
 
             return matchesStatsTab && matchesSearch && matchesCategory && matchesColor;
         });

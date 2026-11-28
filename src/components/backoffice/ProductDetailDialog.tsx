@@ -1,7 +1,8 @@
+import { colorKey, materialKey, publicProductDescription, uniqueCatalogLabels } from '../../lib/catalog-labels';
 import { useId } from 'react';
 import { IconX, IconImage, IconBox, IconClone, IconExternalLink } from './icons';
 import { sanitizeVintedDescription as stripVintedCondition } from '../../lib/vinted-sanitizer';
-import { inventoryLabel } from '../../lib/stock-edit';
+import { inventoryLabel, inventoryStock } from '../../lib/stock-edit';
 import { useDialogKeyboard } from '../../lib/use-dialog-keyboard';
 import { MediaDownload } from '../MediaDownload';
 import type { ProductWorkspace } from './useProductWorkspace';
@@ -85,7 +86,7 @@ export function ProductDetailDialog(props: ProductDetailDialogProps) {
                     })()}
 
                     <MediaDownload media={(currentItem.mediaList || [{ url: currentItem.imageUrl, type: currentItem.fileType }])[activeDetailMediaIdx] || { url: currentItem.imageUrl }} name={currentItem.name || 'aram-media'} className="absolute top-12 right-3 z-10" />
-                    {currentItem.stock > 1 && <div className="absolute bottom-6 left-6 bg-stone-900/90 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg flex items-center gap-1.5"><IconBox /> Απόθεμα: {currentItem.stock} τμχ</div>}
+                    {inventoryStock(currentItem) > 1 && <div className="absolute bottom-6 left-6 bg-stone-900/90 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg flex items-center gap-1.5"><IconBox /> Απόθεμα: {inventoryStock(currentItem)} τμχ</div>}
                 </div>
 
                 <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col max-h-[85vh] overflow-y-auto relative bg-white">
@@ -130,14 +131,14 @@ export function ProductDetailDialog(props: ProductDetailDialogProps) {
                             <div>
                                 <h4 className="text-[10px] font-bold text-stone-400 uppercase mb-2">Χρωματα</h4>
                                 <div className="flex flex-wrap gap-1.5">
-                                    {currentItem.colors.map((col, i) => <span key={col} className="bg-indigo-50 border border-indigo-100 text-xs px-3 py-1.5 rounded font-bold text-indigo-700 uppercase">{col}</span>)}
+                                    {uniqueCatalogLabels(currentItem.colors, colorKey).map((col, i) => <span key={col} className="bg-indigo-50 border border-indigo-100 text-xs px-3 py-1.5 rounded font-bold text-indigo-700 uppercase">{col}</span>)}
                                 </div>
                             </div>
                         )}
                         <div>
                             <h4 className="text-[10px] font-bold text-stone-400 uppercase mb-2">Υλικα</h4>
                             <div className="flex flex-wrap gap-1.5">
-                                {currentItem.materials?.map((mat, i) => <span key={i} className="bg-stone-100 border border-stone-200 text-xs px-3 py-1.5 rounded font-medium text-stone-700">{mat}</span>)}
+                                {uniqueCatalogLabels(currentItem.materials || [], materialKey).map((mat, i) => <span key={i} className="bg-stone-100 border border-stone-200 text-xs px-3 py-1.5 rounded font-medium text-stone-700">{mat}</span>)}
                                 {(!currentItem.materials || currentItem.materials.length === 0) && <span className="text-xs text-stone-400 italic">Δεν έχουν καταγραφεί υλικά.</span>}
                             </div>
                         </div>
@@ -175,10 +176,10 @@ export function ProductDetailDialog(props: ProductDetailDialogProps) {
                         )}
                     </div>
 
-                    {currentItem.notes && (
+                    {publicProductDescription(currentItem) && (
                         <div className="mb-8">
-                            <h4 className="text-[10px] font-bold text-stone-400 uppercase mb-2">Σημειωσεις</h4>
-                            <p className="text-sm text-stone-700 bg-stone-50 p-4 rounded-xl border border-stone-100 whitespace-pre-wrap">{stripVintedCondition(currentItem.notes)}</p>
+                            <h4 className="text-[10px] font-bold text-stone-400 uppercase mb-2">Δημόσια περιγραφή προϊόντος</h4>
+                            <p className="text-sm text-stone-700 bg-stone-50 p-4 rounded-xl border border-stone-100 whitespace-pre-wrap">{stripVintedCondition(publicProductDescription(currentItem))}</p>
                         </div>
                     )}
 

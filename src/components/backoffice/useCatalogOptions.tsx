@@ -1,6 +1,8 @@
+import { catalogColorSwatch, catalogLabelCounts, catalogLabelKey, colorKey, materialKey, uniqueCatalogLabels } from '../../lib/catalog-labels';
+import { inventoryLabel } from '../../lib/stock-edit';
 import { IconTrash, IconGripVertical } from './icons';
 import {
-    BASE_CATEGORIES, BASE_STATUSES, BASE_MATERIALS, BASE_PLATFORMS, BASE_COLORS, COLOR_SWATCHES,
+    BASE_CATEGORIES, BASE_STATUSES, BASE_MATERIALS, BASE_PLATFORMS, BASE_COLORS,
     DEFAULT_SHOP_SETTINGS, normalizeForMatch
 } from './catalog-config';
 import { useMemo } from 'react';
@@ -92,11 +94,7 @@ export function useCatalogOptions(dependencies: CatalogOptionsDependencies) {
         });
     };
 
-    const categoryUsageCounts = useMemo(() => countValues(jewelryList.map(item => item.category)), [jewelryList]);
-
-    const statusUsageCounts = useMemo(() => countValues(jewelryList.map(item => item.status)), [jewelryList]);
-
-    const collectionUsageCounts = useMemo(() => countValues(jewelryList.map(item => item.collection)), [jewelryList]);
+    const statusUsageCounts = useMemo(() => countValues(jewelryList.map(inventoryLabel)), [jewelryList]);
 
     const platformUsageCounts = useMemo(() => {
         return countValues(jewelryList.flatMap(item => [
@@ -106,23 +104,24 @@ export function useCatalogOptions(dependencies: CatalogOptionsDependencies) {
         ]));
     }, [jewelryList]);
 
-    const allFormCategories = useMemo(() => {
-        const embedded = jewelryList.map(item => item.category);
-        const order = shopSettings.categoryOrder || [];
-        return sortByUsage(Array.from(new Set([...BASE_CATEGORIES, ...customCategories, ...order, ...embedded])).filter(cat => cat && !hiddenCategoryOptions.includes(cat)), categoryUsageCounts, order);
-    }, [jewelryList, customCategories, hiddenCategoryOptions, shopSettings.categoryOrder, categoryUsageCounts]);
-
     const settingsCategoryOptions = useMemo(() => {
         const embedded = jewelryList.map(item => item.category);
         const order = shopSettings.categoryOrder || [];
-        return orderOptions(Array.from(new Set([...BASE_CATEGORIES, ...customCategories, ...order, ...embedded])).filter(cat => cat && !hiddenCategoryOptions.includes(cat)), order);
+        return orderOptions(uniqueCatalogLabels([...BASE_CATEGORIES, ...customCategories, ...order, ...embedded].filter(cat => cat && !hiddenCategoryOptions.some(hidden => catalogLabelKey(hidden) === catalogLabelKey(cat)))), order);
     }, [jewelryList, customCategories, hiddenCategoryOptions, shopSettings.categoryOrder]);
+
+    const categoryUsageCounts = useMemo(() => catalogLabelCounts(
+        jewelryList.map(item => item.category), settingsCategoryOptions
+    ), [jewelryList, settingsCategoryOptions]);
+
+    const allFormCategories = useMemo(() => sortByUsage(
+        settingsCategoryOptions, categoryUsageCounts, shopSettings.categoryOrder || []
+    ), [settingsCategoryOptions, categoryUsageCounts, shopSettings.categoryOrder]);
 
     const allFilterCategories = useMemo(() => {
         const embedded = jewelryList.map(item => item.category);
         const order = shopSettings.categoryOrder || [];
-        return Array.from(new Set([...BASE_CATEGORIES, ...customCategories, ...order, ...embedded]))
-            .filter(cat => cat && !hiddenCategoryOptions.includes(cat))
+        return uniqueCatalogLabels([...order, ...embedded])
             .sort((a, b) => {
                 const indexA = order.indexOf(a);
                 const indexB = order.indexOf(b);
@@ -131,49 +130,48 @@ export function useCatalogOptions(dependencies: CatalogOptionsDependencies) {
                 if (indexB !== -1) return 1;
                 return a.localeCompare(b, 'el');
             });
-    }, [jewelryList, customCategories, hiddenCategoryOptions, shopSettings.categoryOrder]);
+    }, [jewelryList, shopSettings.categoryOrder]);
 
     const allFormStatuses = useMemo(() => {
-        const embedded = jewelryList.map(item => item.status);
+        const embedded = jewelryList.map(inventoryLabel);
         return sortByUsage(Array.from(new Set([...BASE_STATUSES, ...customStatuses, ...embedded])).filter(status => status && !hiddenStatusOptions.includes(status)), statusUsageCounts, statusOptionOrder.length ? statusOptionOrder : BASE_STATUSES);
     }, [jewelryList, customStatuses, hiddenStatusOptions, statusUsageCounts, statusOptionOrder]);
 
     const settingsStatusOptions = useMemo(() => {
-        const embedded = jewelryList.map(item => item.status);
+        const embedded = jewelryList.map(inventoryLabel);
         return orderOptions(Array.from(new Set([...BASE_STATUSES, ...customStatuses, ...embedded])).filter(status => status && !hiddenStatusOptions.includes(status)), statusOptionOrder.length ? statusOptionOrder : BASE_STATUSES);
     }, [jewelryList, customStatuses, hiddenStatusOptions, statusOptionOrder]);
 
-    const allCollections = useMemo(() => {
-        const embedded = jewelryList.map(item => item.collection);
-        return sortByUsage(Array.from(new Set([...customCollections, ...embedded])).filter(collection => collection && !hiddenCollectionOptions.includes(collection)), collectionUsageCounts, collectionOptionOrder);
-    }, [jewelryList, customCollections, hiddenCollectionOptions, collectionUsageCounts, collectionOptionOrder]);
-
     const settingsCollectionOptions = useMemo(() => {
         const embedded = jewelryList.map(item => item.collection);
-        return orderOptions(Array.from(new Set([...customCollections, ...embedded])).filter(collection => collection && !hiddenCollectionOptions.includes(collection)), collectionOptionOrder);
+        return orderOptions(uniqueCatalogLabels([...customCollections, ...embedded].filter(collection => collection && !hiddenCollectionOptions.some(hidden => catalogLabelKey(hidden) === catalogLabelKey(collection)))), collectionOptionOrder);
     }, [jewelryList, customCollections, hiddenCollectionOptions, collectionOptionOrder]);
 
-    const colorUsageCounts = useMemo(() => {
-        return jewelryList.flatMap(item => item.colors || []).reduce((acc, color) => {
-            if (color) acc[color] = (acc[color] || 0) + 1;
-            return acc;
-        }, {});
-    }, [jewelryList]);
+    const collectionUsageCounts = useMemo(() => catalogLabelCounts(
+        jewelryList.map(item => item.collection), settingsCollectionOptions
+    ), [jewelryList, settingsCollectionOptions]);
 
-    const materialUsageCounts = useMemo(() => {
-        return jewelryList.flatMap(item => item.materials || []).reduce((acc, material) => {
-            if (material) acc[material] = (acc[material] || 0) + 1;
-            return acc;
-        }, {});
-    }, [jewelryList]);
+    const allCollections = useMemo(() => sortByUsage(
+        settingsCollectionOptions, collectionUsageCounts, collectionOptionOrder
+    ), [settingsCollectionOptions, collectionUsageCounts, collectionOptionOrder]);
+
+    const colorCountsByKey = useMemo(() => countValues(
+        jewelryList.flatMap(item => uniqueCatalogLabels(item.colors || [], colorKey).map(colorKey))
+    ), [jewelryList]);
+
+    const materialCountsByKey = useMemo(() => countValues(
+        jewelryList.flatMap(item => uniqueCatalogLabels(item.materials || [], materialKey).map(materialKey))
+    ), [jewelryList]);
 
     const allMaterialOptions = useMemo(() => {
         const embedded = jewelryList.flatMap(item => item.materials || []);
-        return Array.from(new Set([...BASE_MATERIALS, ...customMaterials, ...embedded]))
-            .filter(mat => mat && mat !== 'Εποξική Ρητίνη' && !hiddenMaterialOptions.includes(mat));
+        return uniqueCatalogLabels([...BASE_MATERIALS, ...customMaterials, ...embedded]
+            .filter(mat => mat && !hiddenMaterialOptions.some(hidden => materialKey(hidden) === materialKey(mat))), materialKey);
     }, [jewelryList, customMaterials, hiddenMaterialOptions]);
 
     const settingsMaterialOptions = useMemo(() => orderOptions(allMaterialOptions, materialOptionOrder), [allMaterialOptions, materialOptionOrder]);
+
+    const materialUsageCounts = useMemo(() => Object.fromEntries(settingsMaterialOptions.map(label => [label, materialCountsByKey[materialKey(label)] || 0])), [settingsMaterialOptions, materialCountsByKey]);
 
     const allAvailableMaterials = useMemo(() => sortByUsage(settingsMaterialOptions, materialUsageCounts, materialOptionOrder), [settingsMaterialOptions, materialUsageCounts, materialOptionOrder]);
 
@@ -183,19 +181,21 @@ export function useCatalogOptions(dependencies: CatalogOptionsDependencies) {
 
     const allColorOptions = useMemo(() => {
         const embedded = jewelryList.flatMap(item => item.colors || []);
-        return Array.from(new Set([...BASE_COLORS, ...customColors, ...embedded]))
-            .filter(color => color && !hiddenColorOptions.includes(color));
+        return uniqueCatalogLabels([...BASE_COLORS, ...customColors, ...embedded]
+            .filter(color => color && !hiddenColorOptions.some(hidden => colorKey(hidden) === colorKey(color))), colorKey);
     }, [jewelryList, customColors, hiddenColorOptions]);
 
     const settingsColorOptions = useMemo(() => orderOptions(allColorOptions, colorOptionOrder), [allColorOptions, colorOptionOrder]);
 
+    const colorUsageCounts = useMemo(() => Object.fromEntries(settingsColorOptions.map(label => [label, colorCountsByKey[colorKey(label)] || 0])), [settingsColorOptions, colorCountsByKey]);
+
     const allAvailableColors = useMemo(() => sortByUsage(settingsColorOptions, colorUsageCounts, colorOptionOrder), [settingsColorOptions, colorUsageCounts, colorOptionOrder]);
 
-    const getColorSwatch = (color) => shopSettings.colorPalette?.[color] || COLOR_SWATCHES[color] || '#d6d3d1';
+    const getColorSwatch = (color) => catalogColorSwatch(color, shopSettings.colorPalette);
 
-    const allFilterColors = useMemo(() => {
-        return allAvailableColors;
-    }, [allAvailableColors]);
+    const allFilterColors = useMemo(() => uniqueCatalogLabels(
+        [...allAvailableColors, ...jewelryList.flatMap(item => item.colors || [])], colorKey
+    ), [allAvailableColors, jewelryList]);
 
     const allStorages = useMemo(() => {
         return Array.from(new Set(jewelryList.map(item => item.storage))).filter(Boolean).sort();
@@ -346,7 +346,7 @@ export function useCatalogOptions(dependencies: CatalogOptionsDependencies) {
 
     const handleAddMaterial = (mat) => {
         const trimmed = mat.trim();
-        if (trimmed && !formMaterials.includes(trimmed)) {
+        if (trimmed && !formMaterials.some(value => materialKey(value) === materialKey(trimmed))) {
             setFormMaterials([...formMaterials, trimmed]);
             if (!BASE_MATERIALS.includes(trimmed) && !customMaterials.includes(trimmed)) setCustomMaterials(prev => [...prev, trimmed]);
             setHiddenMaterialOptions(prev => prev.filter(material => material !== trimmed));
@@ -357,7 +357,7 @@ export function useCatalogOptions(dependencies: CatalogOptionsDependencies) {
 
     const handleAddColor = (col, hex = '') => {
         const trimmed = col.trim();
-        if (trimmed && !formColorsArr.includes(trimmed)) {
+        if (trimmed && !formColorsArr.some(value => colorKey(value) === colorKey(trimmed))) {
             setFormColorsArr([...formColorsArr, trimmed]);
             if (!BASE_COLORS.includes(trimmed) && !customColors.includes(trimmed)) setCustomColors(prev => [...prev, trimmed]);
             setHiddenColorOptions(prev => prev.filter(color => color !== trimmed));

@@ -1,3 +1,4 @@
+import { inventoryStock, isAvailableForSale, isArchivedJewelry } from '../src/lib/stock-edit';
 export class OrderError extends Error {
   constructor(message: string, public status = 400, public code?: string) { super(message); }
 }
@@ -26,10 +27,10 @@ export function priceOrder(input: ReturnType<typeof normalizeOrder>, catalog: Ar
   let subtotalCents = 0;
   const items = input.items.map((requested, index) => {
     const product = catalog[index];
-    const stock = Number(product?.stock ?? product?.stockCount ?? 1);
+    const stock = inventoryStock(product || {});
     const isReservedByCurrent = Boolean(product?.checkoutReservations?.[input.requestId]);
     const hasOtherReservation = product?.status === 'Κρατημένο' && Object.entries(product?.checkoutReservations || {}).some(([resId, q]) => resId !== input.requestId && Number(q) > 0);
-    if (!product || product.isDeleted || product.deletedAt || (!isReservedByCurrent && product.status !== 'Διαθέσιμο') || hasOtherReservation || !Number.isInteger(stock) || (!isReservedByCurrent && stock < requested.quantity)) throw new OrderError(`Το προϊόν «${product?.name || product?.title || requested.id}» δεν είναι διαθέσιμο στην ποσότητα που επέλεξες.`, 409);
+    if (!product || isArchivedJewelry(product) || (!isReservedByCurrent && !isAvailableForSale(product)) || hasOtherReservation || !Number.isInteger(stock) || (!isReservedByCurrent && stock < requested.quantity)) throw new OrderError(`Το προϊόν «${product?.name || product?.title || requested.id}» δεν είναι διαθέσιμο στην ποσότητα που επέλεξες.`, 409);
     const cents = Math.round(Number(product.price) * 100);
     if (!Number.isFinite(cents) || cents <= 0) throw new OrderError('Ένα προϊόν δεν έχει έγκυρη τιμή. Επικοινώνησε μαζί μας.', 409);
     subtotalCents += cents * requested.quantity;
@@ -45,8 +46,27 @@ export function priceOrder(input: ReturnType<typeof normalizeOrder>, catalog: Ar
   return { items, subtotal: subtotalCents / 100, shippingCost: shippingCents / 100, total: (subtotalCents + shippingCents) / 100 };
 }
 export const ORDER_STATUSES = { pending: 'Νέα', waiting_payment: 'Αναμονή πληρωμής', paid: 'Πληρωμένη', shipped: 'Απεστάλη', delivered: 'Παραδόθηκε', cancelled: 'Ακυρωμένη' };
+export type OrderStatus = keyof typeof ORDER_STATUSES;
+
+const orderTransitions: Record<OrderStatus, OrderStatus[]> = {
+  pending: ['waiting_payment', 'paid', 'cancelled'],
+  waiting_payment: ['paid', 'cancelled'],
+  paid: ['shipped', 'cancelled'],
+  shipped: ['delivered'],
+  delivered: [],
+  cancelled: [],
+};
+
+export function allowedOrderTransitions(status: string, paymentMethod = ''): OrderStatus[] {
+  const targets = Object.hasOwn(orderTransitions, status) ? orderTransitions[status as OrderStatus] : [];
+  if (paymentMethod === 'stripe') return targets.filter(target => target !== 'paid');
+  if (paymentMethod === 'cod' && (status === 'pending' || status === 'waiting_payment')) return [...targets, 'shipped'];
+  return targets;
+}
+
 export function nextStatus(previous: string, next: string, paymentMethod = '') {
-  const transitions: Record<string, string[]> = { pending: ['waiting_payment', 'paid', 'cancelled'], waiting_payment: ['paid', 'cancelled'], paid: ['shipped', 'cancelled'], shipped: ['delivered'], delivered: [], cancelled: [] };
-  const cashOnDelivery = paymentMethod === 'cod' && ['pending', 'waiting_payment'].includes(previous) && next === 'shipped';
-  if (previous !== next && !cashOnDelivery && !transitions[previous]?.includes(next)) throw new OrderError('Αυτή η αλλαγή κατάστασης δεν επιτρέπεται.', 409);
+  if (!Object.hasOwn(ORDER_STATUSES, next) ||
+      (previous !== next && !allowedOrderTransitions(previous, paymentMethod).includes(next as OrderStatus))) {
+    throw new OrderError('Αυτή η αλλαγή κατάστασης δεν επιτρέπεται.', 409);
+  }
 }

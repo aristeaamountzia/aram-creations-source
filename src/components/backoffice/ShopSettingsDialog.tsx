@@ -738,7 +738,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                     ['material', 'Υλικά', settingsMaterialOptions.length],
                                     ['category', 'Κατηγορίες', settingsCategoryOptions.length],
                                     ['collection', 'Συλλογές', settingsCollectionOptions.length],
-                                    ['status', 'Καταστάσεις', settingsStatusOptions.length],
+                                    ['status', 'Καταστάσεις πώλησης', settingsStatusOptions.length],
                                     ['platform', 'Πλατφόρμες', settingsPlatformOptions.length]
                                 ].map(([filterKey, filterLabel, count]) => (
                                     <button
@@ -806,7 +806,7 @@ export function ShopSettingsDialog(props: ShopSettingsDialogProps) {
                                 {(activeFieldFilter === 'all' || activeFieldFilter === 'status') && (
                                     renderFieldOptionManager({
                                         type: 'status',
-                                        title: 'Καταστάσεις Διαθεσιμότητας',
+                                        title: 'Καταστάσεις πώλησης',
                                         options: settingsStatusOptions,
                                         counts: statusUsageCounts,
                                         hiddenOptions: hiddenStatusOptions

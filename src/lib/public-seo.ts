@@ -1,9 +1,16 @@
+import { localizedDescription, localizedName } from './public-copy';
+import { isAvailableForSale } from './stock-edit';
 import type { PublicLocale } from './public-locale';
 
 export const SITE_URL = 'https://aramcreationsofficial.netlify.app';
 
 export interface PublicSeoItem extends Record<string, any> {
   id: string;
+  description?: string;
+  notes?: string;
+  status?: string;
+  stock?: number | string | null;
+  stockCount?: number | string | null;
 }
 
 export function mergePublicPortfolio(seed: PublicSeoItem[], remote: PublicSeoItem[]) {
@@ -96,9 +103,10 @@ export function buildPublicSitemap({ products, artworks }: { products: PublicSeo
 }
 
 function localizedProduct(item: PublicSeoItem, locale: PublicLocale) {
-  const name = locale === 'en' ? item.titleEn || item.name || item.title : item.name || item.title || item.titleEn;
-  const description = locale === 'en' ? item.descriptionEn || item.description || item.notes : item.description || item.notes || item.descriptionEn;
-  return { name: String(name || (locale === 'en' ? 'Handmade jewelry' : 'Χειροποίητο κόσμημα')), description: String(description || '') };
+  return {
+    name: localizedName(item, locale) || (locale === 'en' ? 'Handmade jewelry' : 'Χειροποίητο κόσμημα'),
+    description: localizedDescription(item, locale),
+  };
 }
 
 function localizedArtwork(item: PublicSeoItem, locale: PublicLocale) {
@@ -123,8 +131,7 @@ export function renderPublicProduct(item: PublicSeoItem, locale: PublicLocale) {
   const image = images[0] || '';
   const price = Number(item.price);
   const hasPrice = Number.isFinite(price) && price >= 0;
-  const stock = Number(item.stock ?? item.stockCount);
-  const inStock = item.status === 'Διαθέσιμο' && (item.stock == null && item.stockCount == null || Number.isFinite(stock) && stock > 0);
+  const inStock = isAvailableForSale(item);
   const schema = { '@context': 'https://schema.org', '@type': 'Product', '@id': SITE_URL + path + '#product', name, description, image: images, sku: item.id, url: SITE_URL + path, offers: hasPrice ? { '@type': 'Offer', url: SITE_URL + path, priceCurrency: 'EUR', price: price.toFixed(2), availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', seller: { '@type': 'OnlineStore', name: 'Aram Creations', url: SITE_URL } } : undefined };
   const shopPath = locale === 'en' ? '/en/' : '/';
   const body = `<a class="back" href="${shopPath}">${locale === 'en' ? '← Back to Shop' : '← Επιστροφή στο Shop'}</a><article class="card">${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}">` : '<div aria-hidden="true"></div>'}<div><h1>${escapeHtml(name)}</h1>${description ? `<p>${escapeHtml(description)}</p>` : ''}${hasPrice ? `<p class="price">€${price.toFixed(2)}</p>` : ''}<a class="cta" href="${shopPath}">${locale === 'en' ? 'Browse Shop' : 'Περιήγηση στο Shop'}</a></div></article>${images.length > 1 ? `<div class="gallery">${images.slice(1).map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(name)}">`).join('')}</div>` : ''}`;

@@ -1,6 +1,6 @@
 import { IconEye, IconX, IconExternalLink } from './icons';
 import { useDialogKeyboard } from '../../lib/use-dialog-keyboard';
-import { stockForSelectedStatus } from '../../lib/stock-edit';
+import { statusForEditedStock, stockForSelectedStatus } from '../../lib/stock-edit';
 import { AlertTriangle } from 'lucide-react';
 import { MediaManager } from '../media/MediaManager';
 import { VideoUploadStatus } from '../VideoUploadStatus';
@@ -380,6 +380,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                             else { setFormCategory(e.target.value); }
                                         }}>
                                             <option value="" disabled>Επιλέξτε...</option>
+                                            {formCategory && !allFormCategories.includes(formCategory) && <option value={formCategory}>{formCategory}</option>}
                                             {allFormCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">+ Προσθήκη Νέας...</option>
                                         </select>
@@ -399,6 +400,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                             else { setFormCollection(e.target.value); }
                                         }}>
                                             <option value="">(Χωρίς Συλλογή)</option>
+                                            {formCollection && !allCollections.includes(formCollection) && <option value={formCollection}>{formCollection}</option>}
                                             {allCollections.map(col => <option key={col} value={col}>{col}</option>)}
                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">+ Προσθήκη Νέας...</option>
                                         </select>
@@ -417,6 +419,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                             if (e.target.value === 'NEW_CUSTOM') { setIsCustomStatus(true); setFormStatus(''); }
                                             else { setFormStatus(e.target.value); setFormStock(stockForSelectedStatus(e.target.value, Number(formStock))); }
                                         }}>
+                                            {formStatus && !allFormStatuses.includes(formStatus) && <option value={formStatus}>{formStatus}</option>}
                                             {allFormStatuses.map(stat => <option key={stat} value={stat}>{stat}</option>)}
                                             <option value="NEW_CUSTOM" className="font-bold text-emerald-600">+ Προσθήκη Νέας...</option>
                                         </select>
@@ -465,8 +468,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                     <input id="shop-product-stock" type="number" min="0" className="w-full border border-stone-200 rounded-lg px-4 py-2.5 bg-stone-50 focus:bg-white focus:border-stone-500 outline-none" value={formStock} onChange={e => {
                                         const value = e.target.value;
                                         setFormStock(value);
-                                        if (value !== '' && Number(value) > 0 && formStatus === 'Πουλήθηκε') setFormStatus('Διαθέσιμο');
-                                        if (value === '0' && formStatus === 'Διαθέσιμο') setFormStatus('Πουλήθηκε');
+                                        if (value !== '') setFormStatus(statusForEditedStock(formStatus, Number(value)) ?? formStatus);
                                     }} />
                                 </div>
                             </div>
@@ -604,7 +606,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                     <div className="flex gap-2 w-full lg:w-auto">
                                         <label className="flex items-center justify-center gap-2 text-sm font-medium text-stone-700 cursor-pointer flex-1 lg:flex-none bg-stone-50 border border-stone-200 px-3 py-2 rounded-lg hover:bg-white transition whitespace-nowrap">
                                             <input type="checkbox" className="w-4 h-4 text-emerald-600 rounded border-stone-300 focus:ring-emerald-500 cursor-pointer" checked={newPostedVisible} onChange={e => setNewPostedVisible(e.target.checked)} />
-                                            Ορατό στο Shop
+                                            Εμφάνιση συνδέσμου στο Shop
                                         </label>
                                         <button type="button" onClick={handleAddPostedPlatform} className="bg-stone-800 hover:bg-stone-700 text-white px-5 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition">Προσθήκη</button>
                                     </div>
@@ -616,7 +618,13 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                         <span key={idx} className="bg-white border border-stone-200 text-xs px-2 py-1 rounded-md flex items-center gap-1.5 font-bold text-stone-700 shadow-sm max-w-full">
                                             {platObj.site}
                                             {platObj.url && <a href={platObj.url} target="_blank" rel="noopener noreferrer" className="text-stone-500 hover:text-stone-800" title={platObj.url}><IconExternalLink /></a>}
-                                            {platObj.showInShop ? <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 rounded ml-1" title="Θα φαίνεται στο Shop">Ορατό</span> : <span className="text-[10px] bg-stone-200 text-stone-500 px-1 rounded ml-1" title="Κρυφό από το Shop">Κρυφό</span>}
+                                            <label className="flex items-center gap-1 text-stone-600">
+                                                <input type="checkbox" checked={platObj.showInShop === true} disabled={!platObj.url}
+                                                    onChange={e => setFormPostedPlatforms(previous => previous.map((entry, i) =>
+                                                        i === idx ? { ...entry, showInShop: e.target.checked } : entry
+                                                    ))} />
+                                                Εμφάνιση συνδέσμου στο Shop
+                                            </label>
                                             <button type="button" onClick={() => setFormPostedPlatforms(formPostedPlatforms.filter((_, i) => i !== idx))} className="text-red-500 ml-1"><IconX /></button>
                                         </span>
                                     ))}
@@ -702,7 +710,7 @@ export function ProductEditorDialog(props: ProductEditorDialogProps) {
                                 onRemove={handleRemovePrivateMedia}
                             />
                             <div>
-                                <label htmlFor="shop-product-description" className="block text-xs font-bold text-stone-600 mb-1">Περιγραφή / σημειώσεις προϊόντος</label>
+                                <label htmlFor="shop-product-description" className="block text-xs font-bold text-stone-600 mb-1">Δημόσια περιγραφή προϊόντος</label>
                                 <textarea id="shop-product-description" className="w-full border border-stone-200 rounded-lg px-4 py-3 h-24 bg-white focus:bg-white outline-none resize-none" value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Περιγραφή που μπορείς να επεξεργαστείς πριν εμφανιστεί στο shop..."></textarea>
                             </div>
                             <details className="rounded-xl border border-stone-200 p-3" open={formEnglishCopy.title || formEnglishCopy.description ? true : undefined}>
